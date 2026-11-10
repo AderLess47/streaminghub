@@ -19,12 +19,9 @@ primary_region = "fra"
   EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
   EMAIL_REPLY_TO = "service@streaminghub.org"
   STRIPE_PRICE_ID = "price_1UZSAvPmp8Jh8xSPzMCF3gwg"
-  OPERATOR_LEGAL_NAME = "Aaron Dursün"
-  OPERATOR_REPRESENTATIVE = "Aaron Dursün"
-  OPERATOR_STREET = "Potsdamer Straße 2"
-  OPERATOR_POSTAL_CODE = "63110"
-  OPERATOR_CITY = "Rodgau"
-  OPERATOR_PHONE = "+49 173 1893611"
+  # Personal operator details are Fly secrets, not repository content:
+  # OPERATOR_LEGAL_NAME, OPERATOR_REPRESENTATIVE, OPERATOR_STREET,
+  # OPERATOR_POSTAL_CODE, OPERATOR_CITY, OPERATOR_PHONE
   OPERATOR_EMAIL = "service@streaminghub.org"
   OPERATOR_COUNTRY = "Deutschland"
   OPERATOR_SMALL_BUSINESS = "true"
