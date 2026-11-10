@@ -20,6 +20,9 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WRANGLER_VERSION = "4.160.0";
+const PUBLIC_RETRY_ATTEMPTS = 30;
+const PUBLIC_RETRY_DELAY_MS = 4_000;
+const PUBLIC_RETRY_STATUSES = new Set([403, 404, 408, 425, 429, 500, 502, 503, 504]);
 const DOWNLOAD_KEYS = ["DOWNLOAD_FIRE_TV_URL", "DOWNLOAD_ANDROID_TV_URL", "DOWNLOAD_ANDROID_MOBILE_URL"];
 
 function parseArgs(argv) {
@@ -91,6 +94,10 @@ Deploy the website separately with "flyctl deploy --app streaminghub-org".
 
 function fail(message) {
   throw new Error(message);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function run(command, args, { cwd = ROOT, env = process.env, capture = false } = {}) {
@@ -281,12 +288,36 @@ async function updateDownloadUrls(file, url, style, dryRun) {
   return updated !== original;
 }
 
+async function fetchPublic(url, init, { attempts = PUBLIC_RETRY_ATTEMPTS, timeoutMs = 30_000 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!PUBLIC_RETRY_STATUSES.has(response.status) || attempt === attempts) {
+        return response;
+      }
+      lastError = new Error(`HTTP ${response.status}`);
+      await response.body?.cancel();
+    } catch (error) {
+      lastError = error;
+    }
+    console.warn(
+      `Public URL not ready (${lastError instanceof Error ? lastError.message : String(lastError)}); ` +
+        `retry ${attempt + 1}/${attempts} in ${PUBLIC_RETRY_DELAY_MS / 1000}s ...`,
+    );
+    await sleep(PUBLIC_RETRY_DELAY_MS);
+  }
+  throw lastError ?? new Error("Public URL request failed");
+}
+
 async function verifyPublicObject(url, sizeBytes, sha256) {
   console.log(`Verifying ${url} ...`);
-  const head = await fetch(url, {
+  const head = await fetchPublic(url, {
     method: "HEAD",
     cache: "no-store",
-    signal: AbortSignal.timeout(30_000),
   });
   if (!head.ok) fail(`Public URL returned HTTP ${head.status} (expected 200)`);
   const contentLength = head.headers.get("content-length");
@@ -295,10 +326,9 @@ async function verifyPublicObject(url, sizeBytes, sha256) {
   }
 
   const cacheBusted = `${url}${url.includes("?") ? "&" : "?"}v=${sha256}`;
-  const response = await fetch(cacheBusted, {
+  const response = await fetchPublic(cacheBusted, {
     cache: "no-store",
-    signal: AbortSignal.timeout(120_000),
-  });
+  }, { timeoutMs: 120_000 });
   if (!response.ok) fail(`Public download returned HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.byteLength !== sizeBytes) {
