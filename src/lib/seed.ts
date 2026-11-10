@@ -6,9 +6,9 @@ const FAQ_SEED = [
   {
     category: "playlist",
     q_de: "Wie füge ich meine eigene Playlist hinzu?",
-    a_de: "Öffne StreamingHub auf deinem Gerät und wähle „Playlist hinzufügen“. Hinterlege die Zugangsdaten oder die M3U-URL deines Anbieters. StreamingHub speichert die Zugangsdaten auf dem Gerät und ruft die Inhalte ausschließlich für dich ab. Bitte verwende nur Quellen, für die du eine gültige Nutzungsberechtigung besitzt.",
+    a_de: "Öffne StreamingHub auf deinem Gerät und wähle „Playlist hinzufügen“. Hinterlege die Zugangsdaten oder die M3U-URL deines Anbieters. Die App speichert die Playlist und ihre Zugangsdaten lokal auf dem Gerät. Bittest du uns ausdrücklich, eine von dir selbst bereitgestellte M3U-URL für dein Konto zu hinterlegen, wird diese URL serverseitig gespeichert und ausschließlich an das ausgewählte aktive gekoppelte Gerät übermittelt; die Playlist-Inhalte bleiben lokal. Bitte verwende nur Quellen, für die du eine gültige Nutzungsberechtigung besitzt.",
     q_en: "How do I add my own playlist?",
-    a_en: "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. StreamingHub stores the credentials on the device and only loads the content on your behalf. Please only use sources you are licensed to access.",
+    a_en: "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. The app stores the playlist and its credentials locally on the device. If you expressly ask us to store an M3U URL that you provided yourself for your account, that URL is stored on the server and sent only to the selected active linked device; playlist content remains local. Please only use sources you are licensed to access.",
   },
   {
     category: "installation",
@@ -89,7 +89,70 @@ const FAQ_SEED = [
   },
 ];
 
+/**
+ * Legacy FAQ copy, used only to match rows seeded before the managed-playlist
+ * disclosure. It is replaced by the current FAQ answer during bootstrap.
+ */
+const LEGACY_PLAYLIST_FAQ_DE =
+  "Öffne StreamingHub auf deinem Gerät und wähle „Playlist hinzufügen“. Hinterlege die Zugangsdaten oder die M3U-URL deines Anbieters. StreamingHub speichert die Zugangsdaten auf dem Gerät und ruft die Inhalte ausschließlich für dich ab. Bitte verwende nur Quellen, für die du eine gültige Nutzungsberechtigung besitzt.";
+const LEGACY_PLAYLIST_FAQ_EN =
+  "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. StreamingHub stores the credentials on the device and only loads the content on your behalf. Please only use sources you are licensed to access.";
+
+/**
+ * Previous FAQ answer from the first managed-playlist disclosure. Kept only
+ * to migrate existing rows without overwriting manual admin edits.
+ */
+const PREVIOUS_PLAYLIST_FAQ_DE =
+  "Öffne StreamingHub auf deinem Gerät und wähle „Playlist hinzufügen“. Hinterlege die Zugangsdaten oder die M3U-URL deines Anbieters. Die App speichert die Playlist und ihre Zugangsdaten lokal auf dem Gerät. Hinterlegt ein Administrator eine M3U-URL für dein Konto, wird diese URL serverseitig gespeichert und ausschließlich an aktive gekoppelte Geräte übermittelt; die Playlist-Inhalte bleiben lokal. Bitte verwende nur Quellen, für die du eine gültige Nutzungsberechtigung besitzt.";
+const PREVIOUS_PLAYLIST_FAQ_EN =
+  "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. The app stores the playlist and its credentials locally on the device. If an administrator stores an M3U URL for your account, that URL is stored on the server and sent only to active linked devices; playlist content remains local. Please only use sources you are licensed to access.";
+
+/**
+ * FAQ answer from the account-wide managed-playlist disclosure. It predates
+ * device-specific assignment and is migrated on bootstrap, but only when the
+ * row still matches the seeded copy.
+ */
+const PREVIOUS_SELECTED_DEVICE_FAQ_DE =
+  "Öffne StreamingHub auf deinem Gerät und wähle „Playlist hinzufügen“. Hinterlege die Zugangsdaten oder die M3U-URL deines Anbieters. Die App speichert die Playlist und ihre Zugangsdaten lokal auf dem Gerät. Bittest du uns ausdrücklich, eine von dir selbst bereitgestellte M3U-URL für dein Konto zu hinterlegen, wird diese URL serverseitig gespeichert und ausschließlich an aktive gekoppelte Geräte übermittelt; die Playlist-Inhalte bleiben lokal. Bitte verwende nur Quellen, für die du eine gültige Nutzungsberechtigung besitzt.";
+const PREVIOUS_SELECTED_DEVICE_FAQ_EN =
+  "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. The app stores the playlist and its credentials locally on the device. If you expressly ask us to store an M3U URL that you provided yourself for your account, that URL is stored on the server and sent only to active linked devices; playlist content remains local. Please only use sources you are licensed to access.";
+
+function syncLegacyPlaylistFaqCopy() {
+  const target = FAQ_SEED.find(
+    (item) => item.q_de === "Wie füge ich meine eigene Playlist hinzu?",
+  );
+  if (!target) return;
+
+  const current = get<{ answer_de: string; answer_en: string }>(
+    `SELECT answer_de, answer_en FROM faq_items WHERE question_de = ?`,
+    target.q_de,
+  );
+  if (!current) return;
+
+  const matchesLegacy =
+    current.answer_de === LEGACY_PLAYLIST_FAQ_DE &&
+    current.answer_en === LEGACY_PLAYLIST_FAQ_EN;
+  const matchesPrevious =
+    current.answer_de === PREVIOUS_PLAYLIST_FAQ_DE &&
+    current.answer_en === PREVIOUS_PLAYLIST_FAQ_EN;
+  const matchesSelectedDevice =
+    current.answer_de === PREVIOUS_SELECTED_DEVICE_FAQ_DE &&
+    current.answer_en === PREVIOUS_SELECTED_DEVICE_FAQ_EN;
+  if (!matchesLegacy && !matchesPrevious && !matchesSelectedDevice) {
+    return;
+  }
+
+  run(
+    `UPDATE faq_items SET answer_de = ?, answer_en = ?, updated_at = ? WHERE question_de = ?`,
+    target.a_de,
+    target.a_en,
+    nowIso(),
+    target.q_de,
+  );
+}
+
 function seedFaq() {
+  syncLegacyPlaylistFaqCopy();
   const count = get<{ c: number }>(`SELECT COUNT(*) AS c FROM faq_items`)?.c ?? 0;
   if (count > 0) return;
   FAQ_SEED.forEach((item, index) => {

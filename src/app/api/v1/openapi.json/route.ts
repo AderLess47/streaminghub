@@ -10,7 +10,7 @@ const spec = {
     title: "StreamingHub App API",
     version: "1.0.0",
     description:
-      "Pairing and device endpoints used by the StreamingHub Fire TV / Android app. StreamingHub provides no content; the app only receives device activation status and account/subscription metadata.",
+      "Pairing and device endpoints used by the StreamingHub Fire TV / Android app. StreamingHub provides no content; an active paired device receives device activation status, account/subscription metadata and the optional admin-managed M3U source URL.",
   },
   servers: [{ url: "/", description: "Same origin as streaminghub.org" }],
   paths: {
@@ -92,19 +92,38 @@ const spec = {
     },
     "/api/v1/me": {
       get: {
-        summary: "Account, device and subscription status",
+        summary: "Account, device, subscription and managed playlist status",
         description:
-          "Bearer activation token issued after successful pairing. Returns 403 once the device has been unlinked, which makes unlinking effective immediately.",
+          "Bearer activation token issued after successful pairing. Returns the optional customer-confirmed, admin-managed M3U source URL only to the selected active device (legacy account-wide rows remain readable by all active devices); playlist content remains on the device. Returns 403 once the device has been unlinked, which makes unlinking effective immediately.",
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
             description: "Current activation status",
             content: {
               "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    account: { type: "object" },
+                    device: { type: "object" },
+                    subscription: { type: "object" },
+                    playlist: {
+                      type: ["object", "null"],
+                      properties: {
+                        url: { type: "string", format: "uri" },
+                        updatedAt: { type: "string", format: "date-time" },
+                      },
+                    },
+                  },
+                },
                 example: {
                   account: { email: "kunde@example.com", displayName: "Kunde" },
                   device: { id: "dev_x", name: "Wohnzimmer TV", platform: "firetv", activationStatus: "active" },
                   subscription: { plan: "premium", status: "none", channel: "web", premiumActive: false },
+                  playlist: {
+                    url: "https://anbieter.example/playlist.m3u",
+                    updatedAt: "2026-11-10T12:00:00.000Z",
+                  },
                 },
               },
             },

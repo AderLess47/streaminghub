@@ -53,6 +53,15 @@ function migrate(db: DatabaseSync) {
     if (!existing.has(name)) db.exec(`ALTER TABLE outbox_emails ADD COLUMN ${definition}`);
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_outbox_provider ON outbox_emails(provider_id)");
+
+  const playlistColumns = db.prepare("PRAGMA table_info(customer_playlists)").all() as { name: string }[];
+  if (!playlistColumns.some((column) => column.name === "customer_requested")) {
+    db.exec("ALTER TABLE customer_playlists ADD COLUMN customer_requested INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!playlistColumns.some((column) => column.name === "device_id")) {
+    db.exec("ALTER TABLE customer_playlists ADD COLUMN device_id TEXT REFERENCES devices(id) ON DELETE CASCADE");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_customer_playlists_device ON customer_playlists(device_id)");
 }
 
 function prepare(sql: string): Statement {

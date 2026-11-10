@@ -638,6 +638,45 @@ export const de = {
       disable: "Konto deaktivieren",
       enable: "Konto aktivieren",
       detail: "Kundendetail",
+      playlistTitle: "M3U-Playlist",
+      playlistDescription:
+        "Hinterlege die M3U-Quelle nur auf ausdrückliche Anfrage des Kunden. Die Quelle wird einem aktiven gekoppelten Gerät zugeordnet; die gekoppelten Geräte sind daneben aufgeführt.",
+      playlistConfigured: "Hinterlegt",
+      playlistMissing: "Nicht hinterlegt",
+      playlistUnconfirmedBadge: "Bestätigung fehlt",
+      playlistUrl: "M3U-URL",
+      playlistPlaceholder: "https://anbieter.example/playlist.m3u",
+      playlistHint:
+        "Nur vom Kunden selbst bereitgestellte HTTP(S)-URLs. Die URL kann Zugangsdaten enthalten und wird im Adminbereich sowie auf dem ausgewählten aktiven Gerät des Kunden verwendet.",
+      playlistDevice: "Zielgerät",
+      playlistDevicePlaceholder: "Aktives Gerät auswählen",
+      playlistDeviceHint:
+        "Die URL wird ausschließlich an dieses aktive Gerät ausgeliefert. Wird ein anderes Gerät gewählt, entfernt die App die bisherige Playlist auf dem alten Gerät.",
+      playlistDeviceRequired: "Bitte wähle ein aktives Gerät aus.",
+      playlistDeviceInactive:
+        "Das bisher zugeordnete Gerät ist nicht mehr aktiv. Bitte wähle ein anderes Gerät oder entferne die Playlist.",
+      playlistNoActiveDevices:
+        "Für diesen Kunden ist kein aktives Gerät gekoppelt. Die Playlist kann erst nach der Gerätekopplung zugeordnet werden.",
+      playlistAllDevices: "Alle aktiven Geräte (Altbestand)",
+      playlistAdd: "Playlist hinzufügen",
+      playlistDevices: "Gekoppelte Geräte",
+      playlistUpdated: "Zuletzt geändert",
+      playlistUpdatedBy: "Geändert von",
+      playlistDelete: "Playlist entfernen",
+      playlistDeleteConfirm: "M3U-Playlist für diesen Kunden wirklich entfernen?",
+      playlistSaved: "M3U-Playlist gespeichert.",
+      playlistDeleted: "M3U-Playlist entfernt.",
+      playlistInvalid: "Bitte gib eine gültige HTTP(S)-M3U-URL ein.",
+      playlistRequestRequired:
+        "Bitte bestätige, dass der Kunde die URL selbst bereitgestellt und die Hinterlegung ausdrücklich verlangt hat.",
+      playlistUnconfirmed:
+        "Diese gespeicherte URL ist nicht als vom Kunden bereitgestellt bestätigt. Sie wird weder an Geräte ausgeliefert noch in den Datenexport aufgenommen. Bitte entfernen oder nach Bestätigung erneut speichern.",
+      playlistCustomerRequest:
+        "Der Kunde hat diese URL selbst bereitgestellt und die Hinterlegung ausdrücklich verlangt.",
+      playlistSourceWarning:
+        "Keine eigenen, geteilten oder erkennbar rechtswidrigen Quellen eintragen.",
+      playlistSecurityNote:
+        "Die M3U-URL wird serverseitig für dieses Kundenkonto gespeichert und ausschließlich an das ausgewählte aktive gekoppelte Gerät übermittelt. Im Audit-Log wird nur der Host festgehalten. Nur speichern, wenn der Kunde die URL selbst bereitgestellt und die Hinterlegung ausdrücklich verlangt hat.",
       resetMfa: "MFA zurücksetzen",
       roleUpdated: "Rolle aktualisiert.",
       statusUpdated: "Kontostatus aktualisiert.",

@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Icon } from "@/components/icons";
-import { Badge, InfoRow, PageHeader } from "@/components/ui";
+import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import {
+  deleteCustomerPlaylistAction,
   resetCustomerMfaAction,
+  saveCustomerPlaylistAction,
   toggleCustomerDisabledAction,
   updateCustomerRoleAction,
 } from "@/lib/actions/admin";
@@ -28,12 +31,15 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminCustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ ok?: string; error?: string }>;
 }) {
-  await requireStaff();
+  const staff = await requireStaff();
   const { t, locale } = await getI18n();
   const { id } = await params;
+  const query = await searchParams;
 
   const user = get<UserRow>(`SELECT * FROM users WHERE id = ?`, id);
   if (!user) notFound();
@@ -42,6 +48,25 @@ export default async function AdminCustomerDetailPage({
     `SELECT id, name, platform, status, activated_at FROM devices WHERE user_id = ? ORDER BY created_at DESC`,
     id,
   );
+  const playlist = get<{
+    url: string;
+    device_id: string | null;
+    device_name: string | null;
+    customer_requested: number;
+    updated_at: string;
+    updated_by_email: string | null;
+  }>(
+    `SELECT p.url, p.device_id, d.name AS device_name, p.customer_requested, p.updated_at, u.email AS updated_by_email
+     FROM customer_playlists p
+     LEFT JOIN users u ON u.id = p.updated_by
+     LEFT JOIN devices d ON d.id = p.device_id
+     WHERE p.user_id = ?`,
+    id,
+  );
+  const activeDevices = devices.filter((device) => device.status === "active");
+  const playlistDeviceInactive =
+    Boolean(playlist?.device_id) && !activeDevices.some((device) => device.id === playlist?.device_id);
+
   const subscription = get<{ status: string; channel: string; provider: string; current_period_end: string | null; cancel_at_period_end: number }>(
     `SELECT status, channel, provider, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = ?`,
     id,
@@ -70,7 +95,165 @@ export default async function AdminCustomerDetailPage({
         </Link>
       </PageHeader>
 
+      {query.ok === "playlist" ? (
+        <Alert tone="success">{t.admin.customers.playlistSaved}</Alert>
+      ) : null}
+      {query.ok === "playlist-deleted" ? (
+        <Alert tone="success">{t.admin.customers.playlistDeleted}</Alert>
+      ) : null}
+      {query.error === "playlist" ? (
+        <Alert tone="danger">{t.admin.customers.playlistInvalid}</Alert>
+      ) : null}
+      {query.error === "playlist-request" ? (
+        <Alert tone="danger">{t.admin.customers.playlistRequestRequired}</Alert>
+      ) : null}
+      {query.error === "playlist-device" ? (
+        <Alert tone="danger">{t.admin.customers.playlistDeviceRequired}</Alert>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
+        {staff.role === "admin" ? (
+          <section className="card p-5 lg:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold">{t.admin.customers.playlistTitle}</h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  {t.admin.customers.playlistDescription}
+                </p>
+              </div>
+              <Badge tone={playlist ? (playlist.customer_requested ? "ok" : "danger") : "warn"}>
+                {playlist
+                  ? playlist.customer_requested
+                    ? t.admin.customers.playlistConfigured
+                    : t.admin.customers.playlistUnconfirmedBadge
+                  : t.admin.customers.playlistMissing}
+              </Badge>
+            </div>
+
+            {playlist && !playlist.customer_requested ? (
+              <Alert tone="danger">{t.admin.customers.playlistUnconfirmed}</Alert>
+            ) : null}
+            {playlistDeviceInactive ? (
+              <Alert tone="danger">{t.admin.customers.playlistDeviceInactive}</Alert>
+            ) : null}
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_20rem]">
+              <form action={saveCustomerPlaylistAction} className="grid gap-3">
+                <input type="hidden" name="userId" value={user.id} />
+                <input type="hidden" name="returnTo" value={`/admin/customers/${user.id}`} />
+                <div>
+                  <label htmlFor="customer-playlist-url" className="field-label">
+                    {t.admin.customers.playlistUrl}
+                  </label>
+                  <input
+                    id="customer-playlist-url"
+                    name="url"
+                    type="url"
+                    required
+                    defaultValue={playlist?.url ?? ""}
+                    placeholder={t.admin.customers.playlistPlaceholder}
+                    className="field font-mono text-xs"
+                    autoComplete="off"
+                    spellCheck={false}
+                    dir="ltr"
+                  />
+                  <p className="mt-1.5 text-[0.68rem] leading-relaxed text-muted">
+                    {t.admin.customers.playlistHint}
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="customer-playlist-device" className="field-label">
+                    {t.admin.customers.playlistDevice}
+                  </label>
+                  <select
+                    id="customer-playlist-device"
+                    name="deviceId"
+                    required
+                    defaultValue={playlist?.device_id ?? ""}
+                    disabled={activeDevices.length === 0}
+                    className="field"
+                  >
+                    <option value="" disabled>
+                      {t.admin.customers.playlistDevicePlaceholder}
+                    </option>
+                    {activeDevices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.name} · {device.platform}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-[0.68rem] leading-relaxed text-muted">
+                    {t.admin.customers.playlistDeviceHint}
+                  </p>
+                  {activeDevices.length === 0 ? (
+                    <p className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/6 p-2.5 text-[0.68rem] leading-relaxed text-amber-200/90">
+                      {t.admin.customers.playlistNoActiveDevices}
+                    </p>
+                  ) : null}
+                </div>
+                <label className="flex items-start gap-2 rounded-lg border border-line/60 bg-white/2 p-3 text-xs leading-relaxed">
+                  <input type="checkbox" name="customerRequested" value="1" required className="mt-0.5" />
+                  <span>{t.admin.customers.playlistCustomerRequest}</span>
+                </label>
+                <p className="text-[0.68rem] leading-relaxed text-muted">
+                  {t.admin.customers.playlistSourceWarning}
+                </p>
+                <button
+                  type="submit"
+                  disabled={activeDevices.length === 0}
+                  className="btn btn-primary btn-sm justify-self-start"
+                >
+                  {playlist ? t.ui.save : t.admin.customers.playlistAdd}
+                </button>
+              </form>
+
+              <div className="rounded-xl border border-line/60 bg-white/2 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-semibold">{t.admin.customers.playlistDevices}</h3>
+                  <Badge tone="brand">{activeDevices.length}</Badge>
+                </div>
+                <ul className="mt-2 divide-y divide-line/40">
+                  {devices.map((device) => (
+                    <li key={device.id} className="flex items-center justify-between gap-2 py-1.5 text-xs">
+                      <span className="truncate">
+                        {device.name} <span className="text-muted">· {device.platform}</span>
+                      </span>
+                      <Badge tone={device.status === "active" ? "ok" : "neutral"}>{device.status}</Badge>
+                    </li>
+                  ))}
+                  {devices.length === 0 ? (
+                    <li className="py-2 text-xs text-muted">{t.admin.devices.empty}</li>
+                  ) : null}
+                </ul>
+                {playlist ? (
+                  <div className="mt-3">
+                    <InfoRow label={t.admin.customers.playlistUpdated} value={fmt(playlist.updated_at)} />
+                    <InfoRow label={t.admin.customers.playlistUpdatedBy} value={playlist.updated_by_email ?? "—"} />
+                    <InfoRow
+                      label={t.admin.customers.playlistDevice}
+                      value={playlist.device_name ?? t.admin.customers.playlistAllDevices}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {playlist ? (
+              <form action={deleteCustomerPlaylistAction} className="mt-4 border-t border-line/40 pt-3">
+                <input type="hidden" name="userId" value={user.id} />
+                <input type="hidden" name="returnTo" value={`/admin/customers/${user.id}`} />
+                <ConfirmSubmitButton message={t.admin.customers.playlistDeleteConfirm}>
+                  {t.admin.customers.playlistDelete}
+                </ConfirmSubmitButton>
+              </form>
+            ) : null}
+
+            <p className="mt-3 text-[0.68rem] leading-relaxed text-muted">
+              {t.admin.customers.playlistSecurityNote}
+            </p>
+          </section>
+        ) : null}
+
         <section className="card p-5">
           <h2 className="text-sm font-semibold">{t.admin.customers.detail}</h2>
           <div className="mt-3">
