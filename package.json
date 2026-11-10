@@ -12,6 +12,7 @@
     "start": "next start",
     "start:standalone": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
+    "test:download-page": "node --test scripts/download-page.test.mjs",
     "db:init": "node scripts/init-db.mjs",
     "release:apk": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.release scripts/release-apk.mjs",
     "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mjs",

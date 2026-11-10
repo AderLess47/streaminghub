@@ -300,6 +300,10 @@ export const en: Dictionary = {
     amazonCta: "Open in Amazon Appstore",
     amazonPlaceholder: "Amazon Appstore listing not available yet",
     sideloadTitle: "Android sideload installation",
+    downloaderTitle: "Fire TV Downloader",
+    downloaderHint:
+      "Enter this short direct link in the Downloader app — not the /download page:",
+    downloaderUrl: "streaminghub.org/app.apk",
     sideloadSteps: [
       "Download the APK directly on the target device or transfer it via USB or a downloader app.",
       "In system settings, allow installation from unknown sources for the app you use to open the file.",

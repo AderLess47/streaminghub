@@ -303,6 +303,10 @@ export const de = {
     amazonCta: "Im Amazon Appstore öffnen",
     amazonPlaceholder: "Amazon-Appstore-Listung noch nicht verfügbar",
     sideloadTitle: "Android-Sideload-Installation",
+    downloaderTitle: "Fire TV Downloader",
+    downloaderHint:
+      "Gib in der Downloader-App diesen kurzen Direktlink ein – nicht die Seite /download:",
+    downloaderUrl: "streaminghub.org/app.apk",
     sideloadSteps: [
       "Lade die APK direkt auf dem Zielgerät herunter oder übertrage sie per USB bzw. Downloader-App.",
       "Erlaube in den Systemeinstellungen die Installation aus unbekannten Quellen für die App, mit der du die Datei öffnest.",
