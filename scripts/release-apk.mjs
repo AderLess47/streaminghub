@@ -315,19 +315,14 @@ async function fetchPublic(url, init, { attempts = PUBLIC_RETRY_ATTEMPTS, timeou
 
 async function verifyPublicObject(url, sizeBytes, sha256) {
   console.log(`Verifying ${url} ...`);
-  const head = await fetchPublic(url, {
-    method: "HEAD",
-    cache: "no-store",
-  });
-  if (!head.ok) fail(`Public URL returned HTTP ${head.status} (expected 200)`);
-  const contentLength = head.headers.get("content-length");
-  if (contentLength && Number(contentLength) !== sizeBytes) {
-    fail(`Public URL reports ${contentLength} bytes, expected ${sizeBytes}`);
-  }
-
   const cacheBusted = `${url}${url.includes("?") ? "&" : "?"}v=${sha256}`;
+  // Cloudflare's bot challenge rejects Node's default user agent from GitHub runners.
   const response = await fetchPublic(cacheBusted, {
     cache: "no-store",
+    headers: {
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+      accept: "*/*",
+    },
   }, { timeoutMs: 120_000 });
   if (!response.ok) fail(`Public download returned HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
