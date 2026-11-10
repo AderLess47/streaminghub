@@ -26,6 +26,11 @@ data class PairingPollData(
     val activationToken: String?,
 )
 
+data class ManagedPlaylist(
+    val url: String,
+    val updatedAt: String?,
+)
+
 data class AccountInfo(
     val email: String,
     val displayName: String,
@@ -37,11 +42,13 @@ data class AccountInfo(
     val channel: String,
     val currentPeriodEnd: String?,
     val premiumActive: Boolean,
+    val playlist: ManagedPlaylist? = null,
 )
 
 /**
- * Only account, device and subscription metadata is sent to StreamingHub.
- * Playlists, EPG documents and stream URLs stay on the device.
+ * Account, device, subscription metadata and the optional admin-managed M3U
+ * source URL are exchanged with StreamingHub. Playlist content, EPG documents
+ * and stream URLs stay on the device.
  */
 class StreamingHubApi(
     private val baseUrl: String = "https://streaminghub.org",
@@ -100,6 +107,7 @@ class StreamingHubApi(
         val account = json.optJSONObject("account")
         val device = json.optJSONObject("device")
         val subscription = json.optJSONObject("subscription")
+        val playlistJson = json.optJSONObject("playlist")
 
         AccountInfo(
             email = account?.optString("email").orEmpty(),
@@ -115,6 +123,18 @@ class StreamingHubApi(
             currentPeriodEnd = subscription?.optString("currentPeriodEnd")
                 ?.takeIf { it.isNotBlank() },
             premiumActive = subscription?.optBoolean("premiumActive", false) ?: false,
+            playlist = playlistJson?.let { source ->
+                source.optString("url")
+                    .trim()
+                    .takeIf { it.isNotBlank() }
+                    ?.let { url ->
+                        ManagedPlaylist(
+                            url = url,
+                            updatedAt = source.optString("updatedAt")
+                                .takeIf { it.isNotBlank() },
+                        )
+                    }
+            },
         )
     }
 

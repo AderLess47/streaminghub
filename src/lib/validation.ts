@@ -51,6 +51,23 @@ export const activateSchema = z.object({
   deviceName: z.string().trim().max(60).optional(),
 });
 
+export const m3uPlaylistSchema = z.object({
+  deviceId: z.string().trim().min(1, "Bitte wähle ein Gerät aus."),
+  url: z
+    .string()
+    .trim()
+    .min(8, "Bitte gib eine M3U-URL ein.")
+    .max(4096, "Die M3U-URL ist zu lang.")
+    .refine((value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, "Bitte gib eine gültige HTTP(S)-M3U-URL ein."),
+});
+
 export const contactSchema = z.object({
   name: z.string().trim().min(2, "Bitte gib deinen Namen an.").max(80),
   email,

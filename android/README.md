@@ -3,7 +3,7 @@
 Universelle Android-App für Fire TV, Android TV, Smartphones und Tablets.
 Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 
-## Funktionen der Version 1.2
+## Funktionen
 
 - M3U-/M3U8-Import per URL oder Datei
 - Automatische Einordnung in Live-TV, Filme und Serien
@@ -14,6 +14,7 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Playlist aktualisieren und lokal entfernen
 - Gerätekopplung über einen Einmalcode auf `streaminghub.org/activate`
 - Anzeige von Konto, Gerät und Premium-Status über die StreamingHub-API
+- Automatische Übernahme einer vom Admin hinterlegten M3U-URL für gekoppelte Geräte
 - Verschlüsselte lokale Speicherung des Aktivierungstokens (Android Keystore)
 - XMLTV-EPG-Import per URL oder Datei
 - Programmführer mit laufender und nächster Sendung
@@ -25,9 +26,11 @@ StreamingHub stellt keine Sender, Filme, Serien oder Playlists bereit. Die
 App verarbeitet ausschließlich die vom Nutzer hinzugefügten Quellen.
 
 Die Konto-Kopplung ist optional. Für die Aktivierung werden nur Gerätename,
-Plattform und App-Version an StreamingHub übertragen; Playlist, EPG und
-Wiedergabedaten bleiben lokal. Zahlungen, VPN/Proxy, Profile und weitere
-Sprachpakete sind noch nicht Teil dieser Version.
+Plattform und App-Version an StreamingHub übertragen; Playlist-Inhalte, EPG und
+Wiedergabedaten bleiben lokal. Eine vom Admin hinterlegte M3U-URL wird beim
+Kontoabruf empfangen und die Playlist anschließend lokal geladen. Zahlungen,
+VPN/Proxy, Profile und weitere Sprachpakete sind noch nicht Teil dieser
+Version.
 
 ## Voraussetzungen
 

@@ -5,7 +5,7 @@ import { effectiveStatus, getSubscription } from "@/lib/payments";
 
 export const runtime = "nodejs";
 
-/** Authenticated app endpoint: account, device and subscription status. */
+/** Authenticated app endpoint: account, device, subscription and managed playlist status. */
 export async function GET(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
@@ -31,6 +31,13 @@ export async function GET(request: Request) {
 
   const subscription = getSubscription(payload.userId);
   const status = effectiveStatus(subscription);
+  const playlist = get<{ url: string; updated_at: string }>(
+    `SELECT url, updated_at FROM customer_playlists
+     WHERE user_id = ? AND customer_requested = 1
+       AND (device_id IS NULL OR device_id = ?)`,
+    payload.userId,
+    payload.deviceId,
+  );
 
   return json({
     account: { email: user.email, displayName: user.display_name },
@@ -48,5 +55,6 @@ export async function GET(request: Request) {
       currentPeriodEnd: subscription?.current_period_end ?? null,
       premiumActive: status === "active",
     },
+    playlist: playlist ? { url: playlist.url, updatedAt: playlist.updated_at } : null,
   });
 }

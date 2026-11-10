@@ -8,6 +8,7 @@ import { get, nowIso, run } from "@/lib/db";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
 import { requireAdmin, requireStaff, getSessionUser } from "@/lib/session";
+import { m3uPlaylistSchema } from "@/lib/validation";
 
 export type MfaState = {
   ok: boolean;
@@ -25,6 +26,14 @@ function adminPath(formData: FormData, fallback: string) {
 
 function fail(message: string): never {
   redirect(`/admin?error=${encodeURIComponent(message)}`);
+}
+
+function playlistHost(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
 }
 
 export async function updateCustomerRoleAction(formData: FormData) {
@@ -99,6 +108,100 @@ export async function resetCustomerMfaAction(formData: FormData) {
   });
   revalidatePath("/admin/customers");
   redirect(`${adminPath(formData, "/admin/customers")}?ok=mfa`);
+}
+
+export async function saveCustomerPlaylistAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const returnTo = adminPath(formData, `/admin/customers/${userId}`);
+  const target = get<{ email: string }>(`SELECT email FROM users WHERE id = ?`, userId);
+  if (!target) return;
+
+  const customerRequested = String(formData.get("customerRequested") ?? "") === "1";
+  if (!customerRequested) redirect(`${returnTo}?error=playlist-request`);
+
+  const parsed = m3uPlaylistSchema.safeParse({
+    url: formData.get("url"),
+    deviceId: formData.get("deviceId"),
+  });
+  if (!parsed.success) {
+    const deviceIssue = parsed.error.issues.some((issue) => issue.path[0] === "deviceId");
+    redirect(`${returnTo}?error=${deviceIssue ? "playlist-device" : "playlist"}`);
+  }
+
+  const device = get<{ id: string; name: string; status: string }>(
+    `SELECT id, name, status FROM devices WHERE id = ? AND user_id = ?`,
+    parsed.data.deviceId,
+    userId,
+  );
+  if (!device || device.status !== "active") {
+    redirect(`${returnTo}?error=playlist-device`);
+  }
+
+  const existing = get<{ user_id: string }>(
+    `SELECT user_id FROM customer_playlists WHERE user_id = ?`,
+    userId,
+  );
+  const now = nowIso();
+  run(
+    `INSERT INTO customer_playlists (user_id, device_id, url, updated_by, customer_requested, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 1, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       device_id = excluded.device_id,
+       url = excluded.url,
+       updated_by = excluded.updated_by,
+       customer_requested = 1,
+       updated_at = excluded.updated_at`,
+    userId,
+    parsed.data.deviceId,
+    parsed.data.url,
+    admin.id,
+    now,
+    now,
+  );
+
+  logAudit({
+    action: existing ? "admin.customer_playlist_updated" : "admin.customer_playlist_added",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "customer_playlist",
+    targetId: userId,
+    meta: {
+      targetEmail: target.email,
+      host: playlistHost(parsed.data.url),
+      customerRequested: true,
+      deviceId: device.id,
+      deviceName: device.name,
+    },
+  });
+  revalidatePath(`/admin/customers/${userId}`);
+  redirect(`${returnTo}?ok=playlist`);
+}
+
+export async function deleteCustomerPlaylistAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const returnTo = adminPath(formData, `/admin/customers/${userId}`);
+  const target = get<{ email: string }>(`SELECT email FROM users WHERE id = ?`, userId);
+  if (!target) return;
+
+  const existing = get<{ url: string }>(
+    `SELECT url FROM customer_playlists WHERE user_id = ?`,
+    userId,
+  );
+  if (!existing) return;
+
+  run(`DELETE FROM customer_playlists WHERE user_id = ?`, userId);
+  logAudit({
+    action: "admin.customer_playlist_deleted",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "customer_playlist",
+    targetId: userId,
+    meta: { targetEmail: target.email, host: playlistHost(existing.url) },
+  });
+  revalidatePath(`/admin/customers/${userId}`);
+  redirect(`${returnTo}?ok=playlist-deleted`);
 }
 
 export async function revokeDeviceAction(formData: FormData) {

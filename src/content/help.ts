@@ -23,7 +23,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Vergib einen Namen (z. B. „Wohnzimmer“) und speichere die Playlist.",
         "Starte die Aktualisierung und prüfe, ob Kanäle und Kategorien erscheinen.",
       ],
-      note: "Nutze ausschließlich Quellen, für die du eine gültige Zugriffsberechtigung besitzt. Zugangsdaten werden nicht an StreamingHub-Server übertragen, sondern auf dem Gerät gespeichert.",
+      note: "Nutze ausschließlich Quellen, für die du eine gültige Zugriffsberechtigung besitzt. Bei lokaler Eingabe bleiben Zugangsdaten auf dem Gerät. Eine vom Administrator hinterlegte M3U-URL wird nur auf deine ausdrückliche Anfrage und nur dann gespeichert, wenn du die URL selbst bereitstellst; sie kann Zugangsdaten enthalten und wird ausschließlich an das ausgewählte aktive gekoppelte Gerät übermittelt. Playlist-Inhalte bleiben lokal.",
     },
     en: {
       intro:
@@ -34,7 +34,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Give the playlist a name (e.g. “Living room”) and save it.",
         "Start the refresh and check whether channels and categories appear.",
       ],
-      note: "Only use sources you are licensed to access. Credentials are not sent to StreamingHub servers; they are stored on the device.",
+      note: "Only use sources you are licensed to access. Credentials entered locally stay on the device. An M3U URL stored by an administrator is stored only at your express request and only if you provided the URL yourself; it may contain credentials and is sent only to the selected active linked device. Playlist content remains local.",
     },
   },
   install: {

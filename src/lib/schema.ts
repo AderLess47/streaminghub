@@ -3,6 +3,10 @@
  * All timestamps are ISO-8601 UTC strings.
  */
 export const SCHEMA_SQL = `
+-- Only statements that are valid on every historical database belong here.
+-- Indexes on columns added by migrate() (e.g. customer_playlists.device_id,
+-- outbox_emails.provider_id) are created inside migrate() after the column exists;
+-- otherwise CREATE INDEX fails on an old database before migrate() can run.
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
@@ -65,6 +69,16 @@ CREATE TABLE IF NOT EXISTS devices (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
+
+CREATE TABLE IF NOT EXISTS customer_playlists (
+  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  device_id TEXT REFERENCES devices(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  updated_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+  customer_requested INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS device_tokens (
   token_hash TEXT PRIMARY KEY,

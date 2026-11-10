@@ -11,6 +11,7 @@ import de.streaminghub.app.data.AccountInfo
 import de.streaminghub.app.data.DeviceIdentity
 import de.streaminghub.app.data.EpgRepository
 import de.streaminghub.app.data.M3uParser
+import de.streaminghub.app.data.ManagedPlaylist
 import de.streaminghub.app.data.PairingCodeData
 import de.streaminghub.app.data.PlaylistRepository
 import de.streaminghub.app.data.SecureTokenStore
@@ -33,6 +34,31 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 
+private const val MANAGED_PLAYLIST_LABEL = "Admin-Playlist"
+
+internal enum class ManagedPlaylistSyncAction { KEEP, CLEAR, MARK_MANAGED, LOAD }
+
+internal fun managedPlaylistSyncAction(
+    currentSourceUrl: String?,
+    currentManaged: Boolean,
+    remote: ManagedPlaylist?,
+): ManagedPlaylistSyncAction {
+    if (remote == null) {
+        return if (currentManaged) ManagedPlaylistSyncAction.CLEAR else ManagedPlaylistSyncAction.KEEP
+    }
+
+    val url = remote.url.trim()
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return ManagedPlaylistSyncAction.KEEP
+    }
+
+    if (currentSourceUrl == url) {
+        return if (currentManaged) ManagedPlaylistSyncAction.KEEP else ManagedPlaylistSyncAction.MARK_MANAGED
+    }
+
+    return ManagedPlaylistSyncAction.LOAD
+}
+
 data class AppUiState(
     val channels: List<Channel> = emptyList(),
     val favorites: Set<String> = emptySet(),
@@ -41,6 +67,7 @@ data class AppUiState(
     val sourceUrl: String? = null,
     val sourceLabel: String? = null,
     val updatedAt: Long? = null,
+    val managedPlaylist: Boolean = false,
 )
 
 data class AccountUiState(
@@ -91,6 +118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sourceUrl = stored.sourceUrl,
             sourceLabel = stored.sourceLabel,
             updatedAt = stored.updatedAt,
+            managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
         )
 
         val storedEpg = epgRepository.load()
@@ -277,6 +305,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { api.me(token) }
                 .onSuccess { account ->
                     accountState = AccountUiState(account = account)
+                    syncManagedPlaylist(account)
                 }
                 .onFailure { throwable ->
                     handleAccountFailure(throwable)
@@ -340,6 +369,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         pairingJob?.cancel()
         pairingJob = null
         secureStore.clearToken()
+        clearManagedPlaylist()
         accountState = AccountUiState()
     }
 
@@ -390,6 +420,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 null
                             },
                         )
+                        if (account != null) syncManagedPlaylist(account)
                         return@launch
                     }
 
@@ -405,10 +436,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun syncManagedPlaylist(account: AccountInfo) {
+        val managed = account.playlist
+        when (managedPlaylistSyncAction(uiState.sourceUrl, uiState.managedPlaylist, managed)) {
+            ManagedPlaylistSyncAction.KEEP -> return
+            ManagedPlaylistSyncAction.CLEAR -> {
+                clearManagedPlaylist()
+                return
+            }
+            ManagedPlaylistSyncAction.MARK_MANAGED -> {
+                uiState = uiState.copy(
+                    managedPlaylist = true,
+                    sourceLabel = MANAGED_PLAYLIST_LABEL,
+                )
+                return
+            }
+            ManagedPlaylistSyncAction.LOAD -> Unit
+        }
+
+        val url = managed?.url?.trim() ?: return
+        playlistRefreshJob?.cancel()
+        uiState = uiState.copy(loading = true, error = null)
+        playlistRefreshJob = viewModelScope.launch {
+            val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+                uiState = uiState.copy(
+                    loading = false,
+                    error = throwable.toUserMessage(),
+                )
+                return@launch
+            }
+            applyPlaylist(
+                content = content,
+                sourceUrl = url,
+                sourceLabel = MANAGED_PLAYLIST_LABEL,
+            )
+        }
+    }
+
     private fun handleAccountFailure(throwable: Throwable) {
         val apiError = throwable as? StreamingHubApiException
         if (apiError?.httpStatus == 401 || apiError?.httpStatus == 403) {
             secureStore.clearToken()
+            clearManagedPlaylist()
             accountState = AccountUiState(error = apiError.message)
         } else {
             accountState = accountState.copy(
@@ -416,6 +485,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 error = throwable.accountMessage(),
             )
         }
+    }
+
+    private fun clearManagedPlaylist() {
+        if (!uiState.managedPlaylist) return
+        playlistRefreshJob?.cancel()
+        playlistRefreshJob = null
+        repository.clearPlaylist()
+        uiState = AppUiState()
     }
 
     private fun refreshCachedPlaylistIfStale() {
@@ -476,6 +553,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sourceUrl = stored.sourceUrl,
             sourceLabel = stored.sourceLabel,
             updatedAt = stored.updatedAt,
+            managedPlaylist = sourceLabel == MANAGED_PLAYLIST_LABEL,
         )
     }
 
