@@ -19,12 +19,9 @@ primary_region = "fra"
   EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
   EMAIL_REPLY_TO = "service@streaminghub.org"
   STRIPE_PRICE_ID = "price_1UZSAvPmp8Jh8xSPzMCF3gwg"
-  OPERATOR_LEGAL_NAME = "[operator-detail-removed]"
-  OPERATOR_REPRESENTATIVE = "[operator-detail-removed]"
-  OPERATOR_STREET = "[operator-detail-removed]"
-  OPERATOR_POSTAL_CODE = "[operator-detail-removed]"
-  OPERATOR_CITY = "[operator-detail-removed]"
-  OPERATOR_PHONE = "[operator-detail-removed]"
+  # Personal operator details are Fly secrets, not repository content:
+  # OPERATOR_LEGAL_NAME, OPERATOR_REPRESENTATIVE, OPERATOR_STREET,
+  # OPERATOR_POSTAL_CODE, OPERATOR_CITY, OPERATOR_PHONE
   OPERATOR_EMAIL = "service@streaminghub.org"
   OPERATOR_COUNTRY = "Deutschland"
   OPERATOR_SMALL_BUSINESS = "true"
