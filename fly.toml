@@ -1,0 +1,47 @@
+app = "streaminghub-org"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  APP_URL = "https://streaminghub.org"
+  DATABASE_PATH = "/app/data/streaminghub.db"
+  SESSION_DAYS = "30"
+  BACKUP_DIR = "/app/data/backups"
+  BACKUP_RETENTION_DAYS = "30"
+  DOWNLOAD_FIRE_TV_URL = "https://downloads.streaminghub.org/streaminghub-1.2.0.apk"
+  DOWNLOAD_ANDROID_TV_URL = "https://downloads.streaminghub.org/streaminghub-1.2.0.apk"
+  DOWNLOAD_ANDROID_MOBILE_URL = "https://downloads.streaminghub.org/streaminghub-1.2.0.apk"
+  AMAZON_STORE_URL = ""
+  ADMIN_EMAIL = "aarondursun@gmail.com"
+  EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
+  EMAIL_REPLY_TO = "service@streaminghub.org"
+  STRIPE_PRICE_ID = "price_1UZSAvPmp8Jh8xSPzMCF3gwg"
+  OPERATOR_LEGAL_NAME = "[operator-detail-removed]"
+  OPERATOR_REPRESENTATIVE = "[operator-detail-removed]"
+  OPERATOR_STREET = "[operator-detail-removed]"
+  OPERATOR_POSTAL_CODE = "[operator-detail-removed]"
+  OPERATOR_CITY = "[operator-detail-removed]"
+  OPERATOR_PHONE = "[operator-detail-removed]"
+  OPERATOR_EMAIL = "service@streaminghub.org"
+  OPERATOR_COUNTRY = "Deutschland"
+  OPERATOR_SMALL_BUSINESS = "true"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[mounts]]
+  source = "streaminghub_data"
+  destination = "/app/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
