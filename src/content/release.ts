@@ -6,8 +6,8 @@ export const androidRelease = {
   version: "1.2.1",
   versionCode: 4,
   fileName: "streaminghub-1.2.1.apk",
-  path: "https://downloads.streaminghub.org/streaminghub-1.2.1.apk",
+  path: "https://downloads.streaminghub.org/streaminghub-1.2.1.apk?v=60cb829148e8724312cb4caa07e0dfcc8d440cc38d89f4403faafdcd13369c0f",
   sizeLabel: "14 MB",
   sizeBytes: 14284834,
-  sha256: "2f5882915e46ba088a4f2f13076e2b88e0ce1c4a33182fb54619883762a91614",
+  sha256: "60cb829148e8724312cb4caa07e0dfcc8d440cc38d89f4403faafdcd13369c0f",
 } as const;
