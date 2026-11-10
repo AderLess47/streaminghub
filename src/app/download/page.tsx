@@ -14,9 +14,9 @@ export default async function DownloadPage() {
   const { t, locale } = await getI18n();
 
   const platforms: { key: PlatformKey; url: string; icon: "tv" | "devices" | "phone" }[] = [
-    { key: "firetv", url: env.downloads.fireTv, icon: "tv" },
-    { key: "androidtv", url: env.downloads.androidTv, icon: "devices" },
-    { key: "android", url: env.downloads.androidMobile, icon: "phone" },
+    { key: "firetv", url: "/app.apk", icon: "tv" },
+    { key: "androidtv", url: "/app.apk", icon: "devices" },
+    { key: "android", url: "/app.apk", icon: "phone" },
   ];
 
   return (
@@ -64,7 +64,7 @@ export default async function DownloadPage() {
               {available ? (
                 <a
                   href={platform.url}
-                  download={platform.url === androidRelease.path ? androidRelease.fileName : undefined}
+                  download={androidRelease.fileName}
                   type="application/vnd.android.package-archive"
                   className="btn btn-primary btn-sm mt-4 btn-block"
                   rel="noopener noreferrer"
@@ -112,6 +112,16 @@ export default async function DownloadPage() {
       <section className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
         <div className="card p-6">
           <h2 className="text-lg font-semibold">{t.download.sideloadTitle}</h2>
+          <div className="mt-4 rounded-xl border border-cyan/20 bg-cyan/5 p-3.5">
+            <p className="text-xs font-semibold text-cyan">{t.download.downloaderTitle}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">{t.download.downloaderHint}</p>
+            <a
+              href="/app.apk"
+              className="mt-2 inline-block font-mono text-xs text-cyan underline decoration-cyan/30 underline-offset-2"
+            >
+              {t.download.downloaderUrl}
+            </a>
+          </div>
           <ol className="mt-4 grid gap-3">
             {t.download.sideloadSteps.map((step, index) => (
               <li key={step} className="flex gap-3 text-sm leading-relaxed text-slate-300">
