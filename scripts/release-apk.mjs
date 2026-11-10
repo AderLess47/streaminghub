@@ -315,9 +315,10 @@ async function fetchPublic(url, init, { attempts = PUBLIC_RETRY_ATTEMPTS, timeou
 
 async function verifyPublicObject(url, sizeBytes, sha256) {
   console.log(`Verifying ${url} ...`);
-  const cacheBusted = `${url}${url.includes("?") ? "&" : "?"}v=${sha256}`;
+  const cacheBusted = new URL(url);
+  cacheBusted.searchParams.set("v", sha256);
   // Cloudflare's bot challenge rejects Node's default user agent from GitHub runners.
-  const response = await fetchPublic(cacheBusted, {
+  const response = await fetchPublic(cacheBusted.toString(), {
     cache: "no-store",
     headers: {
       "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
@@ -368,7 +369,7 @@ async function main() {
   const sizeLabel = formatSize(sizeBytes);
   const sha256 = createHash("sha256").update(apkBytes).digest("hex");
   const fileName = `streaminghub-${version}.apk`;
-  const url = `${options.publicBase}/${encodeURIComponent(fileName)}`;
+  const url = `${options.publicBase}/${encodeURIComponent(fileName)}?v=${sha256}`;
   const objectPath = `${options.bucket}/${fileName}`;
 
   console.log(`\nRelease: ${version} (build ${versionCode})`);
