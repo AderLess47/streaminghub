@@ -37,6 +37,19 @@ export async function GET(request: Request) {
     notice:
       "Maschinenlesbarer Datenexport gemäß Art. 15 und 20 DSGVO. Passwort-Hashes, Sitzungstoken und Kopplungscode-Hashes sind aus Sicherheitsgründen nicht enthalten.",
     account,
+    playlist: get<{
+      url: string;
+      device_id: string | null;
+      device_name: string | null;
+      created_at: string;
+      updated_at: string;
+    }>(
+      `SELECT p.url, p.device_id, d.name AS device_name, p.created_at, p.updated_at
+       FROM customer_playlists p
+       LEFT JOIN devices d ON d.id = p.device_id
+       WHERE p.user_id = ? AND p.customer_requested = 1`,
+      user.id,
+    ) ?? null,
     devices: all(
       `SELECT id, name, platform, app_version, status, activated_at, revoked_at, created_at
        FROM devices WHERE user_id = ?`,

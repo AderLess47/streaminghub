@@ -635,6 +635,45 @@ export const en: Dictionary = {
       disable: "Disable account",
       enable: "Enable account",
       detail: "Customer detail",
+      playlistTitle: "M3U playlist",
+      playlistDescription:
+        "Store the M3U source only at the customer's express request. It is assigned to one active paired device; the paired devices are listed alongside.",
+      playlistConfigured: "Configured",
+      playlistMissing: "Not configured",
+      playlistUnconfirmedBadge: "Confirmation missing",
+      playlistUrl: "M3U URL",
+      playlistPlaceholder: "https://provider.example/playlist.m3u",
+      playlistHint:
+        "HTTP(S) URLs provided by the customer only. The URL may contain credentials and is used in the admin area and on the customer's selected active device.",
+      playlistDevice: "Target device",
+      playlistDevicePlaceholder: "Select an active device",
+      playlistDeviceHint:
+        "The URL is sent only to this active device. If another device is selected, the app removes the previous playlist from the old device.",
+      playlistDeviceRequired: "Select an active device.",
+      playlistDeviceInactive:
+        "The previously assigned device is no longer active. Select another device or remove the playlist.",
+      playlistNoActiveDevices:
+        "This customer has no active paired device. The playlist can be assigned after a device has been paired.",
+      playlistAllDevices: "All active devices (legacy)",
+      playlistAdd: "Add playlist",
+      playlistDevices: "Paired devices",
+      playlistUpdated: "Last changed",
+      playlistUpdatedBy: "Changed by",
+      playlistDelete: "Remove playlist",
+      playlistDeleteConfirm: "Remove the M3U playlist for this customer?",
+      playlistSaved: "M3U playlist saved.",
+      playlistDeleted: "M3U playlist removed.",
+      playlistInvalid: "Enter a valid HTTP(S) M3U URL.",
+      playlistRequestRequired:
+        "Confirm that the customer provided the URL themselves and expressly requested that it be stored.",
+      playlistUnconfirmed:
+        "This stored URL is not confirmed as customer-provided. It is not sent to devices and is not included in the data export. Remove it or save it again after confirmation.",
+      playlistCustomerRequest:
+        "The customer provided this URL themselves and expressly requested that it be stored.",
+      playlistSourceWarning:
+        "Do not enter your own, shared or evidently unlawful sources.",
+      playlistSecurityNote:
+        "The M3U URL is stored server-side for this customer account and sent only to the selected active linked device. The audit log records only the host. Only store it if the customer provided the URL themselves and expressly requested that it be stored.",
       resetMfa: "Reset MFA",
       roleUpdated: "Role updated.",
       statusUpdated: "Account status updated.",

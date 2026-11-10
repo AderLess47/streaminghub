@@ -62,7 +62,7 @@ After the customer redeems the code:
 
 `status` is one of `pending`, `claimed`, `expired`.
 
-## 3. Account / subscription status (app)
+## 3. Account / subscription / managed playlist status (app)
 
 `GET /api/v1/me` with `Authorization: Bearer <activationToken>`
 
@@ -76,9 +76,19 @@ After the customer redeems the code:
     "channel": "web",
     "currentPeriodEnd": null,
     "premiumActive": false
+  },
+  "playlist": {
+    "url": "https://anbieter.example/playlist.m3u",
+    "updatedAt": "2026-11-10T12:00:00.000Z"
   }
 }
 ```
+
+`playlist` is `null` when no customer-confirmed, admin-managed M3U URL is stored
+for the customer, or when the stored URL is assigned to a different device. If
+present, the selected active paired device may use the URL to load the playlist;
+legacy rows without a device assignment are available to all active devices.
+The playlist content itself remains on the device.
 
 Returns **403** once the device has been unlinked in the portal or by support –
 revocation is immediate despite the stateless token.
@@ -97,7 +107,7 @@ logged-in account.
 
 ## 5. Security requirements for the app
 
-- Never store credentials or playlist data on StreamingHub servers.
+- Never store playlist content or EPG data on StreamingHub servers. Admins may optionally store an M3U source URL that the customer provided and expressly requested; it is returned only to the selected active paired device through `/api/v1/me`. Playlist content remains local.
 - Treat `pollToken` and `activationToken` as secrets; keep them in secure storage.
 - Poll no faster than every 3 seconds; stop on `claimed`/`expired`.
 - Show a clear error after 10 minutes and offer a new code.
@@ -105,5 +115,6 @@ logged-in account.
 
 ## 6. Not provided by this API
 
-- No content, playlist, EPG or stream URLs are served.
+- No content, EPG or stream URLs are served.
+- The only playlist-related value is the optional admin-managed M3U source URL returned to the selected active paired device; playlist content is not served.
 - No payment initiation from the app (web checkout only for sideload builds).

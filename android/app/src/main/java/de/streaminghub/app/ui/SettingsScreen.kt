@@ -257,7 +257,11 @@ fun SettingsScreen(
             item {
                 SettingsCard(
                     title = "Playlist",
-                    subtitle = state.sourceLabel ?: "Noch keine Playlist eingerichtet",
+                    subtitle = if (state.managedPlaylist) {
+                        "Vom Administrator verwaltet"
+                    } else {
+                        state.sourceLabel ?: "Noch keine Playlist eingerichtet"
+                    },
                 ) {
                     Text(
                         text = "${state.channels.size} Einträge",
@@ -275,6 +279,15 @@ fun SettingsScreen(
                         color = Cyan,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+
+                    if (state.managedPlaylist) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Diese M3U-URL wird vom StreamingHub-Admin verwaltet und beim Kontoabruf automatisch geladen.",
+                            color = Cyan,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
 
                     if (state.sourceUrl != null) {
                         Spacer(Modifier.height(14.dp))
@@ -294,15 +307,17 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(9.dp))
-                    PrimaryAction(
-                        text = if (state.channels.isEmpty()) "Playlist hinzufügen" else "Andere Playlist hinzufügen",
-                        icon = Icons.Rounded.Add,
-                        onClick = onAddPlaylist,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (!state.managedPlaylist) {
+                        Spacer(Modifier.height(9.dp))
+                        PrimaryAction(
+                            text = if (state.channels.isEmpty()) "Playlist hinzufügen" else "Andere Playlist hinzufügen",
+                            icon = Icons.Rounded.Add,
+                            onClick = onAddPlaylist,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
 
-                    if (state.channels.isNotEmpty()) {
+                    if (state.channels.isNotEmpty() && !state.managedPlaylist) {
                         Spacer(Modifier.height(9.dp))
                         SecondaryAction(
                             text = "Playlist entfernen",
@@ -499,7 +514,7 @@ fun SettingsScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Deine Playlist-URL, das EPG und deine Wiedergabedaten bleiben lokal in der App gespeichert. Für die Kopplung werden nur Gerätename, Plattform und App-Version an StreamingHub übertragen.",
+                        text = "Deine Playlist, das EPG und deine Wiedergabedaten werden lokal in der App gespeichert. Eine vom Administrator zugewiesene M3U-URL wird beim Kontoabruf geladen; Playlist-Inhalte werden nicht zentral gespeichert. Für die Kopplung werden nur Gerätename, Plattform und App-Version an StreamingHub übertragen.",
                         color = Muted.copy(alpha = 0.82f),
                         style = MaterialTheme.typography.bodyMedium,
                     )

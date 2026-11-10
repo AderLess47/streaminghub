@@ -278,8 +278,8 @@ fly volumes snapshots create vol_42k2gkdelj0xj904 --app streaminghub-org
 Test a restore by copying a backup to a temporary path, opening it with SQLite
 and running `PRAGMA integrity_check`; never overwrite the live database without
 a maintenance window. Logs/audit retention: 90 days for `audit_log`, 30 days for
-server logs, support tickets 24 months. The privacy policy documents these
-periods.
+server logs, support tickets 24 months; admin-managed M3U URLs until account
+deletion or removal. The privacy policy documents these periods.
 
 ## 8. Scaling
 
