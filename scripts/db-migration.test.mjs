@@ -1,3 +1,4 @@
+// Temporary branch: confirms branch protection blocks a merge until CI is green.
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
