@@ -1,3 +1,4 @@
+// Temporary branch: confirms the pull request CI workflow runs on its own.
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
