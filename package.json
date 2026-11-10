@@ -1,0 +1,42 @@
+{
+  "name": "streaminghub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StreamingHub – IPTV player product website, customer portal and admin console",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "start:standalone": "node .next/standalone/server.js",
+    "typecheck": "tsc --noEmit",
+    "db:init": "node scripts/init-db.mjs",
+    "release:apk": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.release scripts/release-apk.mjs",
+    "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mjs",
+    "email:smoke": "node --env-file-if-exists=.env.local scripts/email-smoke.mjs",
+    "email:resend-test": "node scripts/resend-live-test.mjs",
+    "stripe:smoke": "node scripts/stripe-smoke.mjs",
+    "stripe:live-test": "node scripts/stripe-live-test.mjs"
+  },
+  "dependencies": {
+    "next": "^15.5.7",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.1.14",
+    "@types/node": "22.18.6",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "tailwindcss": "4.1.14",
+    "typescript": "5.9.2",
+    "wrangler": "^4.160.0"
+  },
+  "allowScripts": {
+    "@tailwindcss/oxide@4.1.14": true,
+    "sharp@0.34.5": true
+  }
+}
