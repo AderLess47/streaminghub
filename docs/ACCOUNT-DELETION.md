@@ -21,6 +21,7 @@ Sources: `developer.amazon.com/docs/app-submission/user-account-and-data-deletio
 | States what is deleted | Yes — section „Was gelöscht wird“ |
 | States what is retained and why | Yes — section „Was wir aufbewahren müssen“, cross-referenced to the privacy policy |
 | Reachable without account | Yes, no cookie or login needed |
+| Reachable from inside the app | Yes — Einstellungen → „Konto & Gerät“ → „Konto löschen“ opens the public page |
 | Documented in the privacy policy | Yes — deletion by dashboard or email to service@streaminghub.org |
 
 ## Answers for the Amazon console

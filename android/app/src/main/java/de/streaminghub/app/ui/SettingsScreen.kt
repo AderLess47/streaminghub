@@ -58,6 +58,7 @@ import de.streaminghub.app.ui.theme.Ink
 import de.streaminghub.app.ui.theme.Line
 import de.streaminghub.app.ui.theme.Muted
 import de.streaminghub.app.ui.theme.Panel
+import de.streaminghub.app.data.AccountDeletion
 import de.streaminghub.app.ui.theme.Rose
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -255,6 +256,20 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "Konto und gespeicherte Daten löschen: Die öffentliche Löschseite funktioniert auch ohne Anmeldung und erklärt, welche Daten gelöscht und welche aufbewahrt werden.",
+                        color = Muted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(9.dp))
+                    SecondaryAction(
+                        text = "Konto löschen",
+                        icon = Icons.Rounded.Delete,
+                        onClick = { onOpenWebsite(AccountDeletion.PATH) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 

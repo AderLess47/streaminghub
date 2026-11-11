@@ -99,6 +99,7 @@ Stripe; card data never reaches us).
 | Android dependencies (`build.gradle.kts`) | AndroidX, Media3, Coil, coroutines, JUnit — no ads/analytics/crash SDK |
 | Server calls in the app (`StreamingHubApi.kt`) | `/api/v1/pairing/request`, `/api/v1/pairing/status`, `/api/v1/me` |
 | Server schema (`src/lib/schema.ts`) | stores email, display name, locale, session IP/UA, device name/platform/version, optional M3U URL, support messages |
+| In-app deletion entry (`SettingsScreen`, `AccountDeletion`) | „Konto löschen“ opens `/account-deletion`; `AccountDeletionTest` pins the URL |
 | Cookies (`session.ts`, `api/consent/route.ts`, `api/locale`) | `sh_session`, `sh_consent`, `sh_locale` — all necessary, no optional scripts shipped |
 
 ## Caveats
