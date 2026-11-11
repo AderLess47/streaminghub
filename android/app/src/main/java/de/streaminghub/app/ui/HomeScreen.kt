@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.FilterChip
@@ -89,6 +90,9 @@ fun HomeScreen(
     hasEpg: Boolean,
     onOpenGuide: () -> Unit,
     lowSpecMode: Boolean,
+    demoMode: Boolean,
+    onLoadDemo: () -> Unit,
+    onExitDemo: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("Alle") }
@@ -162,6 +166,12 @@ fun HomeScreen(
                 )
             }
 
+            if (demoMode) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    DemoBanner(onExitDemo = onExitDemo)
+                }
+            }
+
             if (state.error != null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ErrorBanner(
@@ -190,6 +200,7 @@ fun HomeScreen(
                     EmptyLibrary(
                         focusRequester = focusRequester,
                         onAddPlaylist = onAddPlaylist,
+                        onLoadDemo = onLoadDemo,
                     )
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -456,6 +467,7 @@ private fun SearchAndFilters(
 private fun EmptyLibrary(
     focusRequester: FocusRequester,
     onAddPlaylist: () -> Unit,
+    onLoadDemo: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -507,9 +519,16 @@ private fun EmptyLibrary(
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
         )
+        Spacer(Modifier.height(10.dp))
+        SecondaryAction(
+            text = "Demo-Inhalte ansehen",
+            icon = Icons.Rounded.PlayArrow,
+            onClick = onLoadDemo,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Du kannst eine Playlist-URL eingeben oder eine M3U-Datei vom Gerät auswählen.",
+            text = "Du kannst eine Playlist-URL eingeben oder eine M3U-Datei vom Gerät auswählen. Ohne eigene Playlist zeigen die Demo-Inhalte die App mit öffentlichen Teststreams.",
             color = Muted,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -538,6 +557,36 @@ private fun EmptyLibrary(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
+    }
+}
+
+@Composable
+private fun DemoBanner(onExitDemo: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Panel)
+            .border(1.dp, Cyan.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Demo-Inhalte aktiv",
+                color = Foreground,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "Beispieldaten mit öffentlichen Teststreams – keine echten Sender, kein Konto nötig.",
+                color = Muted,
+                fontSize = 12.sp,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        SecondaryAction(text = "Demo beenden", onClick = onExitDemo)
     }
 }
 
