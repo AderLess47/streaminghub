@@ -141,22 +141,11 @@ jobs:
             APK_SIZE_BYTES="$APK_SIZE_BYTES" \
             APK_URL="$APK_URL"
 
-      - name: Verify the site serves the new release
-        run: |
-          set -euo pipefail
-          # The checksum changes with every build, so it proves the secrets were
-          # applied and read at request time even when the version stays the same.
-          for _ in $(seq 1 30); do
-            page=$(curl -fsS --max-time 20 https://streaminghub.org/download || true)
-            if printf '%s' "$page" | grep -qF "$APK_SHA256"; then
-              echo "https://streaminghub.org/download serves ${APK_VERSION} (${APK_SHA256})"
-              exit 0
-            fi
-            echo "Site still shows an older release; waiting for the machines to restart ..."
-            sleep 10
-          done
-          echo "::error::The site still serves an older release. Check the APK_* secrets and the machine restarts."
-          exit 1
+      # Same check that runs after every deploy: page, API and served APK must
+      # describe one release. The checksum changes with every build, so it proves
+      # the secrets were applied even when the version stays the same.
+      - name: Verify the deployed site
+        run: node scripts/deploy-smoke.mjs --wait 300
 
       # `npm run release:apk` rewrote the generated files in this runner, but it
       # must not commit to the protected branch. It therefore parks the changes on

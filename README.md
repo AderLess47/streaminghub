@@ -95,6 +95,15 @@ The sync deliberately never writes to Git: branch protection rejects automated
 commits to `main`, and a pull request created with `GITHUB_TOKEN` cannot satisfy
 the required check, because such events start no workflows.
 
+### Deploy smoke test
+
+`npm run smoke:deploy` verifies that `/api/release`, `/download` and `/app.apk`
+describe the same release (version/build, size and SHA-256); `--wait <seconds>`
+retries while the machines restart, `--skip-apk` omits the 14 MB download and
+`--base <url>` targets another origin. The release workflow runs it after
+publishing the secrets, and the *Deploy smoke* workflow repeats it every six
+hours so a manual `flyctl deploy` is verified too.
+
 Configure these repository or `production` environment secrets:
 
 | Secret | Purpose |
