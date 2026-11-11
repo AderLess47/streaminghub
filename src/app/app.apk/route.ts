@@ -1,4 +1,4 @@
-import { androidRelease } from "@/content/release";
+import { androidRelease } from "@/lib/android-release";
 
 export const dynamic = "force-dynamic";
 

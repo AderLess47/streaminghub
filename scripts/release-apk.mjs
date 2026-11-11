@@ -13,7 +13,7 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { appendFile, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -426,7 +426,28 @@ async function main() {
   }
 
   console.log(`\nUpdated: ${changed.join(", ")}`);
-  console.log("Next: deploy the website with `flyctl deploy --app streaminghub-org`.");
+
+  // The release workflow forwards these values to the next step through
+  // GITHUB_ENV and stores them as Fly secrets, so production never needs a
+  // commit to the protected branch.
+  const workflowEnv = process.env.GITHUB_ENV;
+  if (workflowEnv) {
+    const exported = {
+      APK_VERSION: version,
+      APK_VERSION_CODE: String(versionCode),
+      APK_FILE_NAME: fileName,
+      APK_SHA256: sha256,
+      APK_SIZE_BYTES: String(sizeBytes),
+      APK_URL: url,
+    };
+    const lines = Object.entries(exported)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n");
+    await appendFile(workflowEnv, `${lines}\n`);
+    console.log(`Exported release metadata to GITHUB_ENV: ${Object.keys(exported).join(", ")}`);
+  } else {
+    console.log("Next: set these values as Fly secrets or deploy the website.");
+  }
 }
 
 main().catch((error) => {

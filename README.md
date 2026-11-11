@@ -61,22 +61,22 @@ The command builds the signed release APK, verifies the signature, uploads
 `streaminghub-<version>.apk` to R2, verifies the public URL and SHA-256, and
 updates `src/content/release.ts`, `fly.toml`, `.env.example` and `.env.local`.
 Use `--apk <path>` to publish an existing APK or `--dry-run` to validate without
-uploading or writing. The website still needs a separate
-`flyctl deploy --app streaminghub-org` to publish the new metadata.
+uploading or writing. For production, publish the same values as Fly secrets
+(`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,
+`APK_SIZE_BYTES`, `APK_URL`) or run the release workflow, which does it for you.
 
 ### GitHub Actions release
 
 `.github/workflows/android-release.yml` is a manual release workflow
 (**Actions → Android release → Run workflow**). It builds and verifies the APK,
-uploads it to R2, and publishes the updated release metadata through its own
-pull request: the commit goes to a `release/metadata-*` branch, the workflow
-requests the `Typecheck and tests` check explicitly (workflows do not start from
-`GITHUB_TOKEN` events, which is why `ci.yml` also accepts `workflow_dispatch`),
-waits for it, rebase-merges the pull request, and deploys the merged `main` to
-Fly.io. Branch protection therefore stays enabled; the run needs `contents:
-write`, `pull-requests: write`, `actions: write` and `checks: read`. If the check
-never starts or fails, the run stops with the pull request left open and nothing
-is deployed.
+uploads it to R2, and publishes the release metadata as Fly secrets
+(`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,
+`APK_SIZE_BYTES`, `APK_URL`). `src/lib/android-release.ts` reads them at request
+time and falls back to the generated `src/content/release.ts`, so a new APK goes
+live without a commit and without a deploy. The workflow needs only `contents:
+read` plus `FLY_API_TOKEN`, and branch protection stays enabled throughout. A
+final step polls `https://streaminghub.org/download` until the new version is
+served.
 
 Configure these repository or `production` environment secrets:
 
