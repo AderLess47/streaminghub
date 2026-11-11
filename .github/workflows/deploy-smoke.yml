@@ -1,0 +1,33 @@
+name: Deploy smoke
+
+on:
+  schedule:
+    # Every six hours, so a manual `flyctl deploy` cannot stay unverified for long.
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Check the deployed release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No dependency install: the script uses fetch and node:crypto only.
+      - name: Compare /download, /api/release and /app.apk
+        run: node scripts/deploy-smoke.mjs --wait 120

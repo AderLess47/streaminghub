@@ -21,6 +21,7 @@
     "release:apk": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.release scripts/release-apk.mjs",
     "release:sync": "node scripts/release-sync.mjs",
     "smoke": "node --env-file-if-exists=.env.local scripts/smoke-test.mjs",
+    "smoke:deploy": "node scripts/deploy-smoke.mjs",
     "email:smoke": "node --env-file-if-exists=.env.local scripts/email-smoke.mjs",
     "email:resend-test": "node scripts/resend-live-test.mjs",
     "stripe:smoke": "node scripts/stripe-smoke.mjs",
