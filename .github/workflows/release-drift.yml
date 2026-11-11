@@ -4,6 +4,11 @@ on:
   schedule:
     # Daily at 05:17 UTC, after the nightly release window.
     - cron: "17 5 * * *"
+  # Runs right after every Android release, so a fallback that a release left
+  # behind is visible the same day instead of at the next scheduled check.
+  workflow_run:
+    workflows: ["Android release"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -18,6 +23,8 @@ jobs:
     name: Compare fallback with production
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # A cancelled or failed release published nothing, so it needs no drift report.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Check out repository
@@ -31,10 +38,12 @@ jobs:
       # No dependency install: the sync only uses fetch and node:fs, so the check
       # stays fast and needs no secrets or network egress beyond the site.
       - name: Compare the committed release metadata with production
+        env:
+          RELEASE_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           set -euo pipefail
           if node scripts/release-sync.mjs --check; then
-            echo "Committed fallback matches production." >> "$GITHUB_STEP_SUMMARY"
+            echo "Committed fallback matches production (trigger: ${GITHUB_EVENT_NAME})." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
@@ -43,7 +52,12 @@ jobs:
           {
             echo "### Release fallback is stale"
             echo
-            echo "src/content/release.ts lags behind https://streaminghub.org/api/release."
+            echo "src/content/release.ts lags behind https://streaminghub.org/api/release (trigger: \`${GITHUB_EVENT_NAME}\`)."
+            if [ -n "${RELEASE_RUN_URL}" ]; then
+              echo
+              echo "Triggered by release run: ${RELEASE_RUN_URL}"
+            fi
+            echo
             echo "Run \`npm run release:sync\` locally and open a pull request."
             echo
             echo '```diff'
