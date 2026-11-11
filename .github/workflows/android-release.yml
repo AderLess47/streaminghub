@@ -143,10 +143,12 @@ jobs:
       - name: Verify the site serves the new release
         run: |
           set -euo pipefail
+          # The checksum changes with every build, so it proves the secrets were
+          # applied and read at request time even when the version stays the same.
           for _ in $(seq 1 30); do
             page=$(curl -fsS --max-time 20 https://streaminghub.org/download || true)
-            if printf '%s' "$page" | grep -qF "$APK_VERSION"; then
-              echo "https://streaminghub.org/download serves ${APK_VERSION}"
+            if printf '%s' "$page" | grep -qF "$APK_SHA256"; then
+              echo "https://streaminghub.org/download serves ${APK_VERSION} (${APK_SHA256})"
               exit 0
             fi
             echo "Site still shows an older release; waiting for the machines to restart ..."
