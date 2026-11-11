@@ -38,6 +38,7 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
           <FooterColumn title={t.footer.legal}>
             <FooterLink href="/imprint">{t.footer.imprint}</FooterLink>
             <FooterLink href="/privacy">{t.footer.privacy}</FooterLink>
+            <FooterLink href="/account-deletion">{t.footer.accountDeletion}</FooterLink>
             <FooterLink href="/terms">{t.footer.terms}</FooterLink>
             <FooterLink href="/subscription-terms">{t.footer.subscriptionTerms}</FooterLink>
             <FooterLink href="/withdrawal">{t.footer.withdrawal}</FooterLink>

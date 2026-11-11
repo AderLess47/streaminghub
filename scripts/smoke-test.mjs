@@ -128,6 +128,7 @@ async function main() {
     ["/status", "Systemstatus"],
     ["/imprint", "Impressum"],
     ["/privacy", "Datenschutzerklärung"],
+    ["/account-deletion", "Konto und Daten löschen"],
     ["/terms", "Nutzungsbedingungen"],
     ["/subscription-terms", "Abonnementbedingungen"],
     ["/withdrawal", "Widerruf"],
