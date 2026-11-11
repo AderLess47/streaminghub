@@ -5,7 +5,7 @@
  * being simulated.
  */
 import path from "node:path";
-import { androidRelease } from "@/content/release";
+import { androidRelease } from "@/lib/android-release";
 
 const downloadUrl = (value: string | undefined) =>
   value?.trim() || androidRelease.path;

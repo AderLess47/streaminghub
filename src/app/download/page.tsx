@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
-import { androidRelease } from "@/content/release";
+import { androidRelease } from "@/lib/android-release";
 import { getI18n } from "@/i18n";
 import { env } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Download" };
+
+/** Release metadata arrives as Fly secrets, so it has to be read per request. */
+export const dynamic = "force-dynamic";
 
 type PlatformKey = "firetv" | "androidtv" | "android";
 

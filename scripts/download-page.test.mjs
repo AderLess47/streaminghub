@@ -54,3 +54,26 @@ test("short APK endpoint serves the release metadata instead of a hardcoded file
   assert.match(apkRoute, /androidRelease\.fileName/, "route must use the generated file name");
   assert.doesNotMatch(apkRoute, /streaminghub-\d+\.\d+\.\d+\.apk/, "route must not hardcode an APK version");
 });
+
+test("release metadata is read from the environment at request time", () => {
+  const resolver = read("src/lib/android-release.ts");
+
+  for (const name of [
+    "APK_VERSION",
+    "APK_VERSION_CODE",
+    "APK_FILE_NAME",
+    "APK_SHA256",
+    "APK_SIZE_BYTES",
+    "APK_URL",
+  ]) {
+    assert.match(resolver, new RegExp(`process\.env\.${name}`), `resolver must read ${name}`);
+  }
+  assert.match(resolver, /generatedRelease/, "generated release.ts must stay the fallback");
+  assert.match(downloadPage, /from "@\/lib\/android-release"/, "download page must use the resolver");
+  assert.match(apkRoute, /from "@\/lib\/android-release"/, "APK route must use the resolver");
+  assert.match(
+    downloadPage,
+    /export const dynamic = "force-dynamic"/,
+    "download page must render per request, otherwise a release would need a deploy",
+  );
+});
