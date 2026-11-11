@@ -3,6 +3,7 @@
 Fertige Texte für die Amazon-Appstore-Einreichung von StreamingHub
 (`de.streaminghub.app`, Version 1.2.4). Alle Felder sind reiner Text ohne
 HTML; die Zeichen- und Byte-Grenzen von Amazon sind unten je Feld geprüft.
+Englische Fassung: [`listing-en.md`](listing-en.md).
 
 | Feld | Limit | Verwendet |
 | --- | --- | --- |
