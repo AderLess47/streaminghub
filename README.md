@@ -68,9 +68,15 @@ uploading or writing. The website still needs a separate
 
 `.github/workflows/android-release.yml` is a manual release workflow
 (**Actions → Android release → Run workflow**). It builds and verifies the APK,
-uploads it to R2, commits the updated release metadata with `[skip ci]`, and
-deploys the website to Fly.io. `contents: write` is required; branch protection
-must allow the Actions bot to push the metadata commit.
+uploads it to R2, and publishes the updated release metadata through its own
+pull request: the commit goes to a `release/metadata-*` branch, the workflow
+requests the `Typecheck and tests` check explicitly (workflows do not start from
+`GITHUB_TOKEN` events, which is why `ci.yml` also accepts `workflow_dispatch`),
+waits for it, rebase-merges the pull request, and deploys the merged `main` to
+Fly.io. Branch protection therefore stays enabled; the run needs `contents:
+write`, `pull-requests: write`, `actions: write` and `checks: read`. If the check
+never starts or fails, the run stops with the pull request left open and nothing
+is deployed.
 
 Configure these repository or `production` environment secrets:
 
