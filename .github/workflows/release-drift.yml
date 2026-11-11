@@ -1,0 +1,54 @@
+name: Release drift
+
+on:
+  schedule:
+    # Daily at 05:17 UTC, after the nightly release window.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Compare fallback with production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No dependency install: the sync only uses fetch and node:fs, so the check
+      # stays fast and needs no secrets or network egress beyond the site.
+      - name: Compare the committed release metadata with production
+        run: |
+          set -euo pipefail
+          if node scripts/release-sync.mjs --check; then
+            echo "Committed fallback matches production." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Reproduce the drift in the runner so the log and summary show it.
+          node scripts/release-sync.mjs
+          {
+            echo "### Release fallback is stale"
+            echo
+            echo "src/content/release.ts lags behind https://streaminghub.org/api/release."
+            echo "Run \`npm run release:sync\` locally and open a pull request."
+            echo
+            echo '```diff'
+            git --no-pager diff -- src/content/release.ts
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error title=Release fallback is stale::src/content/release.ts lags behind https://streaminghub.org/api/release. Run 'npm run release:sync' and open a pull request."
+          exit 1
