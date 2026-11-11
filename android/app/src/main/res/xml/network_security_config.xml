@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IPTV playlists and streams are frequently served over plain HTTP, so cleartext
+  stays enabled for user-provided sources. HTTPS keeps the system trust anchors;
+  nothing is pinned or trusted additionally.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
