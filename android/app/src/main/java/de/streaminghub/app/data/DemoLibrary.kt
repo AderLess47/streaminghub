@@ -49,7 +49,7 @@ object DemoLibrary {
         DemoChannel(
             id = "demo.movie.two",
             name = "Demo Film: Big Buck Bunny",
-            url = "https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+            url = "https://media.w3.org/2010/05/bunny/trailer.mp4",
         ),
     )
 
