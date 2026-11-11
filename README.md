@@ -73,10 +73,16 @@ uploads it to R2, and publishes the release metadata as Fly secrets
 (`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,
 `APK_SIZE_BYTES`, `APK_URL`). `src/lib/android-release.ts` reads them at request
 time and falls back to the generated `src/content/release.ts`, so a new APK goes
-live without a commit and without a deploy. The workflow needs only `contents:
-read` plus `FLY_API_TOKEN`, and branch protection stays enabled throughout. A
-final step polls `https://streaminghub.org/download` until the new version is
-served.
+live without a commit and without a deploy. The workflow needs `contents:
+write`, `pull-requests: write` and `FLY_API_TOKEN`; branch protection stays
+enabled throughout. A final step polls `https://streaminghub.org/download` until
+the new version is served, then parks the regenerated metadata on the stable
+`release/metadata-sync` branch and keeps a single **draft pull request** open,
+so syncing the repository is one merge. Pull requests created with
+`GITHUB_TOKEN` start no workflows, so that draft carries no `Typecheck and
+tests` check and has to be merged by an administrator (the bypass); this needs
+the repository setting *Allow GitHub Actions to create and approve pull
+requests*.
 
 ### Keeping the local fallback current
 
