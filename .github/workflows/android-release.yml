@@ -160,9 +160,9 @@ jobs:
 
       # `npm run release:apk` rewrote the generated files in this runner, but it
       # must not commit to the protected branch. It therefore parks the changes on
-      # a stable branch and keeps one draft pull request open, so syncing the
-      # repository is a single merge.
-      - name: Prepare the release metadata draft pull request
+      # a stable branch and keeps one pull request open, so syncing the repository
+      # is a single merge.
+      - name: Prepare the release metadata pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -205,16 +205,16 @@ jobs:
 
           **Merge-Hinweis:** Pull Requests, die mit \`GITHUB_TOKEN\` erstellt werden,
           starten keine CI-Läufe. Der erforderliche Check \`Typecheck and tests\`
-          fehlt deshalb und der Merge ist als Administrator (Bypass) nötig.
+          fehlt deshalb; der Merge erfolgt als Administrator über „Merge without
+          waiting for requirements“ (ein Klick).
           EOF
 
           EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
             gh pr edit "$EXISTING" --title "chore(release): ${APK_VERSION}" --body-file "$BODY"
-            gh pr ready --undo "$EXISTING" >/dev/null 2>&1 || true
-            echo "Updated draft pull request #${EXISTING}."
+            echo "Updated pull request #${EXISTING}."
           else
-            gh pr create --draft --base main --head "$BRANCH" \
+            gh pr create --base main --head "$BRANCH" \
               --title "chore(release): ${APK_VERSION}" \
               --body-file "$BODY" | tail -1
           fi
