@@ -7,9 +7,6 @@
 import path from "node:path";
 import { androidRelease } from "@/lib/android-release";
 
-const downloadUrl = (value: string | undefined) =>
-  value?.trim() || androidRelease.path;
-
 const bool = (value: string | undefined) => value === "1" || value?.toLowerCase() === "true";
 
 export const env = {
@@ -43,9 +40,14 @@ export const env = {
     amazonStoreUrl: process.env.AMAZON_STORE_URL ?? "",
   },
   downloads: {
-    fireTv: downloadUrl(process.env.DOWNLOAD_FIRE_TV_URL),
-    androidTv: downloadUrl(process.env.DOWNLOAD_ANDROID_TV_URL),
-    androidMobile: downloadUrl(process.env.DOWNLOAD_ANDROID_MOBILE_URL),
+    /**
+     * Every platform downloads the same signed build through the stable /app.apk
+     * endpoint, so these URLs come from the release metadata instead of separate
+     * environment overrides.
+     */
+    fireTv: androidRelease.path,
+    androidTv: androidRelease.path,
+    androidMobile: androidRelease.path,
     amazonStore: process.env.AMAZON_STORE_URL ?? "",
   },
   contactTo: process.env.CONTACT_TO_EMAIL ?? "service@streaminghub.org",

@@ -77,3 +77,13 @@ test("release metadata is read from the environment at request time", () => {
     "download page must render per request, otherwise a release would need a deploy",
   );
 });
+
+test("download URLs are not duplicated outside the release metadata", () => {
+  for (const file of [".env.example", "fly.toml", "scripts/release-apk.mjs", "src/lib/env.ts"]) {
+    assert.doesNotMatch(
+      read(file),
+      /DOWNLOAD_(?:FIRE_TV|ANDROID_TV|ANDROID_MOBILE)_URL/,
+      `${file} must not carry its own copy of the download URL`,
+    );
+  }
+});
