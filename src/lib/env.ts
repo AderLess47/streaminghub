@@ -65,7 +65,7 @@ const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);
 const operatorData = {
   legalName: process.env.OPERATOR_LEGAL_NAME ?? "[Betreiberfirma – noch zu bestätigen]",
   representative: process.env.OPERATOR_REPRESENTATIVE ?? "[Vertretungsberechtigte Person – noch zu bestätigen]",
-  street: process.env.OPERATOR_STREET ?? "[[operator-detail-removed] und Hausnummer – noch zu bestätigen]",
+  street: process.env.OPERATOR_STREET ?? "[Straße und Hausnummer – noch zu bestätigen]",
   postalCode: process.env.OPERATOR_POSTAL_CODE ?? "[PLZ]",
   city: process.env.OPERATOR_CITY ?? "[Ort]",
   country: process.env.OPERATOR_COUNTRY ?? "Deutschland",
