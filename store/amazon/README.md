@@ -29,6 +29,10 @@ the documented safe areas:
   embedded — both are Amazon requirements for this asset.
 - Screenshots are not badged and need no safe area.
 
+Listing copy: [`listing.md`](listing.md) (German) and [`listing-en.md`](listing-en.md) (English).
+Privacy-label answers: [`privacy-labels.md`](privacy-labels.md).
+Account deletion page: `https://streaminghub.org/account-deletion`.
+
 ## Important: these screenshots are renderings, not device captures
 
 The screenshots were composed from the app's design tokens
