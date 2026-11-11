@@ -78,6 +78,18 @@ read` plus `FLY_API_TOKEN`, and branch protection stays enabled throughout. A
 final step polls `https://streaminghub.org/download` until the new version is
 served.
 
+### Keeping the local fallback current
+
+`src/content/release.ts` is only used when the `APK_*` variables are absent
+(local builds, a fresh deployment). `npm run release:sync` refreshes it from the
+production endpoint `GET /api/release`, and `--check` exits non-zero when it
+lags behind. `npm run dev` and `npm run build` run the sync best-effort first,
+so a checkout or image never carries metadata older than what was live when it
+was built; if the endpoint is unreachable the committed file stays untouched.
+The sync deliberately never writes to Git: branch protection rejects automated
+commits to `main`, and a pull request created with `GITHUB_TOKEN` cannot satisfy
+the required check, because such events start no workflows.
+
 Configure these repository or `production` environment secrets:
 
 | Secret | Purpose |
