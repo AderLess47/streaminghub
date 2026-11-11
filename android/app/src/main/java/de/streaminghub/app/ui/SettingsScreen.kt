@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -83,6 +84,9 @@ fun SettingsScreen(
     onAddPlaylist: () -> Unit,
     onOpenWebsite: (String) -> Unit,
     onDismissError: () -> Unit,
+    demoMode: Boolean,
+    onLoadDemo: () -> Unit,
+    onRemoveDemo: () -> Unit,
 ) {
     var showRemoveConfirmation by remember { mutableStateOf(false) }
     var showRemoveEpgConfirmation by remember { mutableStateOf(false) }
@@ -324,6 +328,44 @@ fun SettingsScreen(
                             icon = Icons.Rounded.Delete,
                             onClick = { showRemoveConfirmation = true },
                             danger = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsCard(
+                    title = "Demo-Modus",
+                    subtitle = if (demoMode) {
+                        "Demo-Inhalte sind geladen"
+                    } else {
+                        "App ohne Konto und ohne eigene Playlist testen"
+                    },
+                ) {
+                    Text(
+                        text = if (demoMode) {
+                            "Sechs Beispiel-Einträge mit öffentlichen Teststreams und ein Programmführer mit laufender und folgender Sendung. Keine echten Sender, keine Kontodaten."
+                        } else {
+                            "Lädt sechs Beispiel-Einträge mit öffentlichen Teststreams und passende Programmdaten. Gedacht für Store-Tests und zum Ausprobieren ohne eigene Playlist."
+                        },
+                        color = Muted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (demoMode) {
+                        SecondaryAction(
+                            text = "Demo-Inhalte entfernen",
+                            icon = Icons.Rounded.Delete,
+                            onClick = onRemoveDemo,
+                            danger = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        PrimaryAction(
+                            text = "Demo-Inhalte laden",
+                            icon = Icons.Rounded.PlayArrow,
+                            onClick = onLoadDemo,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

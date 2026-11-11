@@ -80,6 +80,9 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
             hasEpg = epgState.programmes.isNotEmpty(),
             onOpenGuide = { screen = Screen.Guide },
             lowSpecMode = lowSpecMode,
+            demoMode = state.demoMode,
+            onLoadDemo = viewModel::loadDemoLibrary,
+            onExitDemo = viewModel::removeDemoLibrary,
         )
 
         is Screen.Player -> PlayerScreen(
@@ -120,6 +123,9 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
             onAddPlaylist = { showAddPlaylist = true },
             onOpenWebsite = { path -> openWebsite(path) },
             onDismissError = viewModel::clearError,
+            demoMode = state.demoMode,
+            onLoadDemo = viewModel::loadDemoLibrary,
+            onRemoveDemo = viewModel::removeDemoLibrary,
         )
 
         Screen.Pairing -> PairingScreen(

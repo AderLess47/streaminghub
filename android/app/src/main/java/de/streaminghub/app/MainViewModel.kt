@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.streaminghub.app.data.AccountInfo
+import de.streaminghub.app.data.DemoLibrary
 import de.streaminghub.app.data.DeviceIdentity
 import de.streaminghub.app.data.EpgRepository
 import de.streaminghub.app.data.M3uParser
@@ -68,6 +69,7 @@ data class AppUiState(
     val sourceLabel: String? = null,
     val updatedAt: Long? = null,
     val managedPlaylist: Boolean = false,
+    val demoMode: Boolean = false,
 )
 
 data class AccountUiState(
@@ -119,6 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sourceLabel = stored.sourceLabel,
             updatedAt = stored.updatedAt,
             managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
+            demoMode = stored.sourceLabel == DemoLibrary.SOURCE_LABEL,
         )
 
         val storedEpg = epgRepository.load()
@@ -191,6 +194,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob = null
         repository.clearPlaylist()
         uiState = AppUiState()
+    }
+
+    // ---- Demo library -------------------------------------------------------------
+
+    fun loadDemoLibrary() {
+        playlistRefreshJob?.cancel()
+        playlistRefreshJob = null
+        uiState = uiState.copy(loading = true, error = null)
+        viewModelScope.launch {
+            val channels = withContext(Dispatchers.Default) {
+                runCatching { M3uParser.parse(DemoLibrary.playlist) }.getOrDefault(emptyList())
+            }
+            if (channels.isEmpty()) {
+                uiState = uiState.copy(
+                    loading = false,
+                    error = "Die Demo-Inhalte konnten nicht geladen werden.",
+                )
+                return@launch
+            }
+
+            val programmes = DemoLibrary.programmes(System.currentTimeMillis())
+            val stored = withContext(Dispatchers.IO) {
+                repository.savePlaylist(channels, null, DemoLibrary.SOURCE_LABEL)
+                epgRepository.save(programmes, null)
+                repository.loadPlaylist()
+            }
+            val storedEpg = withContext(Dispatchers.IO) { epgRepository.load() }
+
+            uiState = AppUiState(
+                channels = stored.channels,
+                favorites = repository.loadFavorites(),
+                sourceUrl = stored.sourceUrl,
+                sourceLabel = stored.sourceLabel,
+                updatedAt = stored.updatedAt,
+                managedPlaylist = false,
+                demoMode = true,
+            )
+            epgState = EpgUiState(
+                programmes = storedEpg.programmes,
+                sourceUrl = storedEpg.sourceUrl,
+                updatedAt = storedEpg.updatedAt,
+            )
+        }
+    }
+
+    fun removeDemoLibrary() {
+        removePlaylist()
+        removeEpg()
     }
 
     fun updateLowSpecMode(enabled: Boolean) {

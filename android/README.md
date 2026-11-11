@@ -22,6 +22,15 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Low-Spec-Modus mit kürzeren Listen, ohne Logo-Vorladen und kleineren Wiedergabepuffern
 - Dauerhafter Playlist-Cache: letzter Stand beim Start sofort verfügbar, Hintergrundaktualisierung nach 15 Minuten
 
+## Demo-Modus
+
+Für Store-Tests und zum Ausprobieren ohne eigene Playlist lädt die App unter
+*Einstellungen → Demo-Modus* (oder direkt auf dem Startbildschirm) sechs
+Beispiel-Einträge mit öffentlichen Teststreams und passende Programmdaten. Die
+Demo ist keine Inhaltsauslieferung: keine echten Sender, keine Fremdlogos,
+keine Kontodaten. Der Ablauf für Amazon-Reviewer steht in
+`docs/DEMO-REVIEW.md`.
+
 StreamingHub stellt keine Sender, Filme, Serien oder Playlists bereit. Die
 App verarbeitet ausschließlich die vom Nutzer hinzugefügten Quellen.
 
