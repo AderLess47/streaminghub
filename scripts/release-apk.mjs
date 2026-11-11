@@ -25,7 +25,6 @@ const WRANGLER_VERSION = "4.160.0";
 const PUBLIC_RETRY_ATTEMPTS = 30;
 const PUBLIC_RETRY_DELAY_MS = 4_000;
 const PUBLIC_RETRY_STATUSES = new Set([403, 404, 408, 425, 429, 500, 502, 503, 504]);
-const DOWNLOAD_KEYS = ["DOWNLOAD_FIRE_TV_URL", "DOWNLOAD_ANDROID_TV_URL", "DOWNLOAD_ANDROID_MOBILE_URL"];
 
 function parseArgs(argv) {
   const options = {
@@ -88,9 +87,9 @@ Environment:
   R2_BUCKET, R2_PUBLIC_BASE                      optional overrides
 
 The command reads versionName/versionCode from android/app/build.gradle.kts.
-After a successful upload it updates src/content/release.ts, fly.toml,
-.env.example and .env.local so every download URL points at the new object.
-Deploy the website separately with "flyctl deploy --app streaminghub-org".
+After a successful upload it rewrites src/content/release.ts, the single source
+of the download metadata, and exports the APK_* values to GITHUB_ENV.
+Production reads them from the Fly secrets, so no deploy is required.
 `);
 }
 
@@ -250,24 +249,6 @@ function ensureWranglerAuth() {
   console.log("Cloudflare auth: Wrangler login");
 }
 
-async function updateDownloadUrls(file, url, style, dryRun) {
-  if (!existsSync(file)) return false;
-  const original = await readFile(file, "utf8");
-  const pattern = style === "toml"
-    ? /^(\s*DOWNLOAD_(?:FIRE_TV|ANDROID_TV|ANDROID_MOBILE)_URL\s*=\s*)"[^"]*"/gm
-    : /^(\s*(?:export\s+)?DOWNLOAD_(?:FIRE_TV|ANDROID_TV|ANDROID_MOBILE)_URL\s*=\s*).*$/gm;
-  const matches = original.match(pattern)?.length ?? 0;
-  if (matches === 0) {
-    console.warn(`! ${path.relative(ROOT, file)} has no DOWNLOAD_*_URL entries; left unchanged`);
-    return false;
-  }
-  const updated = original.replace(pattern, (_, prefix) =>
-    `${prefix}${style === "toml" ? `"${url}"` : url}`,
-  );
-  if (updated !== original && !dryRun) await writeFile(file, updated);
-  return updated !== original;
-}
-
 async function fetchPublic(url, init, { attempts = PUBLIC_RETRY_ATTEMPTS, timeoutMs = 30_000 } = {}) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -395,17 +376,7 @@ async function main() {
     releaseFile,
     renderRelease({ version, versionCode, fileName, url, sizeLabel, sizeBytes, sha256 }),
   );
-  const changed = ["src/content/release.ts"];
-  const configs = [
-    [path.join(ROOT, ".env.example"), "env"],
-    [path.join(ROOT, ".env.local"), "env"],
-    [path.join(ROOT, "fly.toml"), "toml"],
-  ];
-  for (const [file, style] of configs) {
-    if (await updateDownloadUrls(file, url, style, false)) changed.push(path.relative(ROOT, file));
-  }
-
-  console.log(`\nUpdated: ${changed.join(", ")}`);
+  console.log("\nUpdated: src/content/release.ts");
 
   // The release workflow forwards these values to the next step through
   // GITHUB_ENV and stores them as Fly secrets, so production never needs a

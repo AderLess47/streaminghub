@@ -59,7 +59,7 @@ Never reuse them outside local development.
 
 The command builds the signed release APK, verifies the signature, uploads
 `streaminghub-<version>.apk` to R2, verifies the public URL and SHA-256, and
-updates `src/content/release.ts`, `fly.toml`, `.env.example` and `.env.local`.
+rewrites `src/content/release.ts` – the only place the download metadata lives.
 Use `--apk <path>` to publish an existing APK or `--dry-run` to validate without
 uploading or writing. For production, publish the same values as Fly secrets
 (`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,

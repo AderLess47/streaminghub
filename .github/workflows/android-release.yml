@@ -168,11 +168,8 @@ jobs:
         run: |
           set -euo pipefail
           BRANCH="release/metadata-sync"
-          FILES=()
-          for file in src/content/release.ts fly.toml .env.example; do
-            [ -f "$file" ] && FILES+=("$file")
-          done
-          git add -- "${FILES[@]}"
+          # Only the version data changed; URLs live nowhere else in the repository.
+          git add -- src/content/release.ts
 
           if git diff --cached --quiet; then
             echo "Committed release metadata is already current; no pull request needed."
@@ -200,8 +197,7 @@ jobs:
           | SHA-256 | \`${APK_SHA256}\` |
 
           Produktion liest diese Werte zur Laufzeit aus den Fly-Secrets; dieser
-          Commit hält nur den lokalen Fallback \`src/content/release.ts\` und die
-          Download-URLs in \`fly.toml\`/\`.env.example\` aktuell.
+          Commit hält nur den lokalen Fallback \`src/content/release.ts\` aktuell.
 
           **Merge-Hinweis:** Pull Requests, die mit \`GITHUB_TOKEN\` erstellt werden,
           starten keine CI-Läufe. Der erforderliche Check \`Typecheck and tests\`
