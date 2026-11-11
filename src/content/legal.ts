@@ -128,7 +128,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           "Beschwerde bei einer Datenschutzaufsichtsbehörde (Art. 77 DSGVO)",
         ],
         paragraphs: [
-          "Datenexport und Kontolöschung können Sie im Dashboard unter Einstellungen beantragen oder per E-Mail an service@streaminghub.org.",
+          "Datenexport und Kontolöschung können Sie im Dashboard unter Einstellungen beantragen oder per E-Mail an service@streaminghub.org. Die öffentliche Löschseite für Nutzer ohne Zugang ist streaminghub.org/account-deletion.",
         ],
       },
       {
@@ -234,7 +234,7 @@ export const legalDocs: Record<string, LegalDoc> = {
           "Complaint to a data protection supervisory authority (Art. 77 GDPR)",
         ],
         paragraphs: [
-          "You can request a data export or account deletion in the dashboard under Settings or by email to service@streaminghub.org.",
+          "You can request a data export or account deletion in the dashboard under Settings or by email to service@streaminghub.org. The public deletion page for users without access is streaminghub.org/account-deletion.",
         ],
       },
       {

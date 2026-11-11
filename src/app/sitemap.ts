@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/docs/api", priority: 0.4, changeFrequency: "monthly" },
     { path: "/imprint", priority: 0.3, changeFrequency: "yearly" },
     { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
+    { path: "/account-deletion", priority: 0.4, changeFrequency: "yearly" },
     { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
     { path: "/subscription-terms", priority: 0.3, changeFrequency: "yearly" },
     { path: "/withdrawal", priority: 0.3, changeFrequency: "yearly" },

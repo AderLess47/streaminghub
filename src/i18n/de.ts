@@ -860,6 +860,57 @@ export const de = {
       notAuthorized: "Nur Mitarbeiterkonten können MFA einrichten.",
     },
   },
+  accountDeletion: {
+    eyebrow: "Kontolöschung",
+    title: "Konto und Daten löschen",
+    description:
+      "Hier beantragst du die Löschung deines StreamingHub-Kontos – angemeldet im Dashboard oder ohne Anmeldung per E-Mail. Diese Seite ist der öffentliche Lösch-Link für Amazon Appstore, Fire TV und Android.",
+    updated:
+      "Gilt für das Konto, die Gerätekopplung und alle Daten, die auf streaminghub.org gespeichert sind.",
+    inAppTitle: "Angemeldet löschen",
+    inAppSteps: [
+      "Melde dich unter streaminghub.org/login mit deiner E-Mail-Adresse an.",
+      "Öffne Dashboard → Einstellungen.",
+      "Wähle „Kontolöschung beantragen“ und bestätige die Anfrage.",
+    ],
+    inAppNote:
+      "Du erhältst eine Bestätigung per E-Mail. Sitzungen enden sofort; personenbezogene Daten werden unverzüglich gelöscht, soweit keine Aufbewahrungspflichten entgegenstehen.",
+    webTitle: "Ohne Anmeldung löschen",
+    webText:
+      "Du hast dein Passwort vergessen, keinen Zugriff mehr auf das Konto oder die App bereits deinstalliert? Dann reicht eine E-Mail von der registrierten Adresse.",
+    webSteps: [
+      "Schreibe an service@streaminghub.org mit dem Betreff „Kontolöschung“.",
+      "Nenne die E-Mail-Adresse des Kontos – weitere Angaben sind nicht nötig.",
+      "Wir bestätigen den Eingang und löschen nach Prüfung der Kontozugehörigkeit.",
+    ],
+    webNote:
+      "Zur Sicherheit prüfen wir nur, ob die Anfrage zum Konto gehört. Zu Adressen ohne Konto speichern wir keine zusätzlichen Daten.",
+    deletedTitle: "Was gelöscht wird",
+    deletedItems: [
+      "Konto, E-Mail-Adresse, Anzeigename und Passwort-Hash",
+      "Alle Sitzungen und Zwei-Faktor-Geheimnisse",
+      "Gerätekopplungen, Aktivierungstoken und Gerätenamen",
+      "Supportanfragen und zugehörige Nachrichten",
+      "Eine hinterlegte M3U-URL sowie Datenexport-Anfragen",
+    ],
+    retainedTitle: "Was wir aufbewahren müssen",
+    retainedItems: [
+      "Abrechnungs- und Zahlungsbelege, solange handels- und steuerrechtliche Fristen gelten",
+      "Sicherheitsprotokolle zu Anmeldung und Löschung, längstens 90 Tage",
+      "Supportanfragen, die für einen laufenden Fall nötig sind, längstens 24 Monate",
+    ],
+    appTitle: "Daten auf deinem Gerät",
+    appText:
+      "Playlist, Programmführer und Wiedergabefortschritt liegen nur lokal in der App. Eine Kontolöschung entfernt sie nicht: Lösche die Playlist in den App-Einstellungen, entferne die Demo-Inhalte oder deinstalliere die App, um die lokalen Daten zu beseitigen.",
+    contactTitle: "Fragen oder Probleme",
+    contactText:
+      "Wenn eine Löschung nicht innerhalb von 30 Tagen bestätigt wurde oder du nur einzelne Daten löschen möchtest, melde dich beim Support. Zwecke und Fristen stehen vollständig in der Datenschutzerklärung.",
+    openDashboard: "Zur Anmeldung",
+    writeEmail: "E-Mail schreiben",
+    mailSubject: "Kontolöschung",
+    privacyLink: "Datenschutzerklärung",
+    contactLink: "Kontakt",
+  },
   footer: {
     tagline:
       "Der technische Player für deine eigenen Playlists – für Fire TV, Android TV und mobile Geräte.",
@@ -874,6 +925,7 @@ export const de = {
     terms: "Nutzungsbedingungen",
     subscriptionTerms: "Abonnementbedingungen",
     withdrawal: "Widerrufsinformationen",
+    accountDeletion: "Konto löschen",
     cookies: "Cookie-Einstellungen",
     rights: "Alle Rechte vorbehalten.",
     languageNote: "Deutsch ist die Standardsprache. Weitere Sprachen folgen schrittweise.",

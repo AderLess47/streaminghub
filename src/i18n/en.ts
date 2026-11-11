@@ -857,6 +857,57 @@ export const en: Dictionary = {
       notAuthorized: "Only staff accounts can set up MFA.",
     },
   },
+  accountDeletion: {
+    eyebrow: "Account deletion",
+    title: "Delete your account and data",
+    description:
+      "Request deletion of your StreamingHub account here – signed in from the dashboard, or without signing in by email. This page is the public deletion link for the Amazon Appstore, Fire TV and Android.",
+    updated:
+      "Applies to the account, device pairing and all data stored on streaminghub.org.",
+    inAppTitle: "Delete while signed in",
+    inAppSteps: [
+      "Sign in at streaminghub.org/login with your email address.",
+      "Open Dashboard → Settings.",
+      "Choose \u201cRequest account deletion\u201d and confirm the request.",
+    ],
+    inAppNote:
+      "You receive a confirmation by email. Sessions end immediately; personal data is deleted without undue delay unless statutory retention obligations apply.",
+    webTitle: "Delete without signing in",
+    webText:
+      "Forgot your password, lost access to the account, or already uninstalled the app? An email from the registered address is enough.",
+    webSteps: [
+      "Write to service@streaminghub.org with the subject \u201cAccount deletion\u201d.",
+      "State the email address of the account – nothing else is required.",
+      "We confirm receipt and delete after verifying the account ownership.",
+    ],
+    webNote:
+      "We only check that the request belongs to the account. For addresses without an account we store no additional data.",
+    deletedTitle: "What is deleted",
+    deletedItems: [
+      "Account, email address, display name and password hash",
+      "All sessions and two-factor secrets",
+      "Device pairings, activation tokens and device names",
+      "Support requests and their messages",
+      "A stored M3U URL as well as data export requests",
+    ],
+    retainedTitle: "What we must retain",
+    retainedItems: [
+      "Billing and payment records while commercial and tax retention periods apply",
+      "Security logs for sign-in and deletion, for no longer than 90 days",
+      "Support requests needed for an open case, for no longer than 24 months",
+    ],
+    appTitle: "Data on your device",
+    appText:
+      "Playlist, program guide and playback progress exist only locally in the app. Deleting the account does not remove them: clear the playlist in the app settings, remove the demo library, or uninstall the app to erase local data.",
+    contactTitle: "Questions or problems",
+    contactText:
+      "If a deletion is not confirmed within 30 days, or you only want individual data removed, contact support. Purposes and retention periods are documented in the privacy policy.",
+    openDashboard: "Go to sign-in",
+    writeEmail: "Send email",
+    mailSubject: "Account deletion",
+    privacyLink: "Privacy policy",
+    contactLink: "Contact",
+  },
   footer: {
     tagline:
       "The technical player for your own playlists – for Fire TV, Android TV and mobile devices.",
@@ -871,6 +922,7 @@ export const en: Dictionary = {
     terms: "Terms of use",
     subscriptionTerms: "Subscription terms",
     withdrawal: "Withdrawal information",
+    accountDeletion: "Delete account",
     cookies: "Cookie settings",
     rights: "All rights reserved.",
     languageNote: "German is the default language. Further languages follow gradually.",
