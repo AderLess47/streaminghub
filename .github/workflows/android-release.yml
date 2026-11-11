@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: android-release
@@ -112,7 +113,7 @@ jobs:
         run: npm run typecheck
 
       # Builds, signs and uploads the APK, verifies the public object, updates the
-      # local release metadata files and exports APK_* to GITHUB_ENV.
+      # release metadata files and exports APK_* to GITHUB_ENV.
       - name: Build, upload and verify APK
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -125,8 +126,8 @@ jobs:
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
       # The website reads APK_* at request time (src/lib/android-release.ts), so
-      # publishing a release is a secret update: no commit to the protected
-      # branch and no deploy are involved.
+      # publishing the release itself is a secret update: no commit to the
+      # protected branch and no deploy are involved.
       - name: Publish release metadata as Fly secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -156,3 +157,64 @@ jobs:
           done
           echo "::error::The site still serves an older release. Check the APK_* secrets and the machine restarts."
           exit 1
+
+      # `npm run release:apk` rewrote the generated files in this runner, but it
+      # must not commit to the protected branch. It therefore parks the changes on
+      # a stable branch and keeps one draft pull request open, so syncing the
+      # repository is a single merge.
+      - name: Prepare the release metadata draft pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/metadata-sync"
+          FILES=()
+          for file in src/content/release.ts fly.toml .env.example; do
+            [ -f "$file" ] && FILES+=("$file")
+          done
+          git add -- "${FILES[@]}"
+
+          if git diff --cached --quiet; then
+            echo "Committed release metadata is already current; no pull request needed."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "chore(release): ${APK_VERSION}"
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch -q origin "$BRANCH"
+            git rebase -q "origin/$BRANCH"
+          fi
+          git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+          BODY=$(mktemp)
+          cat > "$BODY" <<EOF
+          Generated release metadata for **${APK_VERSION}** (build ${APK_VERSION_CODE}).
+
+          | Feld | Wert |
+          | --- | --- |
+          | Datei | \`${APK_FILE_NAME}\` |
+          | Größe | ${APK_SIZE_BYTES} Bytes |
+          | SHA-256 | \`${APK_SHA256}\` |
+
+          Produktion liest diese Werte zur Laufzeit aus den Fly-Secrets; dieser
+          Commit hält nur den lokalen Fallback \`src/content/release.ts\` und die
+          Download-URLs in \`fly.toml\`/\`.env.example\` aktuell.
+
+          **Merge-Hinweis:** Pull Requests, die mit \`GITHUB_TOKEN\` erstellt werden,
+          starten keine CI-Läufe. Der erforderliche Check \`Typecheck and tests\`
+          fehlt deshalb und der Merge ist als Administrator (Bypass) nötig.
+          EOF
+
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh pr edit "$EXISTING" --title "chore(release): ${APK_VERSION}" --body-file "$BODY"
+            gh pr ready --undo "$EXISTING" >/dev/null 2>&1 || true
+            echo "Updated draft pull request #${EXISTING}."
+          else
+            gh pr create --draft --base main --head "$BRANCH" \
+              --title "chore(release): ${APK_VERSION}" \
+              --body-file "$BODY" | tail -1
+          fi
