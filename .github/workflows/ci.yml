@@ -3,6 +3,9 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # The Android release workflow requests this check explicitly on its metadata
+  # branch: pull requests opened with GITHUB_TOKEN do not trigger pull_request events.
+  workflow_dispatch:
 
 permissions:
   contents: read

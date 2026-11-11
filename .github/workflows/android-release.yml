@@ -10,6 +10,9 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
+  actions: write
+  checks: read
 
 concurrency:
   group: android-release
@@ -122,10 +125,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run release:apk
 
-      - name: Commit release metadata
+      # The metadata commit used to be pushed straight to the protected branch,
+      # which only worked while branch protection was suspended. It now travels
+      # through its own pull request, so protection stays enabled.
+      - name: Commit release metadata through a pull request
         if: ${{ inputs.commit_metadata == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          base="${GITHUB_REF_NAME}"
           if git diff --quiet -- src/content/release.ts fly.toml .env.example; then
             echo "No release metadata changes to commit."
             exit 0
@@ -135,19 +144,48 @@ jobs:
             echo "::error::Could not read versionName from android/app/build.gradle.kts"
             exit 1
           fi
+          branch="release/metadata-$(date -u +%Y%m%d%H%M%S)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
           git add src/content/release.ts fly.toml .env.example
           git commit -m "chore(release): APK ${version} [skip ci]"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${branch}"
+
+          pr_url=$(gh pr create --base "$base" --head "$branch" \
+            --title "chore(release): APK ${version}" \
+            --body "Release metadata for APK ${version}: points \`src/content/release.ts\`, \`fly.toml\` and \`.env.example\` at the uploaded R2 object.")
+          pr_number="${pr_url##*/}"
+          echo "metadata_pr=#${pr_number}"
+
+          # Workflows are not started by events created with GITHUB_TOKEN, so the
+          # required check has to be requested explicitly for the metadata branch.
+          gh workflow run ci.yml --ref "$branch"
+          registered=0
+          for _ in $(seq 1 36); do
+            if gh pr checks "$pr_number" 2>/dev/null | grep -q "Typecheck and tests"; then
+              registered=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$registered" -ne 1 ]; then
+            echo "::error::CI did not start for PR #${pr_number}; merge ${branch} manually and deploy."
+            exit 1
+          fi
+          gh pr checks "$pr_number" --watch --fail-fast
+          gh pr merge "$pr_number" --rebase --delete-branch
+
+          git fetch origin "$base"
+          git checkout -B "$base" "origin/${base}"
+          echo "metadata_merged_into_main=$(git rev-parse --short HEAD)"
 
       - name: Install flyctl
         run: |
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
-      - name: Deploy website to Fly.io
+      - name: Deploy merged main to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --app streaminghub-org --yes --remote-only
