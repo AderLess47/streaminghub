@@ -1,4 +1,5 @@
 import { Icon } from "@/components/icons";
+import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { revokeDeviceAction } from "@/lib/actions/admin";
@@ -31,8 +32,9 @@ export default async function AdminDevicesPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.devices} title={t.admin.devices.title} description={t.admin.subtitle} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.devices.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.devices.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.devices.name}</th>
@@ -80,7 +82,7 @@ export default async function AdminDevicesPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

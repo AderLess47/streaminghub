@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { setSubscriptionStatusAction } from "@/lib/actions/admin";
@@ -30,8 +31,9 @@ export default async function AdminSubscriptionsPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.subscriptions} title={t.admin.subscriptions.title} description={t.admin.subscriptions.note} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.subscriptions.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.subscriptions.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.subscriptions.customer}</th>
@@ -81,7 +83,7 @@ export default async function AdminSubscriptionsPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       <p className="rounded-xl border border-amber-500/20 bg-amber-500/6 px-3.5 py-3 text-xs leading-relaxed text-amber-200/90">
         {t.admin.subscriptions.note}
       </p>

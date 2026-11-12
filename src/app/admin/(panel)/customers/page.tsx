@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { ScrollRegion } from "@/components/scroll-region";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import {
@@ -81,8 +82,9 @@ export default async function AdminCustomersPage({
         </button>
       </form>
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.customers.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.customers.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.customers.email}</th>
@@ -164,7 +166,7 @@ export default async function AdminCustomersPage({
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       <p className="text-[0.68rem] leading-relaxed text-muted">
         {t.admin.roles.note}
       </p>
