@@ -46,20 +46,20 @@ if (backup && !dryRun) {
   console.log(`Backup: ${target}`);
 }
 
-const rows = db.prepare("SELECT id, a_de, a_en FROM faq_items").all();
+const rows = db.prepare("SELECT id, answer_de, answer_en FROM faq_items").all();
 let changed = 0;
 for (const row of rows) {
-  let de = row.a_de;
-  let en = row.a_en;
+  let de = row.answer_de;
+  let en = row.answer_en;
   for (const [oldText, newText] of replacements) {
     de = de.split(oldText).join(newText);
     en = en.split(oldText).join(newText);
   }
-  if (de === row.a_de && en === row.a_en) continue;
+  if (de === row.answer_de && en === row.answer_en) continue;
   changed += 1;
   console.log(`Row ${row.id}: ${dryRun ? "would update" : "updating"}`);
   if (!dryRun) {
-    db.prepare("UPDATE faq_items SET a_de = ?, a_en = ?, updated_at = ? WHERE id = ?").run(
+    db.prepare("UPDATE faq_items SET answer_de = ?, answer_en = ?, updated_at = ? WHERE id = ?").run(
       de,
       en,
       new Date().toISOString(),
