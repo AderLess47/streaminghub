@@ -5,22 +5,31 @@ import type { ActionState } from "@/lib/actions/dashboard";
 import type { Dictionary } from "@/i18n/de";
 import { localeMeta, locales, type Locale } from "@/i18n/config";
 import { Icon } from "./icons";
+import { useSubmitFocus } from "./use-submit-focus";
 
 type Action = (prevState: ActionState, formData: FormData) => Promise<ActionState>;
 
+/**
+ * Erfolg und Fehler landen in dauerhaft vorhandenen Live-Regionen. Ein Element,
+ * das erst mit seinem Text eingefügt wird, wird von Screenreadern oft nicht
+ * angesagt – der Container muss schon vor dem Absenden im DOM stehen.
+ */
 function Feedback({ state }: { state: ActionState }) {
-  if (!state?.message) return null;
+  const message = state?.message;
+  const ok = Boolean(state?.ok);
+  const style = `rounded-lg border px-3 py-2 text-xs leading-relaxed ${
+    ok ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-200" : "border-rose-500/25 bg-rose-500/8 text-rose-200"
+  }`;
+
   return (
-    <p
-      className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-        state.ok
-          ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-200"
-          : "border-rose-500/25 bg-rose-500/8 text-rose-200"
-      }`}
-      role={state.ok ? "status" : "alert"}
-    >
-      {state.message}
-    </p>
+    <>
+      <div aria-live="polite" aria-atomic="true">
+        {message && ok ? <p className={style}>{message}</p> : null}
+      </div>
+      <div aria-live="assertive" aria-atomic="true">
+        {message && !ok ? <p className={style}>{message}</p> : null}
+      </div>
+    </>
   );
 }
 
@@ -35,6 +44,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function NewTicketForm({ action, t }: { action: Action; t: Dictionary["dashboard"]["support"] }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
   const categories = Object.entries(t.categories) as [string, string][];
 
@@ -94,7 +104,7 @@ export function NewTicketForm({ action, t }: { action: Action; t: Dictionary["da
         <FieldError id="ticket-message-error" message={fieldErrors.message} />
       </div>
       <Feedback state={state} />
-      <button type="submit" className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {t.submit}
       </button>
@@ -112,6 +122,7 @@ export function ReplyForm({
   labels: { title: string; cta: string; placeholder: string };
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
 
   return (
     <form action={formAction} className="mt-4 grid gap-3">
@@ -132,7 +143,7 @@ export function ReplyForm({
       />
       <FieldError id={`reply-${ticketId}-error`} message={state?.fieldErrors?.body} />
       <Feedback state={state} />
-      <button type="submit" className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="arrow-right" size={14} />}
         {labels.cta}
       </button>
@@ -150,6 +161,7 @@ export function ProfileForm({
   t: Dictionary["dashboard"]["settings"];
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
@@ -216,7 +228,7 @@ export function ProfileForm({
         {t.marketingLabel}
       </label>
       <Feedback state={state} />
-      <button type="submit" className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="check" size={14} />}
         {t.save}
       </button>
@@ -226,6 +238,7 @@ export function ProfileForm({
 
 export function PasswordForm({ action, t }: { action: Action; t: Dictionary["dashboard"]["settings"] }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
@@ -267,7 +280,7 @@ export function PasswordForm({ action, t }: { action: Action; t: Dictionary["das
         <FieldError id="new-password-error" message={fieldErrors.newPassword} />
       </div>
       <Feedback state={state} />
-      <button type="submit" className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="lock" size={14} />}
         {t.passwordTitle}
       </button>
@@ -293,6 +306,7 @@ export function DataRequestForm({
   danger?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
@@ -333,6 +347,7 @@ export function DataRequestForm({
       <Feedback state={state} />
       <button
         type="submit"
+        ref={submitRef}
         className={`btn btn-sm justify-self-start ${danger ? "btn-danger" : "btn-outline"}`}
         disabled={pending}
       >
@@ -351,10 +366,11 @@ export function SessionsForm({
   t: Dictionary["dashboard"]["settings"];
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
+  const submitRef = useSubmitFocus(pending);
   return (
     <form action={formAction} className="grid gap-3">
       <Feedback state={state} />
-      <button type="submit" className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         <Icon name={pending ? "refresh" : "logout"} size={14} className={pending ? "animate-spin" : ""} />
         {t.logoutOthers}
       </button>
