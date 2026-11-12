@@ -120,22 +120,26 @@ export default async function SubscriptionPage({
         </div>
 
         <div className="grid gap-4">
-          <div className="card p-5">
-            <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
-            <div className="mt-4">
-              <CheckoutButton
-                label={t.dashboard.subscription.startCta}
-                disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
-                configured={configured}
-                signedIn
-              />
+          {/* Bei aktivem Abo bietet der Server keinen zweiten Abschluss an
+              (already_active) – dann wird die Handlung auch nicht angeboten. */}
+          {status !== "active" ? (
+            <div className="card p-5">
+              <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
+              <div className="mt-4">
+                <CheckoutButton
+                  label={t.dashboard.subscription.startCta}
+                  disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+                  configured={configured}
+                  signedIn
+                />
+              </div>
+              <Link href="/premium" className="btn btn-ghost btn-sm btn-block mt-2">
+                {t.nav.premium}
+                <Icon name="arrow-right" size={14} />
+              </Link>
             </div>
-            <Link href="/premium" className="btn btn-ghost btn-sm btn-block mt-2">
-              {t.nav.premium}
-              <Icon name="arrow-right" size={14} />
-            </Link>
-          </div>
+          ) : null}
 
           <div className="card p-5">
             <h2 className="text-sm font-semibold">{t.legal.subscriptionTerms}</h2>

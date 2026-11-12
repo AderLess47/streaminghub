@@ -97,6 +97,22 @@ Seite mit aktivem Abo; Reflow bei 320 px 305 = 305.
 Kein Barrierefreiheitsbefund: Rollen, Fokus und Beschriftungen sind korrekt. Es
 ist ein Widerspruch im Handlungsangebot.
 
+Nachtrag 12.11.2026: **Befund 1 ist behoben.** Der Checkout-Bereich wird nur noch
+angezeigt, wenn der Status nicht `active` ist – genau die Bedingung, unter der
+auch der Server einen zweiten Abschluss ablehnt (`already_active` in
+`lib/payments.ts`). Die Kündigung bleibt sichtbar.
+
+Nachgeprüft mit serverseitig gerendertem HTML (zwei Testkonten, gleiche URL):
+
+| Konto | „Abonnement kündigen" | „Premium im Web abschließen" |
+| --- | --- | --- |
+| Abo aktiv | vorhanden (1×) | **nicht vorhanden** (0×) |
+| kein Abo | nicht vorhanden (0×) | vorhanden (1×) |
+
+Zusätzlich im Browser für das aktive Konto gemessen: nur noch die Knöpfe
+„Abmelden", „Abonnement kündigen" und „Cookie-Einstellungen", axe 0 Verstöße,
+Reflow bei 320 px 305 = 305.
+
 ## 6. Grenzen dieser Prüfung
 
 ```
