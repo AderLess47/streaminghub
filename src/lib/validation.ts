@@ -95,7 +95,7 @@ export const ticketSchema = z.object({
 });
 
 export const profileSchema = z.object({
-  displayName: z.string().trim().min(2).max(80),
+  displayName: z.string().trim().min(2, "Bitte gib einen Anzeigenamen mit mindestens 2 Zeichen an.").max(80),
   locale: z.enum(["de", "en", "tr", "ar", "fr", "es", "it", "el"]),
   marketingOptIn: z.boolean().optional().default(false),
 });

@@ -27,9 +27,22 @@ import {
 } from "@/lib/validation";
 import { LOCALE_COOKIE } from "@/i18n/config";
 
-export type ActionState = { ok: boolean; message: string } | null;
+export type ActionState = {
+  ok: boolean;
+  message: string;
+  /** Meldung je Feld, Schlüssel ist das name-Attribut des Feldes. */
+  fieldErrors?: Record<string, string>;
+} | null;
 
 const firstError = (issues: { message: string }[]) => issues[0]?.message ?? "Ungültige Eingabe.";
+
+/** Erste Meldung je betroffenem Feld, damit das Formular sie am Feld anzeigen kann. */
+const fieldErrorsOf = (issues: readonly { path: PropertyKey[]; message: string }[]) =>
+  issues.reduce<Record<string, string>>((acc, issue) => {
+    const key = String(issue.path[0] ?? "form");
+    acc[key] ??= issue.message;
+    return acc;
+  }, {});
 
 export async function removeDeviceAction(formData: FormData): Promise<void> {
   const user = await requireUser();
@@ -68,7 +81,13 @@ export async function updateProfileAction(
     locale: formData.get("locale"),
     marketingOptIn: formData.get("marketingOptIn") === "on",
   });
-  if (!parsed.success) return { ok: false, message: firstError(parsed.error.issues) };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: firstError(parsed.error.issues),
+      fieldErrors: fieldErrorsOf(parsed.error.issues),
+    };
+  }
 
   run(
     `UPDATE users SET display_name = ?, locale = ?, marketing_opt_in = ?, updated_at = ? WHERE id = ?`,
@@ -100,11 +119,21 @@ export async function changePasswordAction(
     currentPassword: formData.get("currentPassword"),
     newPassword: formData.get("newPassword"),
   });
-  if (!parsed.success) return { ok: false, message: firstError(parsed.error.issues) };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: firstError(parsed.error.issues),
+      fieldErrors: fieldErrorsOf(parsed.error.issues),
+    };
+  }
 
   const row = get<{ password_hash: string }>(`SELECT password_hash FROM users WHERE id = ?`, user.id);
   if (!row || !verifyPassword(parsed.data.currentPassword, row.password_hash)) {
-    return { ok: false, message: "Das aktuelle Passwort ist falsch." };
+    return {
+      ok: false,
+      message: "Das aktuelle Passwort ist falsch.",
+      fieldErrors: { currentPassword: "Das aktuelle Passwort ist falsch." },
+    };
   }
 
   run(
@@ -129,7 +158,13 @@ export async function createTicketAction(
     category: formData.get("category"),
     message: formData.get("message"),
   });
-  if (!parsed.success) return { ok: false, message: firstError(parsed.error.issues) };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: firstError(parsed.error.issues),
+      fieldErrors: fieldErrorsOf(parsed.error.issues),
+    };
+  }
 
   const ticketId = randomToken(10);
   const now = nowIso();
@@ -190,7 +225,8 @@ export async function replyTicketAction(
   const ticketId = String(formData.get("ticketId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   if (body.length < 2 || body.length > 4000) {
-    return { ok: false, message: "Bitte gib eine Antwort zwischen 2 und 4000 Zeichen ein." };
+    const message = "Bitte gib eine Antwort zwischen 2 und 4000 Zeichen ein.";
+    return { ok: false, message, fieldErrors: { body: message } };
   }
   const ticket = get<{ id: string; subject: string }>(
     `SELECT id, subject FROM support_tickets WHERE id = ? AND user_id = ?`,
@@ -234,11 +270,17 @@ export async function dataRequestAction(
     confirm: formData.get("confirm") === "on",
     password: formData.get("password"),
   });
-  if (!parsed.success) return { ok: false, message: firstError(parsed.error.issues) };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: firstError(parsed.error.issues),
+      fieldErrors: fieldErrorsOf(parsed.error.issues),
+    };
+  }
 
   const row = get<{ password_hash: string }>(`SELECT password_hash FROM users WHERE id = ?`, user.id);
   if (!row || !verifyPassword(parsed.data.password, row.password_hash)) {
-    return { ok: false, message: "Das Passwort ist falsch." };
+    return { ok: false, message: "Das Passwort ist falsch.", fieldErrors: { password: "Das Passwort ist falsch." } };
   }
 
   run(
