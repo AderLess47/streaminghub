@@ -1,0 +1,24 @@
+{
+  "name": "streaminghub-vega",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "react-native start",
+    "build": "react-native build-vega --build-type Release",
+    "build:debug": "react-native build-vega",
+    "typecheck": "tsc --noEmit",
+    "doctor": "vega project doctor"
+  },
+  "dependencies": {
+    "@amazon-devices/react-native-kepler": "4.0.2",
+    "@amazon-devices/react-native-w3cmedia": "2.3.5",
+    "@react-native-async-storage/async-storage": "2.1.0",
+    "react": "19.2.0",
+    "react-native": "0.83.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "typescript": "5.9.2"
+  }
+}

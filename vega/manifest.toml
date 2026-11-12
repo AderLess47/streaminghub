@@ -1,0 +1,48 @@
+# Vega OS App-Manifest.
+#
+# Die [os.version] ist Pflicht: ohne sie bricht der Build ab. Die [[needs.module]]
+# für die OS-Version erzeugt das Tooling selbst – hier nicht von Hand eintragen.
+# Die [wants]-Einträge unten sind die Voraussetzung dafür, dass initialize() des
+# Media-Players nicht abgelehnt wird (siehe docs: Media Player Setup).
+
+schema-version = 1
+
+[package]
+id = "de.streaminghub.vega"
+title = "StreamingHub"
+version = "1.0.0"
+
+[os.version]
+target = "2.0"
+min = "2.0"
+
+[components]
+[[components.interactive]]
+id = "de.streaminghub.vega.interactive"
+categories = ["com.amazon.category.main"]
+launch-type = "singleton"
+
+[wants]
+[[wants.service]]
+id = "com.amazon.mediametrics.service"
+
+[[wants.privilege]]
+id = "com.amazon.devconf.privilege.accessibility"
+
+[[wants.service]]
+id = "com.amazon.mediabuffer.service"
+
+[[wants.service]]
+id = "com.amazon.mediatransform.service"
+
+[[wants.service]]
+id = "com.amazon.audio.stream"
+
+[[wants.service]]
+id = "com.amazon.audio.control"
+
+[[wants.service]]
+id = "com.amazon.media.server"
+
+[[wants.service]]
+id = "com.amazon.media.playersession.service"
