@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { Dictionary } from "@/i18n/de";
 import { focusSoon } from "./focus-soon";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 
 const FIELD_IDS: Record<string, string> = {
@@ -212,6 +213,7 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
+        <FormStatus pending={pending} label={t.sending} />
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="mail" size={16} />}
           {pending ? t.sending : t.submit}

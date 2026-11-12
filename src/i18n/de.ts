@@ -34,6 +34,7 @@ export const de = {
   ui: {
     save: "Speichern",
     saving: "Wird gespeichert …",
+    sending: "Wird gesendet …",
     cancel: "Abbrechen",
     remove: "Entfernen",
     copy: "Kopieren",
@@ -482,6 +483,7 @@ export const de = {
     devLinkHint: "Entwicklungsmodus: E-Mail-Versand ist nicht konfiguriert. Link:",
     loggedOut: "Du wurdest abgemeldet.",
     accountDisabled: "Dieses Konto ist deaktiviert. Bitte kontaktiere den Support.",
+    submitting: "Wird gesendet …",
   },
   dashboard: {
     title: "Dashboard",
@@ -564,6 +566,7 @@ export const de = {
       category: "Kategorie",
       message: "Nachricht",
       submit: "Anfrage senden",
+      sending: "Wird gesendet …",
       empty: "Du hast noch keine Support-Anfragen gestellt.",
       statusOpen: "Offen",
       statusPending: "In Bearbeitung",
@@ -597,6 +600,7 @@ export const de = {
       languageLabel: "Bevorzugte Sprache",
       marketingLabel: "Produktupdates per E-Mail",
       saved: "Profil gespeichert.",
+      saving: "Wird gespeichert …",
       passwordTitle: "Passwort ändern",
       passwordHint: "Mindestens 10 Zeichen, mit Buchstaben und Zahlen.",
       passwordSaved: "Passwort geändert. Andere Sitzungen wurden abgemeldet.",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { useSubmitFocus } from "./use-submit-focus";
 
@@ -9,9 +10,11 @@ type ActionResult = { message: string; ok: boolean } | null;
 export function CancelSubscriptionForm({
   action,
   label,
+  busyLabel,
 }: {
   action: (prevState: ActionResult, formData: FormData) => Promise<ActionResult>;
   label: string;
+  busyLabel: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
@@ -19,6 +22,7 @@ export function CancelSubscriptionForm({
 
   return (
     <form action={formAction} className="mt-4">
+      <FormStatus pending={pending} label={busyLabel} />
       <button type="submit" ref={submitRef} className="btn btn-danger btn-sm" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="close" size={14} />}
         {label}

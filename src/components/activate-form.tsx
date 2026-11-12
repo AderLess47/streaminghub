@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
 
@@ -26,6 +27,7 @@ export function ActivateForm({
     toLogin: string;
     toDashboard: string;
     securityNote: string;
+    busy: string;
   };
 }) {
   const [code, setCode] = useState("");
@@ -151,6 +153,7 @@ export function ActivateForm({
             className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
           />
 
+          <FormStatus pending={pending} label={labels.busy} />
           <button type="submit" className="btn btn-primary" disabled={pending || code.length < 8}>
             {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="key" size={16} />}
             {labels.submit}

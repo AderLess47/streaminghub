@@ -107,7 +107,11 @@ export default async function SubscriptionPage({
           ) : null}
 
           {status === "active" && subscription.channel === "web" ? (
-            <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+            <CancelSubscriptionForm
+              action={cancelSubscriptionAction}
+              label={t.dashboard.subscription.cancelCta}
+              busyLabel={t.ui.saving}
+            />
           ) : null}
 
           {status !== "active" ? (

@@ -1,4 +1,5 @@
 import { ScrollRegion } from "@/components/scroll-region";
+import { FormStatus } from "@/components/form-status";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { setSubscriptionStatusAction } from "@/lib/actions/admin";
@@ -67,7 +68,13 @@ export default async function AdminSubscriptionsPage() {
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
+                    <FormStatus label={t.ui.saving} />
+                    <button
+                      type="submit"
+                      className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                      title={t.ui.save}
+                      aria-label={t.ui.save}
+                    >
                       ✓
                     </button>
                   </form>

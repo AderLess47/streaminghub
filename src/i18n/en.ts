@@ -33,6 +33,7 @@ export const en: Dictionary = {
   ui: {
     save: "Save",
     saving: "Saving …",
+    sending: "Sending …",
     cancel: "Cancel",
     remove: "Remove",
     copy: "Copy",
@@ -479,6 +480,7 @@ export const en: Dictionary = {
     devLinkHint: "Development mode: email delivery is not configured. Link:",
     loggedOut: "You have been signed out.",
     accountDisabled: "This account is disabled. Please contact support.",
+    submitting: "Sending …",
   },
   dashboard: {
     title: "Dashboard",
@@ -561,6 +563,7 @@ export const en: Dictionary = {
       category: "Category",
       message: "Message",
       submit: "Send request",
+      sending: "Sending …",
       empty: "You have not submitted any support requests yet.",
       statusOpen: "Open",
       statusPending: "In progress",
@@ -594,6 +597,7 @@ export const en: Dictionary = {
       languageLabel: "Preferred language",
       marketingLabel: "Product updates by email",
       saved: "Profile saved.",
+      saving: "Saving …",
       passwordTitle: "Change password",
       passwordHint: "At least 10 characters, with letters and numbers.",
       passwordSaved: "Password changed. Other sessions were signed out.",

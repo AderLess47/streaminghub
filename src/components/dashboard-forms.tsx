@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { ActionState } from "@/lib/actions/dashboard";
 import type { Dictionary } from "@/i18n/de";
 import { localeMeta, locales, type Locale } from "@/i18n/config";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
 import { useSubmitFocus } from "./use-submit-focus";
@@ -99,6 +100,7 @@ export function NewTicketForm({ action, t }: { action: Action; t: Dictionary["da
         <FieldError id="ticket-message-error" message={fieldErrors.message} />
       </div>
       <Feedback state={state} />
+      <FormStatus pending={pending} label={t.sending} />
       <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {t.submit}
@@ -114,7 +116,7 @@ export function ReplyForm({
 }: {
   action: Action;
   ticketId: string;
-  labels: { title: string; cta: string; placeholder: string };
+  labels: { title: string; cta: string; placeholder: string; busy: string };
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
@@ -138,6 +140,7 @@ export function ReplyForm({
       />
       <FieldError id={`reply-${ticketId}-error`} message={state?.fieldErrors?.body} />
       <Feedback state={state} />
+      <FormStatus pending={pending} label={labels.busy} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="arrow-right" size={14} />}
         {labels.cta}
@@ -223,6 +226,7 @@ export function ProfileForm({
         {t.marketingLabel}
       </label>
       <Feedback state={state} />
+      <FormStatus pending={pending} label={t.saving} />
       <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="check" size={14} />}
         {t.save}
@@ -275,6 +279,7 @@ export function PasswordForm({ action, t }: { action: Action; t: Dictionary["das
         <FieldError id="new-password-error" message={fieldErrors.newPassword} />
       </div>
       <Feedback state={state} />
+      <FormStatus pending={pending} label={t.saving} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="lock" size={14} />}
         {t.passwordTitle}
@@ -340,6 +345,7 @@ export function DataRequestForm({
       </label>
       <FieldError id={`confirm-${kind}-check-error`} message={fieldErrors.confirm} />
       <Feedback state={state} />
+      <FormStatus pending={pending} label={t.saving} />
       <button
         type="submit"
         ref={submitRef}
@@ -365,6 +371,7 @@ export function SessionsForm({
   return (
     <form action={formAction} className="grid gap-3">
       <Feedback state={state} />
+      <FormStatus pending={pending} label={t.saving} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         <Icon name={pending ? "refresh" : "logout"} size={14} className={pending ? "animate-spin" : ""} />
         {t.logoutOthers}

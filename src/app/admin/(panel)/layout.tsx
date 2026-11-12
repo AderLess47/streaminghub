@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DashboardNav, type DashNavItem } from "@/components/dashboard-nav";
+import { FormStatus } from "@/components/form-status";
 import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui";
 import { getI18n } from "@/i18n";
@@ -52,6 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             {t.admin.nav.backToSite}
           </Link>
           <form action={logoutAction}>
+            <FormStatus label={t.ui.sending} />
             <button type="submit" className="btn btn-ghost btn-sm w-full justify-start">
               <Icon name="logout" size={15} />
               {t.nav.logout}

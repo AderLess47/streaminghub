@@ -1,4 +1,5 @@
 import { Icon } from "@/components/icons";
+import { FormStatus } from "@/components/form-status";
 import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
@@ -62,6 +63,7 @@ export default async function AdminDevicesPage() {
                     <form action={revokeDeviceAction}>
                       <input type="hidden" name="deviceId" value={device.id} />
                       <input type="hidden" name="returnTo" value="/admin/devices" />
+                      <FormStatus label={t.ui.saving} />
                       <button type="submit" className="btn btn-danger btn-sm">
                         <Icon name="close" size={13} />
                         {t.admin.devices.revoke}

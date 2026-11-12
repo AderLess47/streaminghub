@@ -1,4 +1,5 @@
 import { Alert, Badge, PageHeader } from "@/components/ui";
+import { FormStatus } from "@/components/form-status";
 import { getI18n } from "@/i18n";
 import { releaseEmailSuppressionAction, retryEmailAction } from "@/lib/actions/admin";
 import { all } from "@/lib/db";
@@ -70,6 +71,7 @@ export default async function AdminEmailsPage() {
             {mail.status !== "sent" && mail.status !== "suppressed" && isEmailConfigured() ? (
               <form action={retryEmailAction} className="mt-3">
                 <input type="hidden" name="emailId" value={mail.id} />
+                <FormStatus label={t.ui.saving} />
                 <button type="submit" className="btn btn-outline btn-sm">
                   {t.admin.emails.retry}
                 </button>
@@ -105,6 +107,7 @@ export default async function AdminEmailsPage() {
                 </div>
                 <form action={releaseEmailSuppressionAction}>
                   <input type="hidden" name="email" value={entry.email} />
+                  <FormStatus label={t.ui.saving} />
                   <button type="submit" className="btn btn-ghost btn-sm">
                     {t.admin.emails.release}
                   </button>

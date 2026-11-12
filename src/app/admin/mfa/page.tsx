@@ -84,7 +84,7 @@ export default async function AdminMfaPage() {
           <div className="mt-4">
             <MfaSetupForm
               action={confirmMfaSetupAction}
-              labels={{ code: t.admin.mfa.codeLabel, cta: t.admin.mfa.enableCta }}
+              labels={{ code: t.admin.mfa.codeLabel, cta: t.admin.mfa.enableCta, busy: t.ui.saving }}
             />
           </div>
 

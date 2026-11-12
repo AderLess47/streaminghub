@@ -7,6 +7,7 @@ import type { Dictionary } from "@/i18n/de";
 import type { Locale } from "@/i18n/config";
 import { localeMeta, locales } from "@/i18n/config";
 import { focusSoon } from "./focus-soon";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
 
@@ -148,6 +149,7 @@ export function LoginForm({
           message={error}
           className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
         />
+        <FormStatus pending={pending} label={t.submitting} />
         <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
           {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
           {t.mfaCta}
@@ -232,6 +234,7 @@ export function LoginForm({
         </p>
       ) : null}
 
+      <FormStatus pending={pending} label={t.submitting} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="lock" size={15} />}
         {t.loginCta}
@@ -404,6 +407,7 @@ export function RegisterForm({
       />
       <DevLink url={devLink} hint={t.devLinkHint} />
 
+      <FormStatus pending={pending} label={t.submitting} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="user" size={15} />}
         {t.registerCta}
@@ -462,6 +466,7 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
           {error}
         </p>
       ) : null}
+      <FormStatus pending={pending} label={t.submitting} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="mail" size={15} />}
         {t.resetCta}
@@ -538,6 +543,7 @@ export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: 
           {error}
         </p>
       ) : null}
+      <FormStatus pending={pending} label={t.submitting} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
         {t.newPasswordCta}
