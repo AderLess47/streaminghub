@@ -95,8 +95,8 @@ export default async function DownloadPage() {
             <p className="text-sm font-medium">Amazon Appstore</p>
             <p className="mt-0.5 text-xs text-muted">
               {locale === "de"
-                ? "Eine Appstore-Listung ist noch nicht verfügbar. Premium wird dort ausschließlich über Amazon In-App Purchasing abgewickelt."
-                : "An Appstore listing is not available yet. Premium is handled there exclusively through Amazon In-App Purchasing."}
+                ? "Eine Appstore-Listung ist noch nicht verfügbar. In der Appstore-Version wird Premium derzeit nicht angeboten."
+                : "An Appstore listing is not available yet. Premium is currently not offered in the Appstore build."}
             </p>
           </div>
         </div>

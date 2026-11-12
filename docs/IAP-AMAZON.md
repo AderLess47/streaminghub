@@ -13,7 +13,7 @@ what the policy actually says, and the options for the Amazon build.
 | The app shows the subscription status and links to `/dashboard` | `SettingsScreen` → „Konto im Web verwalten“ |
 | The dashboard leads to checkout | `/dashboard/subscription` renders `CheckoutButton` |
 | Premium features are still marked **in development** (VPN/proxy, cross-device resume) | `src/i18n/de.ts` → `premium.features` |
-| The website promises "Amazon Appstore version: Amazon In-App Purchasing only" | `src/i18n/de.ts` → `premium.channels.amazon` |
+| The website stated "Amazon Appstore version: Amazon In-App Purchasing only" (now: premium not available in that build) | `src/i18n/de.ts` → `premium.channels.amazon` |
 
 So today the Amazon build is a free player that neither sells nor unlocks paid
 content, but it does lead a user to a page where a subscription can be bought.

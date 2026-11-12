@@ -191,7 +191,7 @@ export const en: Dictionary = {
       amazon: {
         title: "Amazon Appstore",
         description:
-          "For the Appstore build, premium is purchased exclusively through Amazon In-App Purchasing.",
+          "Premium is not available in the Amazon Appstore build.",
         points: [
           "No external payment prompts inside the app",
           "Managed via your Amazon account",
@@ -234,7 +234,7 @@ export const en: Dictionary = {
     channelTitle: "Where you can subscribe",
     channels: {
       web: "Sideload version: web checkout via Stripe",
-      amazon: "Amazon Appstore version: Amazon In-App Purchasing only",
+      amazon: "Amazon Appstore version: premium is not available in that build",
     },
     billingNotice:
       "Note: no payment provider is connected yet. The web checkout is technically prepared but does not trigger a payment. Your subscription status stays “not active” until a real payment has been confirmed server-side.",
