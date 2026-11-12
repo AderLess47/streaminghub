@@ -56,7 +56,7 @@ export function HelpTopics({
           <details key={topic.key} className="card group px-5 py-4" open={Boolean(normalized)}>
             <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-4 marker:hidden [&::-webkit-details-marker]:hidden">
               <div>
-                <h3 className="text-[0.98rem] font-medium text-fg">{topic.title}</h3>
+                <h2 className="text-[0.98rem] font-medium text-fg">{topic.title}</h2>
                 <p className="mt-0.5 text-[0.8rem] text-muted">{topic.description}</p>
               </div>
               <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full border border-line text-muted transition-transform group-open:rotate-45 group-open:border-cyan/50 group-open:text-cyan">

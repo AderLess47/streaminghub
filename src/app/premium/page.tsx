@@ -85,7 +85,7 @@ export default async function PremiumPage() {
           )}
         </div>
 
-        <aside className="card sticky top-24 p-6">
+        <div className="card sticky top-24 p-6">
           <p className="text-xs uppercase tracking-[0.14em] text-muted">StreamingHub Premium</p>
           <p className="mt-2 flex items-baseline gap-2">
             <span className="text-5xl font-semibold tracking-tight">{t.premium.price}</span>
@@ -129,7 +129,7 @@ export default async function PremiumPage() {
                 : `Price: €${PREMIUM_PRICE_EUR.toFixed(2)} per month; no VAT (small business regulation).`}
             </li>
           </ul>
-        </aside>
+        </div>
       </section>
 
       {faq.length > 0 ? (
