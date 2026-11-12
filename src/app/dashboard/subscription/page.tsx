@@ -48,7 +48,9 @@ export default async function SubscriptionPage({
 
       {params.checkout === "success" ? (
         <div className="grid gap-2">
-          <Alert tone="success">{t.dashboard.subscription.checkoutSuccess}</Alert>
+          <Alert tone="success" id="checkout-flash" autoFocus>
+            {t.dashboard.subscription.checkoutSuccess}
+          </Alert>
           {params.session_id?.startsWith("cs_") ? (
             <CheckoutSync
               sessionId={params.session_id}
@@ -57,7 +59,11 @@ export default async function SubscriptionPage({
           ) : null}
         </div>
       ) : null}
-      {params.checkout === "canceled" ? <Alert tone="info">{t.dashboard.subscription.checkoutCanceled}</Alert> : null}
+      {params.checkout === "canceled" ? (
+        <Alert tone="info" id="checkout-canceled" autoFocus>
+          {t.dashboard.subscription.checkoutCanceled}
+        </Alert>
+      ) : null}
       {!configured ? <Alert tone="warning">{t.dashboard.subscription.checkoutNotConfigured}</Alert> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">

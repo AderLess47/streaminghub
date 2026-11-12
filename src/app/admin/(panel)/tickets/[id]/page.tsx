@@ -46,8 +46,16 @@ export default async function AdminTicketDetailPage({
         </Link>
       </PageHeader>
 
-      {query.ok === "reply" ? <Alert tone="success">{t.admin.tickets.updated}</Alert> : null}
-      {query.ok === "status" ? <Alert tone="success">{t.admin.tickets.statusChange}</Alert> : null}
+      {query.ok === "reply" ? (
+        <Alert tone="success" id="ticket-flash-reply" autoFocus>
+          {t.admin.tickets.updated}
+        </Alert>
+      ) : null}
+      {query.ok === "status" ? (
+        <Alert tone="success" id="ticket-flash-status" autoFocus>
+          {t.admin.tickets.statusChange}
+        </Alert>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={ticket.status === "open" ? "warn" : ticket.status === "closed" ? "neutral" : "brand"}>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { FocusOnMount } from "./focus-on-mount";
 import { Icon, type IconName } from "./icons";
 
 export function Badge({
@@ -53,11 +54,16 @@ export function Alert({
   title,
   children,
   icon,
+  id,
+  autoFocus = false,
 }: {
   tone?: "info" | "success" | "warning" | "danger";
   title?: string;
   children?: ReactNode;
   icon?: IconName;
+  id?: string;
+  /** Setzt den Fokus auf die Meldung nach dem Rendern, etwa nach einer Server-Action. */
+  autoFocus?: boolean;
 }) {
   const styles = {
     info: "border-sky-500/25 bg-sky-500/8 text-sky-100",
@@ -69,6 +75,8 @@ export function Alert({
 
   return (
     <div
+      id={id}
+      tabIndex={autoFocus ? -1 : undefined}
       className={`flex gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed ${styles}`}
       role={tone === "danger" ? "alert" : "status"}
     >
@@ -77,6 +85,7 @@ export function Alert({
         {title ? <p className="font-semibold">{title}</p> : null}
         {children ? <div className={title ? "mt-1 opacity-90" : "opacity-90"}>{children}</div> : null}
       </div>
+      {autoFocus && id ? <FocusOnMount targetId={id} /> : null}
     </div>
   );
 }

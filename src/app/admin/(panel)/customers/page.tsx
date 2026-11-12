@@ -60,7 +60,11 @@ export default async function AdminCustomersPage({
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.customers} title={t.admin.customers.title} description={t.admin.subtitle} />
 
-      {okMessage ? <Alert tone="success">{okMessage}</Alert> : null}
+      {okMessage ? (
+        <Alert tone="success" id="customers-flash" autoFocus>
+          {okMessage}
+        </Alert>
+      ) : null}
 
       <form method="get" className="flex gap-2">
         <input

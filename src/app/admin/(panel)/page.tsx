@@ -48,7 +48,11 @@ export default async function AdminOverviewPage({
     <div className="grid grid-cols-1 gap-6">
       <PageHeader eyebrow={t.admin.title} title={t.admin.nav.overview} description={t.admin.subtitle} />
 
-      {query.error ? <Alert tone="danger">{query.error}</Alert> : null}
+      {query.error ? (
+        <Alert tone="danger" id="admin-error" autoFocus>
+          {query.error}
+        </Alert>
+      ) : null}
 
       {!staff.mfaEnrolled ? (
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-amber-100">
