@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { LiveRegion } from "./live-region";
 
 /**
  * Next.js tauscht bei der Client-Navigation nur den Seiteninhalt aus: Der Fokus
@@ -38,9 +39,5 @@ export function RouteAnnouncer() {
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
-  return (
-    <p role="status" className="sr-only">
-      {announcement}
-    </p>
-  );
+  return <LiveRegion message={announcement} />;
 }

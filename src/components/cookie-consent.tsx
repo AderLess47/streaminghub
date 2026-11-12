@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/i18n/de";
 import { Icon } from "./icons";
+import { LiveRegion } from "./live-region";
 
 const COOKIE = "sh_consent";
 
@@ -66,11 +67,8 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
 
   return (
     <>
-      {/* Mounted before the choice is made, so the outcome is announced rather
-          than rendered together with the message. */}
-      <p role="status" className="sr-only">
-        {announcement}
-      </p>
+      {/* Steht schon vor der Wahl im DOM, damit das Ergebnis angesagt wird. */}
+      <LiveRegion message={announcement} />
       {visible ? (
         <div
           ref={dialogRef}

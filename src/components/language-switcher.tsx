@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { localeMeta, locales, type Locale } from "@/i18n/config";
 import { Icon } from "./icons";
+import { LiveRegion } from "./live-region";
 
 /**
  * Ruhezeit nach der letzten Auswahl. Ein zugeklapptes `<select>` feuert pro
@@ -121,9 +122,7 @@ export function LanguageSwitcher({
           ))}
         </select>
       </label>
-      <span role="status" className="sr-only">
-        {announcement}
-      </span>
+      <LiveRegion message={announcement} />
     </>
   );
 }

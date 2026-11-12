@@ -2,11 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { LiveRegion } from "./live-region";
 
 /**
- * Meldet ein laufendes Formular an Screenreader. Die Live-Region steht von
- * Anfang an im DOM und ändert nur ihren Text – eine Region, die zusammen mit
- * ihrer Meldung entsteht, wird nicht zuverlässig angesagt.
+ * Meldet ein laufendes Formular an Screenreader.
  *
  * Das umgebende Formular bekommt hier auch `aria-busy`: Formulare mit
  * Server-Action kennen ihren Zustand selbst nicht, und ein Attribut am
@@ -24,9 +23,5 @@ export function FormStatus({ label, pending }: { label: string; pending?: boolea
     else form.removeAttribute("aria-busy");
   }, [busy]);
 
-  return (
-    <p ref={ref} role="status" className="sr-only">
-      {busy ? label : ""}
-    </p>
-  );
+  return <LiveRegion ref={ref} message={busy ? label : ""} />;
 }
