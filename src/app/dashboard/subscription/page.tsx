@@ -110,7 +110,7 @@ export default async function SubscriptionPage({
             <CancelSubscriptionForm
               action={cancelSubscriptionAction}
               label={t.dashboard.subscription.cancelCta}
-              busyLabel={t.ui.saving}
+              busy={t.ui.saving}
             />
           ) : null}
 
