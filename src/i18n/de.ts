@@ -22,6 +22,7 @@ export const de = {
     login: "Anmelden",
     register: "Konto erstellen",
     dashboard: "Dashboard",
+    mainNav: "Hauptnavigation",
     admin: "Administration",
     logout: "Abmelden",
     menu: "Menü",
@@ -488,6 +489,7 @@ export const de = {
       support: "Support",
       settings: "Einstellungen",
       security: "Sicherheit",
+      currentPage: "aktuelle Seite",
     },
     overview: {
       devicesTitle: "Aktive Geräte",
