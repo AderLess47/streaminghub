@@ -33,6 +33,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Die Vega-App ist ein eigenes Paket mit eigenen Abhaengigkeiten; die
+      # Website-Pruefung blendet sie aus, damit beide Staende getrennt geprueft werden.
+      - name: Typecheck Vega app
+        working-directory: vega
+        run: npm ci && npx tsc --noEmit
+
       - name: Download page test
         run: npm run test:download-page
 
