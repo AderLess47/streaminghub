@@ -1,4 +1,4 @@
-# Uploading build 10 to the Amazon Appstore
+# Uploading build 11 to the Amazon Appstore
 
 The store binary is the **Amazon flavor**, built and signed by the release
 workflow from the same commit as the public download. Since phase P4 it sells
@@ -12,24 +12,24 @@ in place – the card would otherwise end in a purchase that cannot be verified.
 
 | Field | Value |
 | --- | --- |
-| Workflow run | `43195656027` (`Android release`) |
+| Workflow run | `43202606518` (`Android release`) |
 | Artifact | `streaminghub-amazon-apk` |
 | File | `app-amazon-release.apk` |
-| Version | 1.3.0 (build 10) |
-| Size | 14.478.659 bytes |
-| SHA-256 | `203495b56d3f6a7b6fc1d5fde2c66b455ddb8cdd5f8941c55216276336cb8db9` |
+| Version | 1.4.0 (build 11) |
+| Size | 14.478.645 bytes |
+| SHA-256 | `ac2e11361b3be0ac55ab8febbc8c835699eb680b566f41602b7b67eb8073bf3e` |
 | Signing certificate (SHA-256) | `34aefdb6f9dc697f4e5cd85794e0cb3b39756ef1b0086b24637016c8774ed07e` |
 
 Fetch it:
 
 ```bash
-gh run download 43195656027 -n streaminghub-amazon-apk -D /tmp/amazon-apk
+gh run download 43202606518 -n streaminghub-amazon-apk -D /tmp/amazon-apk
 sha256sum /tmp/amazon-apk/app-amazon-release.apk   # must match the hash above
 ```
 
 **Do not upload `https://streaminghub.org/app.apk`.** That is the `direct` flavor
-(1.3.0, 14.331.189 bytes,
-`6ecc115c1c02681b8188c6fafb2a9c398ea98c60cc7fb3ee172b2335e585f170`): same code,
+(1.4.0, 14.331.194 bytes,
+`8c707ce0760f73daf9de14ebcf6ded66d244b9535a11f770b5e7afa5926a1cdf`): same code,
 but premium is sold on the website instead of through Amazon IAP. Both builds
 now show a premium surface, so the size and the hash are the reliable way to
 tell them apart.
@@ -57,8 +57,8 @@ tell them apart.
 ## Console steps
 
 1. **Upload your app file** — Appstore → your app → Upload app file, select
-   `app-amazon-release.apk`. Amazon accepts `versionCode 10` over the previous
-   `9`; the app id stays `de.streaminghub.app`, so existing installs upgrade.
+   `app-amazon-release.apk`. Amazon accepts `versionCode 11` over the previous
+   `10`; the app id stays `de.streaminghub.app`, so existing installs upgrade.
 2. **Appstore details** — title, short/long description, five bullets and 20
    keywords are in [`listing.md`](listing.md) (German) and
    [`listing-en.md`](listing-en.md) (English). Assets: `icon-114.png`,
@@ -87,12 +87,14 @@ tell them apart.
 | Check | Result |
 | --- | --- |
 | APK signature (`apksigner verify --print-certs`) | verified, `CN=StreamingHub`, release key as above |
-| `aapt dump badging` | `de.streaminghub.app`, versionCode 10, versionName 1.3.0 |
+| `aapt dump badging` | `de.streaminghub.app`, versionCode 11, versionName 1.4.0 |
 | Premium surface | `PREMIUM_SALES = true` and `PREMIUM_CHANNEL = "amazon"` asserted in the workflow before upload |
 | Appstore SDK | `amazon-appstore-sdk:3.0.9` asserted on the `amazonReleaseRuntimeClasspath` |
 | Permissions | `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS` only – the SDK adds none |
-| Public download untouched by this flavor | `/api/release`, `/download`, `/app.apk` serve the direct 1.3.0 (build 10), checksum `6ecc115c…` |
-| Purchase logic | 49 JVM/Robolectric tests per flavor, including server-confirmation-before-fulfilment |
+| Public download untouched by this flavor | `/api/release`, `/download`, `/app.apk` serve the direct 1.4.0 (build 11), checksum `8c707ce0…` |
+| Purchase logic | 61 JVM/Robolectric tests per flavor, including server-confirmation-before-fulfilment |
+| Cross-device resume | `/api/v1/progress` live and premium-gated (`402` without premium), 11 unit tests |
+| Adaptive layout | device class from UI mode and window width, 8 unit tests |
 
 ## Before pressing submit
 
@@ -103,6 +105,9 @@ tell them apart.
 - **Test the premium value:** start a title, stop after a minute, then open the
   same title on the second device – it must resume at the synced position. A free
   account must start at the beginning and keep its position local.
+- **Check the layout on the target device:** the card grid must use the larger TV
+  cards (224 dp) with wide margins, and the settings column must stay centred
+  instead of stretching across a wide window.
 - Re-read the content-rating answers if demo entries change.
 - Keep this file updated with the next artifact hash; the console keeps the
   uploaded binary, not this document.
