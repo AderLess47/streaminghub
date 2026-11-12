@@ -6,7 +6,9 @@ export default async function NotFound() {
   const { t } = await getI18n();
   return (
     <div className="shell flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
-      <p className="text-6xl font-semibold text-brand/40">404</p>
+            <p aria-hidden="true" className="text-6xl font-semibold text-brand-light/70">
+        404
+      </p>
       <h1 className="mt-3 text-2xl font-semibold">{t.errors.notFoundTitle}</h1>
       <p className="mt-2 max-w-md text-sm text-muted">{t.errors.notFoundBody}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
