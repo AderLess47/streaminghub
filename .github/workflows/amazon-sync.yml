@@ -1,0 +1,57 @@
+name: Amazon IAP sync
+
+on:
+  schedule:
+    # Daily at 04:41 UTC: renewals and cancellations are re-verified even when a
+    # Real-Time Notification never arrived, before the release drift check.
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: amazon-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Re-verify Amazon subscriptions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No dependency install: the script uses fetch only.
+      - name: Run the sync
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://streaminghub.org' }}
+          AMAZON_SYNC_TOKEN: ${{ secrets.AMAZON_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${AMAZON_SYNC_TOKEN}" ]; then
+            echo "::notice title=Amazon sync skipped::AMAZON_SYNC_TOKEN is not set, so no Amazon subscription is syncable yet. Add it once IAP is configured, see docs/DEPLOYMENT.md section 11."
+            exit 0
+          fi
+
+          output=$(node scripts/amazon-sync.mjs)
+          echo "${output}"
+          {
+            echo "### Amazon IAP sync"
+            echo
+            echo '```json'
+            echo "${output}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
+          if [ "${failed}" != "0" ]; then
+            echo "::warning title=Amazon sync had failures::${failed} receipt(s) could not be verified. Check AMAZON_RVS_SHARED_SECRET and RVS availability."
+          fi
