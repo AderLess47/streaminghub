@@ -20,9 +20,9 @@ export const accessibilityDoc: LegalDoc = {
   titleEn: "Accessibility information",
   updated: "2026-11-12",
   introDe:
-    "Diese Informationen richten sich an Verbraucherinnen und Verbraucher und beschreiben, wie barrierefrei die Website streaminghub.org und das Kundenportal nutzbar sind. Sie folgen dem Aufbau, den § 14 Absatz 1 Nummer 2 des Barrierefreiheitsstärkungsgesetzes (BFSG) in Verbindung mit Anlage 3 Nummer 1 BFSG für Dienstleistungserbringer vorsieht, und werden unabhängig davon bereitgestellt, ob StreamingHub in den Anwendungsbereich des Gesetzes fällt.",
+    "Diese Informationen richten sich an Verbraucherinnen und Verbraucher und beschreiben, wie barrierefrei die Website streaminghub.org und das Kundenportal nutzbar sind. Sie folgen dem Aufbau, den § 14 Absatz 1 Nummer 2 des Barrierefreiheitsstärkungsgesetzes (BFSG) in Verbindung mit Anlage 3 Nummer 1 BFSG für Dienstleistungserbringer vorsieht. StreamingHub ist ein Kleinstunternehmen und nach § 3 Absatz 3 BFSG von der Pflicht zur barrierefreien Leistungserbringung ausgenommen; diese Informationen stellen wir freiwillig bereit.",
   introEn:
-    "This information is addressed to consumers and describes how accessible the streaminghub.org website and the customer portal are. It follows the structure that section 14(1) no. 2 of the German Accessibility Strengthening Act (BFSG) in conjunction with Annex 3 no. 1 BFSG sets out for service providers, and is provided regardless of whether StreamingHub falls within the scope of that act.",
+    "This information is addressed to consumers and describes how accessible the streaminghub.org website and the customer portal are. It follows the structure that section 14(1) no. 2 of the German Accessibility Strengthening Act (BFSG) in conjunction with Annex 3 no. 1 BFSG sets out for service providers. StreamingHub is a micro-enterprise and is exempt under section 3(3) BFSG from the duty to provide accessible services; we provide this information voluntarily.",
   clausesDe: [
     {
       heading: "1. Beschreibung der Dienstleistung",
