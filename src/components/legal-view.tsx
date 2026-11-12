@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { Clause, LegalDoc } from "@/content/legal";
 import type { Locale } from "@/i18n/config";
 import { PageHeader } from "./ui";
@@ -53,10 +54,13 @@ export function LegalView({
   doc,
   locale,
   notice,
+  children,
 }: {
   doc: LegalDoc;
   locale: Locale;
   notice?: string;
+  /** Zusätzlicher Inhalt unter den Absätzen, etwa klickbare Kontaktdaten. */
+  children?: ReactNode;
 }) {
   const de = locale === "de";
   return (
@@ -83,6 +87,8 @@ export function LegalView({
       ) : null}
 
       <Clauses clauses={de ? doc.clausesDe : doc.clausesEn} />
+
+      {children}
 
       <div className="mt-10 flex flex-wrap gap-2 border-t border-line/50 pt-6">
         <Link href="/contact" className="btn btn-outline btn-sm">
