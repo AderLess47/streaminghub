@@ -121,7 +121,7 @@ script `scripts/amazon-sync.mjs` (`npm run amazon:sync`). P2 is in as well: the
 Amazon flavour integrates the Appstore SDK, renders the purchase card and
 restores a purchase through `getPurchaseUpdates`. P4 is prepared as well: the
 Amazon flavour now builds with `PREMIUM_SALES = true` and `PREMIUM_CHANNEL =
-amazon`, version 1.3.0 (build 10), and the release workflow asserts both values
+amazon`, version 1.4.0 (build 11), and the release workflow asserts both values
 plus the bundled SDK.
 
 **Premium value:** premium gates *Weiterschauen auf allen Geräten*. Positions are
@@ -471,7 +471,7 @@ Manual (device required):
 | P1 | `amazon-iap.ts`, `iap_receipts`, `/purchase` + `/refresh`, tests 1–12 | suite green, no secret in logs |
 | P2 (done) | SDK in the Amazon flavour, purchase UI, restore, 16 Robolectric/JVM tests | App Tester purchase end-to-end (needs a device) |
 | P3 | RTN endpoint and daily sync | renewal and cancel reflected within minutes |
-| P4 (code done) | `PREMIUM_SALES = true` for `amazon`, version 1.3.0 (build 10), workflow assertions | App Tester/LAT run and submission still open |
+| P4 (code done) | `PREMIUM_SALES = true` for `amazon`, version 1.4.0 (build 11), workflow assertions | App Tester/LAT run and submission still open |
 
 Until P4 the Amazon binary stays build 9 with `PREMIUM_SALES = false`.
 
