@@ -117,7 +117,7 @@ export function LoginForm({
 
   if (step === "mfa") {
     return (
-      <form
+      <form aria-busy={pending}
         className="grid gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
@@ -171,7 +171,7 @@ export function LoginForm({
   }
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -288,7 +288,7 @@ export function RegisterForm({
   );
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -438,7 +438,7 @@ export function ForgotPasswordForm({ t, busy }: { t: Dictionary["auth"]; busy: s
   });
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -512,7 +512,7 @@ export function ResetPasswordForm({
   }
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();

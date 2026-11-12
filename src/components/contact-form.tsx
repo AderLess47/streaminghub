@@ -91,7 +91,7 @@ export function ContactForm({
   }
 
   return (
-    <form onSubmit={submit} className="card grid gap-4 p-6" noValidate>
+    <form aria-busy={pending} onSubmit={submit} className="card grid gap-4 p-6" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className="field-label">

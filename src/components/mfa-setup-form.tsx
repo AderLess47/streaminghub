@@ -16,7 +16,7 @@ export function MfaSetupForm({
 
   return (
     <div>
-      <form action={formAction} className="grid gap-3">
+      <form aria-busy={pending} action={formAction} className="grid gap-3">
         <div>
           <label htmlFor="mfa-setup-code" className="field-label">
             {labels.code}

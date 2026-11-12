@@ -40,7 +40,7 @@ export function AdminMfaForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <form aria-busy={pending} onSubmit={submit} className="grid gap-4">
       <div className="flex items-start gap-2 rounded-xl border border-line/60 bg-white/3 px-3 py-2.5">
         <Icon name="shield" size={16} className="mt-0.5 text-cyan" />
         <div>

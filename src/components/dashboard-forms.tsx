@@ -53,7 +53,7 @@ export function NewTicketForm({
   const categories = Object.entries(t.categories) as [string, string][];
 
   return (
-    <form action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} className="grid gap-3">
       <div>
         <label htmlFor="ticket-subject" className="field-label">
           {t.subject}
@@ -130,7 +130,7 @@ export function ReplyForm({
   const submitRef = useSubmitFocus(pending);
 
   return (
-    <form action={formAction} className="mt-4 grid gap-3">
+    <form aria-busy={pending} action={formAction} className="mt-4 grid gap-3">
       <input type="hidden" name="ticketId" value={ticketId} />
       <label htmlFor={`reply-${ticketId}`} className="field-label">
         {labels.title}
@@ -173,7 +173,7 @@ export function ProfileForm({
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} className="grid gap-3">
       <div>
         <label htmlFor="profile-name" className="field-label">
           {t.displayName}
@@ -259,7 +259,7 @@ export function PasswordForm({
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} className="grid gap-3">
       <div>
         <label htmlFor="current-password" className="field-label">
           {t.currentPassword}
@@ -330,7 +330,7 @@ export function DataRequestForm({
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="grid gap-3 rounded-xl border border-line/60 bg-white/2 p-4">
+    <form aria-busy={pending} action={formAction} className="grid gap-3 rounded-xl border border-line/60 bg-white/2 p-4">
       <input type="hidden" name="kind" value={kind} />
       <div>
         <p className="text-sm font-medium">{label}</p>
@@ -391,7 +391,7 @@ export function SessionsForm({
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
   return (
-    <form action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} className="grid gap-3">
       <Feedback state={state} />
       <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>

@@ -104,7 +104,7 @@ export function ActivateForm({
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="grid gap-4">
+        <form aria-busy={pending} onSubmit={submit} className="grid gap-4">
           <div>
             <label htmlFor="pairing-code" className="field-label">
               {labels.code}

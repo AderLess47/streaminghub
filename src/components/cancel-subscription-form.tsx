@@ -21,7 +21,7 @@ export function CancelSubscriptionForm({
   const message = state?.message;
 
   return (
-    <form action={formAction} className="mt-4">
+    <form aria-busy={pending} action={formAction} className="mt-4">
       <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-danger btn-sm" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="close" size={14} />}
