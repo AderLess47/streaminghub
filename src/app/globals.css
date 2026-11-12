@@ -97,6 +97,20 @@
     padding-inline: clamp(1.15rem, 4vw, 2.5rem);
   }
 
+  /* At 320 px long German words ("Abonnementbedingungen") are wider than the
+     column and drag cards past the viewport, so let them break and hyphenate. */
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  li,
+  dt,
+  dd {
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
   .shell-narrow {
     width: 100%;
     max-width: 54rem;
@@ -164,6 +178,13 @@
       color 0.25s ease;
     text-align: center;
     white-space: nowrap;
+  }
+
+  /* Long labels ("APK herunterladen (14 MB)") are wider than a 320 px phone. */
+  @media (max-width: 420px) {
+    .btn {
+      white-space: normal;
+    }
   }
 
   .btn:active {

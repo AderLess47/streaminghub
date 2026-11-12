@@ -149,7 +149,7 @@ export function PageHeader({
     <div className="border-b border-line/40 pb-8">
       {eyebrow ? <p className="eyebrow mb-3">{eyebrow}</p> : null}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-2xl">
+        <div className="min-w-0 max-w-2xl">
           <h1 className="text-3xl font-semibold sm:text-4xl">{title}</h1>
           {description ? <p className="mt-3 text-muted">{description}</p> : null}
         </div>

@@ -9,7 +9,7 @@ export default async function NotFound() {
       <p className="text-6xl font-semibold text-brand/40">404</p>
       <h1 className="mt-3 text-2xl font-semibold">{t.errors.notFoundTitle}</h1>
       <p className="mt-2 max-w-md text-sm text-muted">{t.errors.notFoundBody}</p>
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
         <Link href="/" className="btn btn-primary">
           {t.errors.toHome}
         </Link>

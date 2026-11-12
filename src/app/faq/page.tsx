@@ -80,7 +80,7 @@ export default async function FaqPage({
 
       <div className="card mt-8 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted">{t.help.stillNeedHelp}</p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/help" className="btn btn-outline btn-sm">
             {t.help.title}
           </Link>
