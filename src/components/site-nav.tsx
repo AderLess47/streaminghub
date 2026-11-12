@@ -119,18 +119,21 @@ export function SiteNav({
             <LogoMark size={32} />
                             {/* Below 360 px the wordmark would only show "Strea…"; the logo mark
                     keeps the link recognisable and its aria-label names the site. */}
-                <span className="truncate text-[1.02rem] font-semibold tracking-tight max-[359px]:hidden">
+                <span className="truncate whitespace-nowrap text-[1.02rem] font-semibold tracking-tight max-[359px]:hidden">
               Streaming<span className="grad-text">Hub</span>
             </span>
           </Link>
 
-          <ul className="hidden items-center gap-1 lg:flex">
+          {/* Die volle Navigation braucht rund 1170 px. Bei 1024–1170 px (iPad
+              hochkant) wurden die Beschriftungen sonst mitten im Wort getrennt;
+              darunter übernimmt das Menü. */}
+          <ul className="hidden items-center gap-1 xl:flex">
             {LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
                   aria-current={isActive(link.href) ? "page" : undefined}
-                  className={`rounded-lg px-3 py-2 text-[0.86rem] font-medium transition ${
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-[0.86rem] font-medium transition ${
                     isActive(link.href)
                       ? "bg-white/7 text-fg"
                       : "text-muted hover:bg-white/4 hover:text-fg"
@@ -142,7 +145,7 @@ export function SiteNav({
             ))}
           </ul>
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center gap-2 xl:flex">
             <LanguageSwitcher locale={locale} label={t.language} compact />
             {user ? (
               <>
@@ -177,7 +180,7 @@ export function SiteNav({
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-1 lg:hidden">
+          <div className="flex shrink-0 items-center gap-1 xl:hidden">
             <LanguageSwitcher locale={locale} label={t.language} compact />
             <button
               ref={menuButtonRef}
@@ -195,7 +198,7 @@ export function SiteNav({
       </div>
 
       {open ? (
-        <div className="fixed inset-0 top-16 z-40 lg:hidden">
+        <div className="fixed inset-0 top-16 z-40 xl:hidden">
           <div
             className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
             onClick={() => setOpen(false)}
