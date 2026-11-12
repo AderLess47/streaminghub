@@ -55,15 +55,19 @@ export default async function FaqPage({
           href="/faq"
           className={`chip ${active ? "" : "chip-brand"}`}
           aria-current={active ? undefined : "page"}
+          aria-label={`${t.faq.title}: ${t.faq.allCategories}`}
         >
           {t.faq.allCategories}
         </Link>
+        {/* "Premium" alone also names the main navigation entry, so the category
+            chips carry the list name to stay distinguishable. */}
         {CATEGORIES.map((category) => (
           <Link
             key={category}
             href={`/faq?category=${category}`}
             className={`chip ${active === category ? "chip-brand" : ""}`}
             aria-current={active === category ? "page" : undefined}
+            aria-label={`${t.faq.title}: ${t.faq.categories[category]}`}
           >
             {t.faq.categories[category]}
           </Link>

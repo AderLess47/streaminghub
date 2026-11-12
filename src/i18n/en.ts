@@ -22,6 +22,7 @@ export const en: Dictionary = {
     register: "Create account",
     dashboard: "Dashboard",
     mainNav: "Main navigation",
+    homeLabel: "StreamingHub home",
     admin: "Administration",
     logout: "Sign out",
     menu: "Menu",
