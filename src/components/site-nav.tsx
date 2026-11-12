@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Role } from "@/lib/session";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/de";
@@ -36,6 +36,8 @@ export function SiteNav({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -53,6 +55,51 @@ export function SiteNav({
     return () => {
       document.body.style.overflow = "";
     };
+  }, [open]);
+
+  // The open menu covers the page, so keep the keyboard inside it: Escape closes
+  // and hands focus back to the toggle, Tab cycles between the toggle and the panel.
+  useEffect(() => {
+    if (!open) return;
+    const items = () => {
+      const panel = menuPanelRef.current;
+      const inPanel = panel
+        ? Array.from(
+            panel.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled])',
+            ),
+          )
+        : [];
+      return [menuButtonRef.current, ...inPanel].filter(
+        (el): el is HTMLElement => Boolean(el),
+      );
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        menuButtonRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const list = items();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !list.includes(active)) {
+        event.preventDefault();
+        first.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   const isActive = (href: string) =>
@@ -131,6 +178,7 @@ export function SiteNav({
           <div className="flex shrink-0 items-center gap-1 lg:hidden">
             <LanguageSwitcher locale={locale} label={t.language} compact />
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
@@ -153,7 +201,8 @@ export function SiteNav({
           />
           <div
             id="mobile-menu"
-            className="relative mx-4 mt-3 overflow-hidden rounded-2xl border border-line bg-panel-2 p-4 shadow-2xl"
+            ref={menuPanelRef}
+            className="relative mx-4 mt-3 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-line bg-panel-2 p-4 shadow-2xl"
           >
             <ul className="grid gap-1">
               {LINKS.map((link) => (
