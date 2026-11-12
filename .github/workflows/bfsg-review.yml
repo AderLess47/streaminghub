@@ -54,20 +54,16 @@ jobs:
             echo "Offenes Issue existiert bereits, kein neues angelegt."
             exit 0
           fi
-          gh issue create \
-            --title "BFSG-Prüfung fällig" \
-            --body "$(cat <<'EOF'
-Die jährliche Prüfung der BFSG-Einordnung steht an (siehe `docs/BFSG-ANWENDUNGSBEREICH.md`).
-
-- [ ] Beschäftigtenzahl (Vollzeitäquivalente) erheben
-- [ ] Jahresumsatz **oder** Jahresbilanzsumme des letzten Geschäftsjahres erheben
-- [ ] Gegen die Schwelle prüfen: unter 10 Personen **und** höchstens 2 Mio. €
-- [ ] Ergebnis und Datum im Entscheidungsblock eintragen
-- [ ] Bei geänderter Einordnung: Pflichten nach BFSG prüfen und `/barrierefreiheit` anpassen
-- [ ] Issue schließen
-
-Hintergrund: § 3 Abs. 3 Satz 1 BFSG nimmt Kleinstunternehmen von den Pflichten
-für Dienstleistungen aus. Sobald 10 oder mehr Personen beschäftigt werden oder
-Umsatz bzw. Bilanzsumme 2 Mio. € übersteigen, greifen die Pflichten.
-EOF
-)"
+          body=$(printf '%s\n' \
+            'Die jährliche Prüfung der BFSG-Einordnung steht an (siehe docs/BFSG-ANWENDUNGSBEREICH.md).' \
+            '' \
+            '- [ ] Beschäftigtenzahl (Vollzeitäquivalente) erheben' \
+            '- [ ] Jahresumsatz oder Jahresbilanzsumme des letzten Geschäftsjahres erheben' \
+            '- [ ] Gegen die Schwelle prüfen: unter 10 Personen und höchstens 2 Mio. €' \
+            '- [ ] Ergebnis und Datum im Entscheidungsblock eintragen' \
+            '- [ ] Bei geänderter Einordnung: Pflichten nach BFSG prüfen und /barrierefreiheit anpassen' \
+            '- [ ] Issue schließen' \
+            '' \
+            'Hintergrund: § 3 Abs. 3 Satz 1 BFSG nimmt Kleinstunternehmen von den Pflichten für Dienstleistungen aus.' \
+            'Sobald 10 oder mehr Personen beschäftigt werden oder Umsatz bzw. Bilanzsumme 2 Mio. € übersteigen, greifen die Pflichten.')
+          gh issue create --title "BFSG-Prüfung fällig" --body "$body"
