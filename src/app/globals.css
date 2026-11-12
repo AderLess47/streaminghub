@@ -359,6 +359,13 @@
     box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
   }
 
+  /* Tastaturfokus: der weiche Schein allein ist zu schwach, deshalb der Rahmen. */
+  .field:focus-visible {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 2px;
+    border-color: rgba(6, 182, 212, 0.65);
+  }
+
   .field:disabled {
     opacity: 0.6;
   }
