@@ -1,0 +1,202 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
+import { ScrollRegion } from "@/components/scroll-region";
+import { Badge } from "@/components/ui";
+import type { Dictionary } from "@/i18n/de";
+import {
+  resetCustomerMfaAction,
+  toggleCustomerDisabledAction,
+  updateCustomerRoleAction,
+} from "@/lib/actions/admin";
+
+export type CustomerRow = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  verified: boolean;
+  devices: number;
+  subscriptionStatus: string;
+  created: string;
+  disabled: boolean;
+};
+
+export function CustomerTable({
+  rows,
+  dictionary,
+  initialQuery,
+}: {
+  rows: CustomerRow[];
+  dictionary: Dictionary;
+  initialQuery: string;
+}) {
+  const t = dictionary;
+  const [query, setQuery] = useState(initialQuery);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const needle = query.trim().toLowerCase();
+  const visible = useMemo(() => {
+    if (!needle) return rows;
+    return rows.filter(
+      (row) =>
+        row.email.toLowerCase().includes(needle) || row.displayName.toLowerCase().includes(needle),
+    );
+  }, [rows, needle]);
+
+  // Der Filter steht in der Adresse, damit ein Neuladen ihn behält – ohne Navigation.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (needle) url.searchParams.set("q", needle);
+    else url.searchParams.delete("q");
+    window.history.replaceState(null, "", url);
+  }, [needle]);
+
+  const summary = needle
+    ? t.ui.resultsFor.replace("{count}", String(visible.length)).replace("{query}", query.trim())
+    : t.ui.resultsAll.replace("{count}", String(rows.length));
+
+  return (
+    <>
+      <form
+        role="search"
+        aria-label={t.admin.customers.search}
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <input
+          ref={inputRef}
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t.admin.customers.search}
+          className="field max-w-sm"
+          aria-label={t.admin.customers.search}
+          aria-describedby="customers-result-summary"
+        />
+        {needle ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setQuery("");
+              inputRef.current?.focus();
+            }}
+          >
+            {t.admin.customers.clearFilter}
+          </button>
+        ) : null}
+      </form>
+
+      <p id="customers-result-summary" role="status" className="text-[0.7rem] text-muted">
+        {summary}
+      </p>
+
+      <ScrollRegion
+        label={t.admin.customers.title}
+        describedBy="customers-result-summary"
+        className="card overflow-x-auto"
+      >
+        <table className="data-table">
+          <caption className="sr-only">{t.admin.customers.title}</caption>
+          <thead>
+            <tr>
+              <th>{t.admin.customers.email}</th>
+              <th>{t.admin.customers.role}</th>
+              <th>{t.admin.customers.verified}</th>
+              <th>{t.admin.customers.devices}</th>
+              <th>{t.admin.customers.subscription}</th>
+              <th>{t.admin.customers.created}</th>
+              <th>{t.ui.actions}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <Link href={`/admin/customers/${row.id}`} className="link text-[0.82rem]">
+                    {row.email}
+                  </Link>
+                  <p className="text-[0.68rem] text-muted">
+                    {row.displayName || "—"}
+                    {row.disabled ? " · deaktiviert" : ""}
+                  </p>
+                </td>
+                <td>
+                  <form action={updateCustomerRoleAction} className="flex items-center gap-1.5">
+                    <input type="hidden" name="userId" value={row.id} />
+                    <input type="hidden" name="returnTo" value="/admin/customers" />
+                    <select
+                      name="role"
+                      defaultValue={row.role}
+                      className="field !w-auto !py-1 !text-xs"
+                      aria-label={`${t.admin.customers.role}: ${row.email}`}
+                    >
+                      <option value="customer">customer</option>
+                      <option value="support">support</option>
+                      <option value="admin">admin</option>
+                    </select>
+                    <button type="submit" className="btn btn-ghost btn-sm !px-2" title={t.ui.save}>
+                      <Icon name="check" size={13} />
+                    </button>
+                  </form>
+                </td>
+                <td>{row.verified ? <Badge tone="ok">✓</Badge> : <Badge tone="warn">—</Badge>}</td>
+                <td>{row.devices}</td>
+                <td>
+                  <Badge tone={row.subscriptionStatus === "active" ? "ok" : "neutral"}>
+                    {row.subscriptionStatus}
+                  </Badge>
+                </td>
+                <td className="whitespace-nowrap text-xs">{row.created}</td>
+                <td>
+                  <div className="flex items-center gap-1">
+                    <form action={toggleCustomerDisabledAction}>
+                      <input type="hidden" name="userId" value={row.id} />
+                      <input type="hidden" name="disable" value={row.disabled ? "0" : "1"} />
+                      <input type="hidden" name="returnTo" value="/admin/customers" />
+                      <button
+                        type="submit"
+                        className="btn btn-ghost btn-sm !px-2"
+                        title={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
+                      >
+                        <Icon name={row.disabled ? "check" : "close"} size={13} />
+                      </button>
+                    </form>
+                    <form action={resetCustomerMfaAction}>
+                      <input type="hidden" name="userId" value={row.id} />
+                      <input type="hidden" name="returnTo" value="/admin/customers" />
+                      <button
+                        type="submit"
+                        className="btn btn-ghost btn-sm !px-2"
+                        title={t.admin.customers.resetMfa}
+                      >
+                        <Icon name="shield" size={13} />
+                      </button>
+                    </form>
+                    <Link
+                      href={`/admin/customers/${row.id}`}
+                      className="btn btn-ghost btn-sm !px-2"
+                      title={t.ui.details}
+                    >
+                      <Icon name="arrow-right" size={13} />
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {visible.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-6 text-center text-xs text-muted">
+                  {t.ui.noResults}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </ScrollRegion>
+    </>
+  );
+}
