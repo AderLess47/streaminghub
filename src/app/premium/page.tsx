@@ -34,11 +34,11 @@ export default async function PremiumPage() {
         </div>
       </section>
 
-      <section className="shell mt-10 grid gap-6 pb-16 lg:grid-cols-[1.35fr_1fr] lg:items-start">
-        <div className="grid gap-4">
+      <section className="shell mt-10 grid grid-cols-1 gap-6 pb-16 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+        <div className="grid grid-cols-1 gap-4">
           <div className="card p-6">
             <h2 className="text-lg font-semibold">{t.premium.featuresTitle}</h2>
-            <ul className="mt-4 grid gap-3">
+            <ul className="mt-4 grid grid-cols-1 gap-3">
               {t.premium.features.map((feature) => (
                 <li key={feature.title} className="rounded-xl border border-line/60 bg-white/2 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
