@@ -78,6 +78,10 @@ Flag.
 
 ### Gilt weiterhin
 
+- **Wenn die Schwelle überschritten wird:** Dann greifen die Pflichten sofort.
+  Was konkret zu tun ist – von der Umstellung der Einordnung bis zu Prüfung,
+  Nachweisen und Bußgeldrahmen – steht in
+  [BFSG-PFLICHTEN-CHECKLISTE.md](BFSG-PFLICHTEN-CHECKLISTE.md).
 - **Produkte:** Die Ausnahme gilt nicht für Wirtschaftsakteure, die Produkte in
   den Verkehr bringen. StreamingHub vertreibt derzeit keine Hardware. Das ändert
   sich, sobald gebrandete Geräte oder Zubehör dazukommen – dann ist die
@@ -138,7 +142,8 @@ zusätzlich einen eigenen Kalendertermin am Jahresanfang setzen.
 - Sofort, wenn **10 oder mehr Personen** beschäftigt werden oder Umsatz bzw.
   Bilanzsumme **2 Mio. € überschreiten**. Dann greifen die BFSG-Pflichten, und
   die freiwilligen Maßnahmen werden zur Pflicht – die Website erfüllt den
-  Großteil davon bereits.
+  Großteil davon bereits. Die dann nötigen Schritte stehen in
+  [BFSG-PFLICHTEN-CHECKLISTE.md](BFSG-PFLICHTEN-CHECKLISTE.md).
 - Wenn Hardware oder gebrandete Geräte in den Verkehr gebracht werden (dann
   Produktpflichten, unabhängig von der Größe).
 - Wenn die Seite `/barrierefreiheit` geändert wird: Der Satz zur
@@ -158,3 +163,6 @@ Alle am 12. November 2026 abgerufen.
 - BMAS, Leitlinien für Barrierefreiheit (PDF): https://www.bmas.de/SharedDocs/Downloads/DE/Teilhabe/leitlinien-barrierefreiheit.pdf
 - MLBF AöR, Kontakt: https://www.mlbf-barrierefrei.de/Über-Uns/Kontakt/
 - IHK Schwerin, Barrierefreiheit ab Juni 2025 (Abmahnrisiko): https://www.ihk.de/schwerin/recht/aktuelles/barrierefreiheit-ab-juni-2025-fuer-unternehmen-pflicht-6005058
+- BFSGV (Anforderungen an Dienstleistungen, §§ 12 und 19): https://www.gesetze-im-internet.de/bfsgv/BJNR092800022.html
+- Anlage 3 BFSG (Informationen über Dienstleistungen): https://www.gesetze-im-internet.de/bfsg/anlage_3.html
+- § 37 BFSG (Bußgeldvorschriften): https://www.gesetze-im-internet.de/bfsg/__37.html
