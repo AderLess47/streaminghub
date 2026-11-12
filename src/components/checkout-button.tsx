@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
+import { useSubmitFocus } from "./use-submit-focus";
+
+const UNAVAILABLE_HINT_ID = "checkout-unavailable-hint";
 
 export function CheckoutButton({
   label,
@@ -17,6 +20,9 @@ export function CheckoutButton({
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // Während der Anfrage ist der Knopf deaktiviert und verliert den Fokus; der
+  // Hook holt ihn nach der Antwort zurück (WCAG 2.4.3).
+  const buttonRef = useSubmitFocus(pending);
 
   async function start() {
     setMessage(null);
@@ -43,18 +49,23 @@ export function CheckoutButton({
   return (
     <div>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => void start()}
         className="btn btn-primary btn-block"
         disabled={pending}
-        aria-disabled={!configured}
-        title={configured ? undefined : disabledLabel}
+        aria-describedby={configured ? undefined : UNAVAILABLE_HINT_ID}
       >
         {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="card" size={16} />}
         {pending ? "…" : label}
       </button>
       {!configured ? (
-        <p className="mt-2 text-center text-[0.7rem] leading-relaxed text-amber-300/80">{disabledLabel}</p>
+        <p
+          id={UNAVAILABLE_HINT_ID}
+          className="mt-2 text-center text-[0.7rem] leading-relaxed text-amber-300/80"
+        >
+          {disabledLabel}
+        </p>
       ) : null}
       <LiveMessage
         ok={false}

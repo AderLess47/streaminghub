@@ -190,7 +190,7 @@ export async function createWebCheckout(params: {
       ok: false,
       code: "not_configured",
       message:
-        "Die Zahlungsabwicklung ist noch nicht mit einem Zahlungsdienstleister verbunden. Es wurde keine Zahlung ausgelöst.",
+        "Die Zahlungsabwicklung ist noch nicht mit einem Zahlungsanbieter verbunden. Es wurde keine Zahlung ausgelöst.",
     };
   }
 

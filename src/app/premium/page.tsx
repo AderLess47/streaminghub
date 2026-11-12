@@ -74,12 +74,15 @@ export default async function PremiumPage() {
             </div>
           </div>
 
+          {/* Statische Hinweise, keine Statusmeldungen: sonst werden sie bei
+              jedem Laden als Aktualisierung angesagt und überlagern den Fehler
+              des Checkout-Knopfs mit fast demselben Wortlaut. */}
           {configured ? (
-            <Alert tone="info" title={locale === "de" ? "Zahlung über Stripe" : "Payment via Stripe"}>
+            <Alert tone="info" live={false} title={locale === "de" ? "Zahlung über Stripe" : "Payment via Stripe"}>
               {t.premium.billingLiveNotice}
             </Alert>
           ) : (
-            <Alert tone="warning" title={locale === "de" ? "Wichtiger Hinweis zur Zahlung" : "Important payment notice"}>
+            <Alert tone="warning" live={false} title={locale === "de" ? "Wichtiger Hinweis zur Zahlung" : "Important payment notice"}>
               {t.premium.billingNotice}
             </Alert>
           )}

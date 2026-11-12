@@ -56,6 +56,7 @@ export function Alert({
   icon,
   id,
   autoFocus = false,
+  live = true,
 }: {
   tone?: "info" | "success" | "warning" | "danger";
   title?: string;
@@ -64,6 +65,11 @@ export function Alert({
   id?: string;
   /** Setzt den Fokus auf die Meldung nach dem Rendern, etwa nach einer Server-Action. */
   autoFocus?: boolean;
+  /**
+   * Statische Hinweise sollen nicht als Statusmeldung angesagt werden. Mit
+   * `live={false}` entfällt die Statusrolle; Vorgabe bleibt die Live-Region.
+   */
+  live?: boolean;
 }) {
   const styles = {
     info: "border-sky-500/25 bg-sky-500/8 text-sky-100",
@@ -78,7 +84,7 @@ export function Alert({
       id={id}
       tabIndex={autoFocus ? -1 : undefined}
       className={`flex gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed ${styles}`}
-      role={tone === "danger" ? "alert" : "status"}
+      role={tone === "danger" ? "alert" : live ? "status" : undefined}
     >
       <Icon name={iconName} size={18} className="mt-0.5 shrink-0 opacity-80" />
       <div>

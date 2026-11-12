@@ -121,6 +121,34 @@ Alle drei Befunde betreffen ausschließlich den Checkout-Bereich und sind mit
 dem fehlenden Zahlungsanbieter verknüpft: Solange kein Anbieter verbunden ist,
 ist der Knopf der einzige Weg zu dieser Rückmeldung.
 
+Nachtrag 12.11.2026: **Barrieren 1 bis 3 sind behoben.**
+
+1. `aria-disabled` und `title` sind entfernt. Der Knopf bleibt bedienbar, weil er
+   der einzige Weg zur Rückmeldung ist; die Erklärung ist über
+   `aria-describedby="checkout-unavailable-hint"` mit ihm verknüpft und bleibt
+   sichtbar unter dem Knopf.
+2. `lib/payments.ts` nutzt jetzt denselben Wortlaut wie die Oberfläche
+   („Zahlungsanbieter"). Die statischen Hinweise auf `/dashboard/subscription`
+   und `/premium` haben mit `live={false}` keine Statusrolle mehr; `Alert` hat
+   dafür ein optionales Prop bekommen, die Vorgabe bleibt die Live-Region.
+3. `CheckoutButton` nutzt `useSubmitFocus(pending)` wie die Dashboard-Formulare
+   und gibt den Fokus nach der Antwort zurück.
+
+Nachgeprüft im Dev-Browser, angemeldet als Testkonto:
+
+- Kein `aria-disabled` mehr am Knopf, `aria-describedby` gesetzt, der
+  Playwright-Klick wird nicht mehr als „element is not enabled“ abgelehnt.
+- Nach der Fehlerantwort nur noch **eine** Meldung, in der assertiven
+  Live-Region, Wortlaut „…mit einem Zahlungsanbieter verbunden…“;
+  `role="status"` kommt auf beiden Seiten nicht mehr vor.
+- `document.activeElement` ist nach der Antwort wieder der Knopf
+  „Premium im Web abschließen“.
+- axe-core 4.10.2: 0 Verstöße auf `/premium` und `/dashboard/subscription`,
+  Reflow bei 320 px weiter 305 = 305.
+
+Nicht geprüft bleibt der Erfolgsfall des Checkouts (kein Zahlungsanbieter in
+dieser Umgebung) und die Wirkung mit echten Screenreadern.
+
 ## 7. Prüfung mit assistiven Technologien
 
 Nicht durchgeführt; die Tabelle bleibt leer statt ein Ergebnis zu behaupten.
