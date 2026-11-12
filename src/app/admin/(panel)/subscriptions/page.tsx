@@ -67,7 +67,7 @@ export default async function AdminSubscriptionsPage() {
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="btn btn-ghost btn-sm !px-2" title={t.ui.save}>
+                    <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
                       ✓
                     </button>
                   </form>

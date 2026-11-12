@@ -206,7 +206,7 @@ export function ProfileForm({
         </select>
         <FieldError id="profile-locale-error" message={fieldErrors.locale} />
       </div>
-      <label className="flex items-start gap-2 text-xs text-muted">
+      <label className="flex min-h-11 items-center gap-2 text-xs text-muted">
         <input
           type="checkbox"
           name="marketingOptIn"
@@ -318,12 +318,12 @@ export function DataRequestForm({
         />
         <FieldError id={`confirm-${kind}-error`} message={fieldErrors.password} />
       </div>
-      <label className="flex items-start gap-2 text-xs text-muted">
+      <label className="flex min-h-11 items-center gap-2 text-xs text-muted">
         <input
           type="checkbox"
           name="confirm"
           required
-          className="mt-0.5 size-4 accent-brand"
+          className="size-4 accent-brand"
           aria-invalid={Boolean(fieldErrors.confirm)}
           aria-describedby={fieldErrors.confirm ? `confirm-${kind}-check-error` : undefined}
         />

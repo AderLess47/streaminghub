@@ -89,7 +89,7 @@ export default async function AdminContentPage({
 
         {faqItems.map((item) => (
           <details key={item.id} className="card px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs marker:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs marker:hidden [&::-webkit-details-marker]:hidden">
               <span className="truncate text-[0.82rem] text-slate-200">{item.question_de}</span>
               <span className="flex shrink-0 items-center gap-2">
                 <span className="chip">{item.category}</span>
@@ -111,7 +111,7 @@ export default async function AdminContentPage({
                   </label>
                   <input id={`sort-${item.id}`} name="sortOrder" type="number" defaultValue={item.sort_order} className="field" />
                 </div>
-                <label className="flex items-end gap-2 pb-2 text-xs text-muted">
+                <label className="flex min-h-11 items-center gap-2 pb-2 text-xs text-muted">
                   <input type="checkbox" name="published" defaultChecked={Boolean(item.published)} className="size-4 accent-brand" />
                   {t.admin.content.published}
                 </label>
@@ -173,7 +173,7 @@ export default async function AdminContentPage({
             </label>
             <input id="new-sort" name="sortOrder" type="number" defaultValue={faqItems.length} className="field" />
           </div>
-          <label className="flex items-end gap-2 pb-2 text-xs text-muted">
+          <label className="flex min-h-11 items-center gap-2 pb-2 text-xs text-muted">
             <input type="checkbox" name="published" className="size-4 accent-brand" />
             {t.admin.content.published}
           </label>
