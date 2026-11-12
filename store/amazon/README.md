@@ -33,6 +33,7 @@ Listing copy: [`listing.md`](listing.md) (German) and [`listing-en.md`](listing-
 Privacy-label answers: [`privacy-labels.md`](privacy-labels.md).
 Content-rating answers: [`content-rating.md`](content-rating.md).
 IAP decision for the Amazon build: [`../../docs/IAP-AMAZON.md`](../../docs/IAP-AMAZON.md).
+Upload checklist for the store binary: [`UPLOAD.md`](UPLOAD.md).
 Account deletion page: `https://streaminghub.org/account-deletion`.
 
 ## Important: these screenshots are renderings, not device captures
