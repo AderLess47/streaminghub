@@ -111,8 +111,12 @@ Fire TV tier starts to make sense — and the moment Amazon will expect IAP.
 
 ## Implementation plan for option B (Amazon IAP)
 
-Status: planned, not started. Build 9 (option A) stays the live Amazon binary
-until every gate in the rollout table below is met.
+Status: P1 implemented — `src/lib/amazon-iap.ts` (RVS client and receipt rules),
+`src/lib/amazon-subscriptions.ts` (persistence), `iap_receipts` and the two app
+endpoints `POST /api/v1/amazon/purchase` and `POST /api/v1/amazon/refresh`
+(`npm run test:amazon-iap`, also part of CI). Real-Time Notifications and the
+Android purchase flow follow in P3 and P2. Build 9 (option A) stays the live
+Amazon binary until every gate in the rollout table below is met.
 
 ### 0. Preconditions
 
@@ -231,7 +235,7 @@ CREATE TABLE IF NOT EXISTS iap_receipts (
   product_id TEXT NOT NULL,
   term_sku TEXT,
   product_type TEXT NOT NULL,
-  status TEXT NOT NULL,            -- active | past_due | canceled | expired | invalid
+  status TEXT NOT NULL,            -- active | canceled | expired | invalid
   auto_renewing INTEGER NOT NULL DEFAULT 0,
   purchase_date TEXT,
   renewal_date TEXT,
@@ -258,7 +262,7 @@ unique) records every RVS result, so replays are idempotent.
 | --- | --- | --- |
 | `cancelDate = null`, `renewalDate > now`, no grace | `active` | true |
 | `freeTrialEndDate > now` | `active` | true |
-| `gracePeriodEndDate > now` | `past_due` | true (grace) |
+| `gracePeriodEndDate > now` | `active`, `current_period_end = gracePeriodEndDate` | true (grace) |
 | `cancelDate > now` (auto-renew off, still paid) | `active`, `cancel_at_period_end = 1` | true until `cancelDate` |
 | `cancelDate <= now` or HTTP 410 | `canceled`, `current_period_end = cancelDate` | false |
 | `renewalDate <= now` with no newer receipt | `canceled` | false |
@@ -441,7 +445,7 @@ Manual (device required):
 | Phase | Content | Gate |
 | --- | --- | --- |
 | P0 | Premium feature exists and is gated in the app | one shipped feature behind `premiumActive` |
-| P1 | `amazon-iap.ts`, schema, endpoints, tests 1–14 | suite green, no secret in logs |
+| P1 | `amazon-iap.ts`, `iap_receipts`, `/purchase` + `/refresh`, tests 1–12 | suite green, no secret in logs |
 | P2 | SDK in the Amazon flavour, purchase UI, restore | App Tester purchase end-to-end |
 | P3 | RTN endpoint and daily sync | renewal and cancel reflected within minutes |
 | P4 | `PREMIUM_SALES = true` for `amazon`, version bump, LAT, submission | review passes, build 9 replaced |

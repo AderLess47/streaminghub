@@ -19,6 +19,12 @@ export const registerSchema = z.object({
   marketingOptIn: z.boolean().optional().default(false),
 });
 
+export const amazonPurchaseSchema = z.object({
+  receiptId: z.string().trim().min(8, "receiptId fehlt.").max(200),
+  appUserId: z.string().trim().min(3, "appUserId fehlt.").max(128),
+  productId: z.string().trim().min(1, "productId fehlt.").max(120),
+});
+
 export const loginSchema = z.object({
   email,
   password: z.string().min(1).max(200),

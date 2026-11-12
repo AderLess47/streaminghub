@@ -7,7 +7,7 @@
  * secrets, so a new APK is published without a commit to the protected branch
  * and without a redeploy.
  */
-import { androidRelease as generatedRelease } from "@/content/release";
+import { androidRelease as generatedRelease } from "../content/release";
 
 export type AndroidRelease = {
   version: string;
