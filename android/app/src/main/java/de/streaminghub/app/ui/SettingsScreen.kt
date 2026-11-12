@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -104,17 +106,28 @@ fun SettingsScreen(
 
     BackHandler(onBack = onBack)
 
+    // Wide windows (tablet, ChromeOS, desktop) read better in a centred column.
+    val profile = rememberLayoutProfile()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(Ink, Color(0xFF0B101A), Ink))),
+        contentAlignment = Alignment.TopCenter,
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
+                .widthIn(max = profile.contentMaxWidth)
+                .fillMaxWidth()
                 .testTag("settings-list")
                 .windowInsetsPadding(WindowInsets.safeDrawing),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 36.dp),
+            contentPadding = PaddingValues(
+                start = profile.horizontalPadding,
+                end = profile.horizontalPadding,
+                top = 18.dp,
+                bottom = 36.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {

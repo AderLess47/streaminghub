@@ -130,6 +130,9 @@ fun HomeScreen(
         }
     }
 
+    // TV, phone, tablet and desktop get their own card size and margins.
+    val profile = rememberLayoutProfile()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -148,11 +151,16 @@ fun HomeScreen(
         )
 
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 158.dp),
+            columns = GridCells.Adaptive(minSize = profile.cardMinSize),
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 36.dp),
+            contentPadding = PaddingValues(
+                start = profile.horizontalPadding,
+                end = profile.horizontalPadding,
+                top = if (profile.isTelevision) 24.dp else 18.dp,
+                bottom = 36.dp,
+            ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
