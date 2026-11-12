@@ -61,6 +61,8 @@ export const en: Dictionary = {
     actions: "Actions",
     details: "Details",
     noResults: "No results found.",
+    resultsFor: "{count} results for “{query}”",
+    resultsAll: "{count} entries",
     errorGeneric: "Something went wrong. Please try again.",
     saved: "Changes saved.",
     confirm: "Confirm",

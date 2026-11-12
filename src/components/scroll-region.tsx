@@ -8,10 +8,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  */
 export function ScrollRegion({
   label,
+  describedBy,
   className,
   children,
 }: {
   label: string;
+  describedBy?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -33,6 +35,7 @@ export function ScrollRegion({
       ref={ref}
       role="region"
       aria-label={label}
+      aria-describedby={describedBy}
       tabIndex={scrollable ? 0 : undefined}
       className={className}
     >

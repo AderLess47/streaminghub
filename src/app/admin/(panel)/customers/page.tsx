@@ -67,7 +67,7 @@ export default async function AdminCustomersPage({
         </Alert>
       ) : null}
 
-      <form method="get" className="flex gap-2">
+      <form method="get" role="search" aria-label={t.admin.customers.search} className="flex gap-2">
         <input
           type="search"
           name="q"
@@ -82,7 +82,17 @@ export default async function AdminCustomersPage({
         </button>
       </form>
 
-      <ScrollRegion label={t.admin.customers.title} className="card overflow-x-auto">
+      <p id="customers-result-summary" className="text-[0.7rem] text-muted">
+        {q
+          ? t.ui.resultsFor.replace("{count}", String(rows.length)).replace("{query}", q)
+          : t.ui.resultsAll.replace("{count}", String(rows.length))}
+      </p>
+
+      <ScrollRegion
+        label={t.admin.customers.title}
+        describedBy="customers-result-summary"
+        className="card overflow-x-auto"
+      >
         <table className="data-table">
           <caption className="sr-only">{t.admin.customers.title}</caption>
           <thead>
