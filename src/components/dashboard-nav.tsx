@@ -11,7 +11,7 @@ export type DashNavItem = { href: string; label: string; icon: IconName };
 const score = (pathname: string, href: string) =>
   pathname === href ? href.length + 1000 : pathname.startsWith(`${href}/`) ? href.length : -1;
 
-export function DashboardNav({ items }: { items: DashNavItem[] }) {
+export function DashboardNav({ items, currentLabel }: { items: DashNavItem[]; currentLabel?: string }) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   // Only one entry can be current: the overview href is a prefix of every
@@ -35,7 +35,7 @@ export function DashboardNav({ items }: { items: DashNavItem[] }) {
   return (
     <nav
       ref={navRef}
-      className="no-scrollbar -mx-1 flex snap-x scroll-px-3 gap-1 overflow-x-auto scroll-smooth px-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
+      className="no-scrollbar relative -mx-1 flex snap-x scroll-px-3 gap-1 overflow-x-auto scroll-smooth px-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
       aria-label="Dashboard"
     >
       {items.map((item) => {
@@ -53,6 +53,9 @@ export function DashboardNav({ items }: { items: DashNavItem[] }) {
           >
             <Icon name={item.icon} size={16} className={active ? "text-cyan" : ""} />
             {item.label}
+            {/* Chromium does not pass aria-current to the accessibility tree, so
+                the state is spelled out for screen readers as well. */}
+            {active && currentLabel ? <span className="sr-only"> ({currentLabel})</span> : null}
           </Link>
         );
       })}

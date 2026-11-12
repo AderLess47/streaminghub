@@ -21,6 +21,7 @@ export const en: Dictionary = {
     login: "Sign in",
     register: "Create account",
     dashboard: "Dashboard",
+    mainNav: "Main navigation",
     admin: "Administration",
     logout: "Sign out",
     menu: "Menu",
@@ -485,6 +486,7 @@ export const en: Dictionary = {
       support: "Support",
       settings: "Settings",
       security: "Security",
+      currentPage: "current page",
     },
     overview: {
       devicesTitle: "Active devices",

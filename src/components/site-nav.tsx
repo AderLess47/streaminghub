@@ -110,7 +110,7 @@ export function SiteNav({
       <div
         className={`glass sticky top-0 z-50 transition-shadow ${scrolled ? "shadow-[0_10px_40px_-24px_rgba(0,0,0,0.9)]" : ""}`}
       >
-        <nav className="shell flex h-16 items-center justify-between gap-2 sm:gap-4" aria-label="Hauptnavigation">
+        <nav className="shell flex h-16 items-center justify-between gap-2 sm:gap-4" aria-label={t.mainNav}>
           <Link
             href="/"
             className="flex min-w-0 items-center gap-2.5 rounded-lg"

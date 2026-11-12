@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        <DashboardNav items={items} />
+        <DashboardNav items={items} currentLabel={t.dashboard.nav.currentPage} />
 
         <div className="mt-3 hidden gap-2 border-t border-line/50 pt-3 lg:grid">
           {isStaff(user.role) ? (

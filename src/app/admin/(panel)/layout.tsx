@@ -40,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        <DashboardNav items={items} />
+        <DashboardNav items={items} currentLabel={t.dashboard.nav.currentPage} />
 
         <div className="mt-3 hidden gap-1 border-t border-line/50 pt-3 lg:grid">
           <Link href="/dashboard" className="btn btn-ghost btn-sm justify-start">
