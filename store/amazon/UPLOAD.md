@@ -50,9 +50,9 @@ tell them apart.
 4. **Testing accounts** — add your testers in App Tester, set
    `AMAZON_RVS_SANDBOX=1` on the Fly app while they buy test transactions, and
    remove it before real customers.
-5. **Live App Testing** — upload this APK to a LAT round, buy and restore with a
-   test account, and watch the settings card switch to “Abo aktiv” with the
-   renewal date the server reported.
+5. **Live App Testing** — upload this APK to a LAT round and work through
+   [`LAT-CHECKLIST.md`](LAT-CHECKLIST.md): purchase, restore, cross-device resume
+   on two devices, layout, end of term.
 
 ## Console steps
 
