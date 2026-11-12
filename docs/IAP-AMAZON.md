@@ -91,7 +91,7 @@ its Stripe subscription for users who install via the website. Revisit B when th
 premium feature set leaves "in development", because that is the moment a paid
 Fire TV tier starts to make sense — and the moment Amazon will expect IAP.
 
-## Implementation sketch for option A
+## Implementation sketch for option A (done)
 
 1. Add a product flavour `amazon` (or `amazon`/`direct`) with
    `buildConfigField("boolean", "PREMIUM_SALES", "false")` for Amazon and `true` for
@@ -103,7 +103,8 @@ Fire TV tier starts to make sense — and the moment Amazon will expect IAP.
 4. Unit-test the flag wiring (`BuildConfig` value per variant is checked in the
    Gradle test run; UI conditionals stay covered by the compile plus the existing
    settings tests).
-5. Re-run `testDebugUnitTest` and `assembleRelease`, upload as build 9.
+5. Re-run `testDirectDebugUnitTest testAmazonDebugUnitTest` and
+   `assembleDirectRelease assembleAmazonRelease`, upload as build 9.
 
 ## Open questions
 

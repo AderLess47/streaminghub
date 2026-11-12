@@ -4,7 +4,7 @@
  *
  * Usage:
  *   npm run release:apk
- *   npm run release:apk -- --apk android/app/build/outputs/apk/release/app-release.apk
+ *   npm run release:apk -- --apk android/app/build/outputs/apk/direct/release/app-direct-release.apk
  *   npm run release:apk -- --dry-run
  *
  * Upload credentials (one of):
@@ -312,12 +312,12 @@ async function main() {
   const versionCode = Number(versionCodeRaw);
   if (!Number.isSafeInteger(versionCode) || versionCode < 1) fail(`Invalid versionCode: ${versionCodeRaw}`);
 
-  let apk = options.apk ?? path.join(ROOT, "android", "app", "build", "outputs", "apk", "release", "app-release.apk");
+  let apk = options.apk ?? path.join(ROOT, "android", "app", "build", "outputs", "apk", "direct", "release", "app-direct-release.apk");
   const env = buildEnv();
 
   if (!options.apk) {
     console.log(`Building release APK for ${version} (build ${versionCode}) ...`);
-    run(resolveGradle(), ["-p", "android", "--no-daemon", "assembleRelease"], { env });
+    run(resolveGradle(), ["-p", "android", "--no-daemon", "assembleDirectRelease"], { env });
   } else {
     console.log(`Using existing APK: ${apk}`);
   }

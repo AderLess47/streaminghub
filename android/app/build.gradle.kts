@@ -29,6 +29,23 @@ android {
         }
     }
 
+    // The Amazon Appstore build must not advertise or link to the web
+    // subscription: Amazon requires digital content used in the app to be sold
+    // through Amazon IAP (see docs/IAP-AMAZON.md). The direct build keeps the
+    // web checkout flow.
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("boolean", "PREMIUM_SALES", "true")
+        }
+        create("amazon") {
+            dimension = "distribution"
+            buildConfigField("boolean", "PREMIUM_SALES", "false")
+        }
+    }
+
     signingConfigs {
         if (keystorePropertiesFile.isFile) {
             create("release") {

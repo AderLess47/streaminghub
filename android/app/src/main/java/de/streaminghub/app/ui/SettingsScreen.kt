@@ -151,7 +151,11 @@ fun SettingsScreen(
                 SettingsCard(
                     title = "Konto & Gerät",
                     subtitle = if (accountState.account == null) {
-                        "Optional – für Geräteverwaltung und Premium-Status"
+                        if (BuildConfig.PREMIUM_SALES) {
+                            "Optional – für Geräteverwaltung und Premium-Status"
+                        } else {
+                            "Optional – für Geräteverwaltung"
+                        }
                     } else {
                         "Gerät ist mit deinem StreamingHub-Konto verbunden"
                     },
@@ -189,13 +193,15 @@ fun SettingsScreen(
                             onClick = onPairDevice,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Spacer(Modifier.height(9.dp))
-                        SecondaryAction(
-                            text = "Konto im Web verwalten",
-                            icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                            onClick = { onOpenWebsite("/dashboard") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        if (BuildConfig.PREMIUM_SALES) {
+                            Spacer(Modifier.height(9.dp))
+                            SecondaryAction(
+                                text = "Konto im Web verwalten",
+                                icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                                onClick = { onOpenWebsite("/dashboard") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     } else {
                         Text(
                             text = account.displayName.ifBlank { account.email },
@@ -211,8 +217,9 @@ fun SettingsScreen(
                             color = Muted,
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        Spacer(Modifier.height(5.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (BuildConfig.PREMIUM_SALES) {
+                            Spacer(Modifier.height(5.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 Modifier
                                     .width(7.dp)
@@ -227,9 +234,10 @@ fun SettingsScreen(
                                 } else {
                                     "Kein aktives Premium"
                                 },
-                                color = if (account.premiumActive) Cyan else Muted,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                                    color = if (account.premiumActive) Cyan else Muted,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
                         }
                         if (accountState.error != null) {
                             Spacer(Modifier.height(8.dp))
