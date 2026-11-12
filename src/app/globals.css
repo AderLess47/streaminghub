@@ -97,6 +97,17 @@
     padding-inline: clamp(1.15rem, 4vw, 2.5rem);
   }
 
+  /* Horizontal strips (e.g. the dashboard nav on phones) scroll without the
+     chunky scrollbar sitting in the layout. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   /* At 320 px long German words ("Abonnementbedingungen") are wider than the
      column and drag cards past the viewport, so let them break and hyphenate. */
   h1,
