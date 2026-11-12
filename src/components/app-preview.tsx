@@ -84,7 +84,7 @@ function AppHeaderRow({ t, compact = false }: { t: Preview; compact?: boolean })
         >
           StreamingHub
         </p>
-        <p className={`truncate text-slate-500 ${compact ? "text-[0.3rem]" : "text-[0.4rem] sm:text-[0.46rem]"}`}>
+        <p className={`truncate text-slate-400 ${compact ? "text-[0.3rem]" : "text-[0.4rem] sm:text-[0.46rem]"}`}>
           {t.demoPlaylist}
         </p>
       </div>
@@ -174,18 +174,20 @@ function PremiumScreen({ t }: { t: Preview }) {
         <p className="text-[0.42rem] font-semibold text-slate-200">Einstellungen</p>
       </div>
 
+      {/* Contrast on #0d1420 stays AA for the small scale: slate-100 16.8:1,
+          cyan 7.6:1, slate-400 7.2:1 – slate-500 (3.9:1) is deliberately avoided. */}
       <div className="mt-1.5 rounded-[4px] border border-white/10 bg-[#0d1420] p-2">
-        <p className="text-[0.5rem] font-semibold text-slate-100">{t.premiumTitle}</p>
-        <p className="text-[0.34rem] text-slate-500">{t.premiumBilling}</p>
+        <p className="text-[0.56rem] font-semibold text-slate-100">{t.premiumTitle}</p>
+        <p className="text-[0.4rem] text-slate-400">{t.premiumBilling}</p>
 
-        <p className="mt-1.5 flex items-center gap-1 text-[0.42rem] font-medium text-cyan">
+        <p className="mt-1.5 flex items-center gap-1 text-[0.46rem] font-medium text-cyan">
           <Icon name="check" size={6} />
           {t.premiumActive}
         </p>
-        <p className="mt-0.5 text-[0.34rem] text-slate-400">{t.premiumRenewal}</p>
-        <p className="mt-0.5 text-[0.34rem] leading-relaxed text-slate-400">{t.premiumBenefit}</p>
+        <p className="mt-0.5 text-[0.4rem] text-slate-400">{t.premiumRenewal}</p>
+        <p className="mt-0.5 text-[0.4rem] leading-relaxed text-slate-400">{t.premiumBenefit}</p>
 
-        <span className="mt-1.5 inline-flex items-center rounded-full border border-white/12 px-1.5 py-[2px] text-[0.32rem] text-slate-300">
+        <span className="mt-1.5 inline-flex items-center rounded-full border border-white/14 px-1.5 py-[2px] text-[0.38rem] text-slate-300">
           {t.premiumRefresh}
         </span>
       </div>
