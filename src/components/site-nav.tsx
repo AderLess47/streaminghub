@@ -143,7 +143,13 @@ export function SiteNav({
           </ul>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <LanguageSwitcher locale={locale} label={t.language} compact />
+            <LanguageSwitcher
+              locale={locale}
+              label={t.language}
+              pendingLabel={t.languagePending}
+              changedLabel={t.languageChanged}
+              compact
+            />
             {user ? (
               <>
                 {isStaffUser ? (
@@ -178,7 +184,13 @@ export function SiteNav({
           </div>
 
           <div className="flex shrink-0 items-center gap-1 lg:hidden">
-            <LanguageSwitcher locale={locale} label={t.language} compact />
+            <LanguageSwitcher
+              locale={locale}
+              label={t.language}
+              pendingLabel={t.languagePending}
+              changedLabel={t.languageChanged}
+              compact
+            />
             <button
               ref={menuButtonRef}
               type="button"

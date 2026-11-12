@@ -28,6 +28,8 @@ export const de = {
     logout: "Abmelden",
     menu: "Menü",
     language: "Sprache",
+    languagePending: "Sprache wird geändert …",
+    languageChanged: "Sprache geändert: {language}",
     closeMenu: "Menü schließen",
     skipToContent: "Zum Inhalt springen",
   },

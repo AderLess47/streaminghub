@@ -27,6 +27,8 @@ export const en: Dictionary = {
     logout: "Sign out",
     menu: "Menu",
     language: "Language",
+    languagePending: "Changing language …",
+    languageChanged: "Language changed: {language}",
     closeMenu: "Close menu",
     skipToContent: "Skip to content",
   },
