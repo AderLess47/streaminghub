@@ -96,19 +96,29 @@ export default async function AdminCustomerDetailPage({
       </PageHeader>
 
       {query.ok === "playlist" ? (
-        <Alert tone="success">{t.admin.customers.playlistSaved}</Alert>
+        <Alert tone="success" id="customer-flash-playlist" autoFocus>
+          {t.admin.customers.playlistSaved}
+        </Alert>
       ) : null}
       {query.ok === "playlist-deleted" ? (
-        <Alert tone="success">{t.admin.customers.playlistDeleted}</Alert>
+        <Alert tone="success" id="customer-flash-playlist-deleted" autoFocus>
+          {t.admin.customers.playlistDeleted}
+        </Alert>
       ) : null}
       {query.error === "playlist" ? (
-        <Alert tone="danger">{t.admin.customers.playlistInvalid}</Alert>
+        <Alert tone="danger" id="customer-flash-invalid" autoFocus>
+          {t.admin.customers.playlistInvalid}
+        </Alert>
       ) : null}
       {query.error === "playlist-request" ? (
-        <Alert tone="danger">{t.admin.customers.playlistRequestRequired}</Alert>
+        <Alert tone="danger" id="customer-flash-request" autoFocus>
+          {t.admin.customers.playlistRequestRequired}
+        </Alert>
       ) : null}
       {query.error === "playlist-device" ? (
-        <Alert tone="danger">{t.admin.customers.playlistDeviceRequired}</Alert>
+        <Alert tone="danger" id="customer-flash-device" autoFocus>
+          {t.admin.customers.playlistDeviceRequired}
+        </Alert>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
