@@ -5,6 +5,8 @@
  */
 export type Clause = {
   heading: string;
+  /** Stable anchor for links from elsewhere, e.g. the cookie banner. */
+  id?: string;
   paragraphs?: string[];
   bullets?: string[];
 };
@@ -90,6 +92,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       },
       {
         heading: "9. Cookies und Einwilligung",
+        id: "cookies",
         paragraphs: [
           "Technisch notwendige Cookies setzen wir für Anmeldung (Sitzung), Spracheinstellung und Einwilligungsspeicherung. Diese Cookies sind für den Betrieb erforderlich und benötigen keine Einwilligung (§ 25 Abs. 2 TDDDG).",
           "Optionale Analyse- oder Marketingdienste sind derzeit nicht im Einsatz. Sollten sie eingeführt werden, werden sie ausschließlich nach wirksamer Einwilligung geladen. Ihre Auswahl können Sie jederzeit über „Cookie-Einstellungen“ im Footer ändern.",
@@ -196,6 +199,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       },
       {
         heading: "9. Cookies and consent",
+        id: "cookies",
         paragraphs: [
           "We use technically necessary cookies for sign-in (session), language preference and consent storage. These are required for operation and do not require consent under § 25(2) TDDDG.",
           "Optional analytics or marketing services are not in use. If introduced, they will load only after valid consent. You can change your choice at any time via “Cookie settings” in the footer.",

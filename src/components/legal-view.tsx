@@ -34,7 +34,7 @@ function Clauses({ clauses }: { clauses: Clause[] }) {
   return (
     <div className="legal mt-8 max-w-3xl">
       {clauses.map((clause) => (
-        <section key={clause.heading}>
+        <section key={clause.heading} id={clause.id}>
           <h2>{clause.heading}</h2>
           {clause.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           {clause.bullets?.length ? (
