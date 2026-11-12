@@ -83,7 +83,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }
           isStaffUser={Boolean(user && isStaff(user.role))}
         />
-        <main id="main">{children}</main>
+        <main id="main" tabIndex={-1} className="focus:outline-none">
+          {children}
+        </main>
         <SiteFooter t={t} role={user?.role ?? null} locale={locale} />
         <CookieConsent t={t.consent} />
       </body>

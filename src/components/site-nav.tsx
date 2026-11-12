@@ -217,6 +217,7 @@ export function SiteNav({
             id="mobile-menu"
             ref={menuPanelRef}
             role="dialog"
+            aria-modal="true"
             aria-label={t.menu}
             className="relative mx-4 mt-3 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-line bg-panel-2 p-4 shadow-2xl"
           >
