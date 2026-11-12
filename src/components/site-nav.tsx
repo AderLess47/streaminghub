@@ -114,7 +114,7 @@ export function SiteNav({
           <Link
             href="/"
             className="flex min-w-0 items-center gap-2.5 rounded-lg"
-            aria-label="StreamingHub Startseite"
+            aria-label={t.homeLabel}
           >
             <LogoMark size={32} />
                             {/* Below 360 px the wordmark would only show "Strea…"; the logo mark

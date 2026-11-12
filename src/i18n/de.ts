@@ -23,6 +23,7 @@ export const de = {
     register: "Konto erstellen",
     dashboard: "Dashboard",
     mainNav: "Hauptnavigation",
+    homeLabel: "StreamingHub Startseite",
     admin: "Administration",
     logout: "Abmelden",
     menu: "Menü",
