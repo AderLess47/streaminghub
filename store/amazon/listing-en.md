@@ -1,7 +1,7 @@
 # Amazon listing: English copy
 
 English version of the Amazon Appstore listing for StreamingHub
-(`de.streaminghub.app`, version 1.2.6). Keep it in sync with
+(`de.streaminghub.app`, version 1.3.0). Keep it in sync with
 [`listing.md`](listing.md); the German file stays the reference for wording and
 legal statements. Plain text only, no HTML.
 

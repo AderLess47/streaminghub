@@ -120,10 +120,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run release:apk
 
-      # The Amazon Appstore build is the same code with premium sales disabled
-      # (BuildConfig.PREMIUM_SALES=false, see docs/IAP-AMAZON.md). It is never
-      # published on the public download page; the run attaches it for the
-      # console upload instead.
+      # The Amazon Appstore build sells premium through Amazon IAP
+      # (BuildConfig.PREMIUM_SALES=true, channel amazon, see docs/IAP-AMAZON.md).
+      # It is never published on the public download page; the run attaches it
+      # for the console upload instead.
       - name: Build, verify and attach the Amazon Appstore APK
         run: |
           set -euo pipefail
@@ -131,8 +131,11 @@ jobs:
           ./gradlew --no-daemon assembleAmazonRelease
           APK="app/build/outputs/apk/amazon/release/app-amazon-release.apk"
           test -f "$APK"
-          grep -q 'PREMIUM_SALES = false' \
+          grep -q 'PREMIUM_SALES = true' \
             "app/build/generated/source/buildConfig/amazon/release/de/streaminghub/app/BuildConfig.java"
+          grep -q 'PREMIUM_CHANNEL = "amazon"' \
+            "app/build/generated/source/buildConfig/amazon/release/de/streaminghub/app/BuildConfig.java"
+          unzip -l "$APK" | grep -q 'com/amazon/device/iap'
           BUILD_TOOLS="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools/35.0.0"
           "$BUILD_TOOLS/apksigner" verify --print-certs "$APK"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionName='${APK_VERSION}'"
