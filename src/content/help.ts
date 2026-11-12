@@ -95,7 +95,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Starte den Web-Checkout für die Sideload-Version.",
         "Der Status wird erst nach serverseitiger Zahlungsbestätigung aktiv.",
       ],
-      note: "In Amazon-Appstore-Versionen erfolgt der Kauf ausschließlich über Amazon In-App Purchasing. Es werden keine externen Zahlungsaufforderungen in der App angezeigt.",
+      note: "In Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten. Es werden keine externen Zahlungsaufforderungen in der App angezeigt.",
     },
     en: {
       intro:
@@ -106,7 +106,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Start the web checkout for the sideload version.",
         "The status only becomes active after server-side payment confirmation.",
       ],
-      note: "In Amazon Appstore builds, purchases are handled exclusively through Amazon In-App Purchasing. No external payment prompts are shown in the app.",
+      note: "Premium is currently not offered in Amazon Appstore builds. No external payment prompts are shown in the app.",
     },
   },
   playback: {

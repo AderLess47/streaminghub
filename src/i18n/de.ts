@@ -193,7 +193,7 @@ export const de = {
       amazon: {
         title: "Amazon Appstore",
         description:
-          "Für die Appstore-Version erfolgt der Premiumkauf ausschließlich über Amazon In-App Purchasing.",
+          "Im Amazon-Appstore-Build ist Premium derzeit nicht erhältlich.",
         points: [
           "Keine externen Zahlungsaufforderungen in der App",
           "Verwaltung über dein Amazon-Konto",
@@ -236,7 +236,7 @@ export const de = {
     channelTitle: "Wo du Premium abschließen kannst",
     channels: {
       web: "Sideload-Version: Web-Checkout über Stripe",
-      amazon: "Amazon-Appstore-Version: ausschließlich Amazon In-App Purchasing",
+      amazon: "Amazon-Appstore-Version: Premium ist dort nicht erhältlich",
     },
     billingNotice:
       "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Dein Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",

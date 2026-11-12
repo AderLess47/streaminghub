@@ -436,7 +436,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "3. Zahlungswege",
         paragraphs: [
-          "Für die Sideload-Version wird der Web-Checkout über Stripe abgewickelt. Für Amazon-Appstore-Versionen erfolgt der Kauf ausschließlich über Amazon In-App Purchasing; in der App werden keine externen Zahlungsaufforderungen angezeigt.",
+          "Für die Sideload-Version wird der Web-Checkout über Stripe abgewickelt. In Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten; in der App werden keine externen Zahlungsaufforderungen angezeigt.",
           "Ein Abonnement wird erst nach erfolgreicher Zahlung und serverseitiger Bestätigung begründet. Ein angezeigter Status „nicht aktiv“ bedeutet nicht, dass ein Vertrag besteht.",
         ],
       },
@@ -483,7 +483,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "3. Payment channels",
         paragraphs: [
-          "For the sideload version the web checkout is processed by Stripe. For Amazon Appstore builds, purchase occurs exclusively through Amazon In-App Purchasing; no external payment prompts are shown in the app.",
+          "For the sideload version the web checkout is processed by Stripe. Premium is currently not offered in Amazon Appstore builds; no external payment prompts are shown in the app.",
           "A subscription is formed only after successful payment and server-side confirmation. A displayed status of “not active” does not mean a contract exists.",
         ],
       },
