@@ -105,8 +105,13 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
             autoComplete="email"
             className="field"
             aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={fieldErrors.email ? "contact-email-error" : undefined}
           />
-          {fieldErrors.email ? <p className="mt-1 text-xs text-rose-300">{fieldErrors.email}</p> : null}
+          {fieldErrors.email ? (
+            <p id="contact-email-error" className="mt-1 text-xs text-rose-300">
+              {fieldErrors.email}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -121,8 +126,14 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
           maxLength={120}
           placeholder={t.subjectPlaceholder}
           className="field"
+          aria-invalid={Boolean(fieldErrors.subject)}
+          aria-describedby={fieldErrors.subject ? "contact-subject-error" : undefined}
         />
-        {fieldErrors.subject ? <p className="mt-1 text-xs text-rose-300">{fieldErrors.subject}</p> : null}
+        {fieldErrors.subject ? (
+          <p id="contact-subject-error" className="mt-1 text-xs text-rose-300">
+            {fieldErrors.subject}
+          </p>
+        ) : null}
       </div>
 
       <div>
@@ -138,8 +149,14 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
           rows={6}
           placeholder={t.messagePlaceholder}
           className="field"
+          aria-invalid={Boolean(fieldErrors.message)}
+          aria-describedby={fieldErrors.message ? "contact-message-error" : undefined}
         />
-        {fieldErrors.message ? <p className="mt-1 text-xs text-rose-300">{fieldErrors.message}</p> : null}
+        {fieldErrors.message ? (
+          <p id="contact-message-error" className="mt-1 text-xs text-rose-300">
+            {fieldErrors.message}
+          </p>
+        ) : null}
       </div>
 
       {/* Honeypot – hidden from users and assistive technology */}
@@ -155,6 +172,7 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
           required
           className="mt-0.5 size-4 rounded border-line bg-ink accent-brand"
           aria-invalid={Boolean(fieldErrors.privacyAccepted)}
+          aria-describedby={fieldErrors.privacyAccepted ? "contact-privacy-error" : undefined}
         />
         <span>
           {t.privacyLabel}{" "}
@@ -163,6 +181,11 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
           </a>
         </span>
       </label>
+      {fieldErrors.privacyAccepted ? (
+        <p id="contact-privacy-error" className="mt-1 text-xs text-rose-300">
+          {fieldErrors.privacyAccepted}
+        </p>
+      ) : null}
 
       {state === "error" ? (
         <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
