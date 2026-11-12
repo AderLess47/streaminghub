@@ -58,6 +58,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import de.streaminghub.app.MainViewModel
+import de.streaminghub.app.data.resumeStart
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.ui.theme.Brand
 import de.streaminghub.app.ui.theme.Cyan
@@ -138,16 +139,36 @@ fun PlayerScreen(
         exoPlayer.addListener(listener)
         onDispose {
             viewModel.saveProgress(channel, exoPlayer.currentPosition, exoPlayer.duration)
+            viewModel.syncWatchProgress(channel, exoPlayer.currentPosition, exoPlayer.duration)
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
 
+    // Premium accounts continue where another device stopped; the local position
+    // still wins when it is further ahead.
+    LaunchedEffect(exoPlayer, channel.url) {
+        val remote = viewModel.remoteResumePosition(channel)
+        val target = resumeStart(viewModel.progressFor(channel), remote)
+        if (target > 5_000L && target > exoPlayer.currentPosition + 5_000L) {
+            exoPlayer.seekTo(target)
+        }
+    }
+
     LaunchedEffect(exoPlayer) {
+        var ticks = 0
         while (true) {
             delay(5_000)
             if (exoPlayer.isPlaying && exoPlayer.duration > 0L) {
                 viewModel.saveProgress(channel, exoPlayer.currentPosition, exoPlayer.duration)
+                ticks += 1
+                if (ticks % 6 == 0) {
+                    viewModel.syncWatchProgress(
+                        channel,
+                        exoPlayer.currentPosition,
+                        exoPlayer.duration,
+                    )
+                }
             }
         }
     }

@@ -124,16 +124,17 @@ Amazon flavour now builds with `PREMIUM_SALES = true` and `PREMIUM_CHANNEL =
 amazon`, version 1.3.0 (build 10), and the release workflow asserts both values
 plus the bundled SDK.
 
-**Open product risk:** premium still gates no shipped feature, so a Fire TV
-customer paying today receives nothing in return. Amazon's content rules require
-described functionality to work, so a subscription should not be offered in the
-store until a gated feature ships (precondition 1 in § 0).
+**Premium value:** premium gates *Weiterschauen auf allen Geräten*. Positions are
+stored locally as before and, for accounts the server reports as `premiumActive`,
+synced through `PUT`/`GET /api/v1/progress`; free accounts receive
+`402 premium_required` and stay local. That closes the "gates nothing" gap that
+blocked submission.
 
 ### 0. Preconditions
 
 | # | Precondition | Why it blocks the work |
 | --- | --- | --- |
-| 1 | Premium gates at least one shipped feature | Amazon requires that the purchased content is usable in the app; today `premiumActive` unlocks nothing |
+| 1 | Premium gates at least one shipped feature | **Done:** cross-device resume, enforced in `/api/v1/progress` |
 | 2 | Amazon developer account with tax and bank details, app already listed | IAP items and the shared key live in the console |
 | 3 | Release build signed with the upload key whose certificate hash is registered in the console | IAP refuses unsigned or unknown signers |
 | 4 | Decision on the cross-channel rule (see §5) | Determines the conflict response the app has to handle |
@@ -466,7 +467,7 @@ Manual (device required):
 
 | Phase | Content | Gate |
 | --- | --- | --- |
-| P0 | Premium feature exists and is gated in the app | one shipped feature behind `premiumActive` |
+| P0 (done) | Premium feature exists and is gated | cross-device resume, server-enforced for every device |
 | P1 | `amazon-iap.ts`, `iap_receipts`, `/purchase` + `/refresh`, tests 1–12 | suite green, no secret in logs |
 | P2 (done) | SDK in the Amazon flavour, purchase UI, restore, 16 Robolectric/JVM tests | App Tester purchase end-to-end (needs a device) |
 | P3 | RTN endpoint and daily sync | renewal and cancel reflected within minutes |

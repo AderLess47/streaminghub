@@ -5,6 +5,7 @@ export type ApiErrorCode =
   | "invalid_request"
   | "unauthorized"
   | "forbidden"
+  | "premium_required"
   | "not_found"
   | "rate_limited"
   | "conflict"
@@ -15,6 +16,7 @@ const statusByCode: Record<ApiErrorCode, number> = {
   invalid_request: 400,
   unauthorized: 401,
   forbidden: 403,
+  premium_required: 402,
   not_found: 404,
   rate_limited: 429,
   conflict: 409,

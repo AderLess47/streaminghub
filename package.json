@@ -18,6 +18,7 @@
     "test:release-sync": "node --test scripts/release-sync.test.mjs",
     "test:db-migration": "node --test scripts/db-migration.test.mjs",
     "test:amazon-iap": "node --experimental-strip-types --test src/lib/amazon-iap.test.ts src/lib/amazon-subscriptions.test.ts src/lib/amazon-rtn.test.ts src/lib/amazon-sync.test.ts",
+    "test:progress": "node --experimental-strip-types --test src/lib/watch-progress.test.ts",
     "amazon:sync": "node --env-file-if-exists=.env.local scripts/amazon-sync.mjs",
     "db:init": "node scripts/init-db.mjs",
     "release:apk": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.release scripts/release-apk.mjs",

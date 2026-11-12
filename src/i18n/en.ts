@@ -243,6 +243,12 @@ export const en: Dictionary = {
     featuresTitle: "Premium features",
     features: [
       {
+        title: "Continue watching on every device",
+        description:
+          "Playback positions are stored in your account: start in the living room and pick up at the same spot in the bedroom.",
+        status: "Available",
+      },
+      {
         title: "Integrated VPN/proxy capability",
         description:
           "Automatically configured connection supporting suitable streaming connections – inside the app.",

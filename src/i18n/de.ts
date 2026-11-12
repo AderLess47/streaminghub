@@ -245,6 +245,12 @@ export const de = {
     featuresTitle: "Premiumfunktionen",
     features: [
       {
+        title: "Weiterschauen auf allen Geräten",
+        description:
+          "Die Wiedergabeposition wird im Konto gespeichert: im Wohnzimmer angefangen, im Schlafzimmer an derselben Stelle weiter.",
+        status: "Verfügbar",
+      },
+      {
         title: "Integrierte VPN-/Proxy-Funktion",
         description:
           "Automatisch konfigurierte Verbindung zur Unterstützung geeigneter Streaming-Verbindungen – direkt in der App.",

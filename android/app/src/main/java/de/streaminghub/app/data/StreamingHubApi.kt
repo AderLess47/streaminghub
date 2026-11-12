@@ -31,6 +31,14 @@ data class ManagedPlaylist(
     val updatedAt: String?,
 )
 
+/** A watch position the server keeps for a premium account. */
+data class WatchProgressItem(
+    val url: String,
+    val positionMs: Long,
+    val durationMs: Long,
+    val updatedAt: String?,
+)
+
 /** Subscription state as confirmed by the server after a purchase. */
 data class AmazonSubscriptionState(
     val premiumActive: Boolean,
@@ -179,6 +187,49 @@ class StreamingHubApi(
             )
             json.subscriptionState()
         }
+
+    /**
+     * Cross-device resume is a premium feature; free accounts get
+     * `premium_required` and keep their positions on the device only.
+     */
+    suspend fun fetchWatchProgress(activationToken: String): List<WatchProgressItem> =
+        withContext(Dispatchers.IO) {
+            val json = call(
+                path = "/api/v1/progress",
+                method = "GET",
+                bearerToken = activationToken,
+            )
+            val items = json.optJSONArray("items") ?: return@withContext emptyList()
+            (0 until items.length()).mapNotNull { index ->
+                val item = items.optJSONObject(index) ?: return@mapNotNull null
+                val url = item.optString("url").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                WatchProgressItem(
+                    url = url,
+                    positionMs = item.optLong("positionMs", 0L).coerceAtLeast(0L),
+                    durationMs = item.optLong("durationMs", 0L).coerceAtLeast(0L),
+                    updatedAt = item.optString("updatedAt").takeIf { it.isNotBlank() },
+                )
+            }
+        }
+
+    suspend fun saveWatchProgress(
+        activationToken: String,
+        url: String,
+        positionMs: Long,
+        durationMs: Long,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val body = JSONObject()
+            .put("url", url)
+            .put("positionMs", positionMs)
+            .put("durationMs", durationMs)
+        call(
+            path = "/api/v1/progress",
+            method = "PUT",
+            bearerToken = activationToken,
+            body = body,
+        )
+        true
+    }
 
     private fun JSONObject.subscriptionState(): AmazonSubscriptionState {
         val subscription = optJSONObject("subscription")

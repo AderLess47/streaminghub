@@ -273,6 +273,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.saveProgress(channel.url, positionMs, durationMs)
     }
 
+    /**
+     * Cross-device resume is part of premium: only an account the server marked
+     * as `premiumActive` keeps its watch positions there. Free accounts keep
+     * them on the device, exactly as before.
+     */
+    private val crossDeviceResumeEnabled: Boolean
+        get() = accountState.account?.premiumActive == true
+
+    suspend fun remoteResumePosition(channel: Channel): Long {
+        if (!crossDeviceResumeEnabled) return 0L
+        val token = secureStore.loadToken() ?: return 0L
+        return runCatching {
+            api.fetchWatchProgress(token)
+                .firstOrNull { it.url == channel.url }
+                ?.positionMs
+                ?: 0L
+        }.getOrDefault(0L)
+    }
+
+    fun syncWatchProgress(channel: Channel, positionMs: Long, durationMs: Long) {
+        if (!crossDeviceResumeEnabled || durationMs <= 0L) return
+        val token = secureStore.loadToken() ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { api.saveWatchProgress(token, channel.url, positionMs, durationMs) }
+        }
+    }
+
     fun clearProgress() {
         repository.clearProgress()
     }
