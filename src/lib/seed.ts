@@ -34,9 +34,9 @@ const FAQ_SEED = [
   {
     category: "premium",
     q_de: "Was kostet StreamingHub Premium?",
-    a_de: "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in einer Amazon-Appstore-Version erfolgt der Kauf ausschließlich über Amazon In-App Purchasing.",
+    a_de: "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten.",
     q_en: "How much does StreamingHub Premium cost?",
-    a_en: "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; in an Amazon Appstore build, purchase is handled exclusively through Amazon In-App Purchasing.",
+    a_en: "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; premium is currently not offered in Amazon Appstore builds.",
   },
   {
     category: "premium",
