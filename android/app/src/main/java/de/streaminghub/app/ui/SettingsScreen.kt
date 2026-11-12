@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.streaminghub.app.AccountUiState
@@ -88,6 +89,7 @@ fun SettingsScreen(
     demoMode: Boolean,
     onLoadDemo: () -> Unit,
     onRemoveDemo: () -> Unit,
+    premiumSales: Boolean = BuildConfig.PREMIUM_SALES,
 ) {
     var showRemoveConfirmation by remember { mutableStateOf(false) }
     var showRemoveEpgConfirmation by remember { mutableStateOf(false) }
@@ -104,6 +106,7 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag("settings-list")
                 .windowInsetsPadding(WindowInsets.safeDrawing),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -151,7 +154,7 @@ fun SettingsScreen(
                 SettingsCard(
                     title = "Konto & Gerät",
                     subtitle = if (accountState.account == null) {
-                        if (BuildConfig.PREMIUM_SALES) {
+                        if (premiumSales) {
                             "Optional – für Geräteverwaltung und Premium-Status"
                         } else {
                             "Optional – für Geräteverwaltung"
@@ -193,7 +196,7 @@ fun SettingsScreen(
                             onClick = onPairDevice,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        if (BuildConfig.PREMIUM_SALES) {
+                        if (premiumSales) {
                             Spacer(Modifier.height(9.dp))
                             SecondaryAction(
                                 text = "Konto im Web verwalten",
@@ -217,7 +220,7 @@ fun SettingsScreen(
                             color = Muted,
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        if (BuildConfig.PREMIUM_SALES) {
+                        if (premiumSales) {
                             Spacer(Modifier.height(5.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(

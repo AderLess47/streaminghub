@@ -64,6 +64,7 @@ fun PairingScreen(
     onDismissPairingError: () -> Unit,
     onBack: () -> Unit,
     onPaired: () -> Unit,
+    premiumSales: Boolean = BuildConfig.PREMIUM_SALES,
 ) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
@@ -237,7 +238,7 @@ fun PairingScreen(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    if (BuildConfig.PREMIUM_SALES) {
+                    if (premiumSales) {
                         "Die Kopplung ist optional. Deine Playlist und die Wiedergabe funktionieren auch ohne Konto. Das Konto wird für Geräteverwaltung und Premium-Status benötigt."
                     } else {
                         "Die Kopplung ist optional. Deine Playlist und die Wiedergabe funktionieren auch ohne Konto. Das Konto wird für die Geräteverwaltung benötigt."
