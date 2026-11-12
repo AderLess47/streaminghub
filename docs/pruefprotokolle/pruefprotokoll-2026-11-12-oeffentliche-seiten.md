@@ -118,6 +118,11 @@ Barrieren 2 und 3 sind keine WCAG-A/AA-Verstöße, sondern Hinweise aus
 Best-Practice-Regeln. Sie stehen hier, weil sie den Screenreader-Nutzen
 verbessern, wenn sie behoben sind.
 
+Nachtrag 12.11.2026: Barriere 1 ist behoben. Ursache war die Breitenkette des
+Grids, nicht nur der `overflow-hidden`-Container. Nachmessung und Änderung
+stehen in
+[pruefprotokoll-2026-11-12-docs-api-reflow.md](pruefprotokoll-2026-11-12-docs-api-reflow.md).
+
 ## 7. Prüfung mit assistiven Technologien
 
 Nicht durchgeführt. Die Tabelle bleibt leer, statt ein Ergebnis zu behaupten.
