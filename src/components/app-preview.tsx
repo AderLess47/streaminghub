@@ -25,6 +25,10 @@ export function AppPreview({ t }: { t: Preview }) {
       />
 
       <div className="relative" aria-hidden="true">
+        <span className="absolute -top-3 left-4 z-10 rounded-full border border-white/12 bg-ink/80 px-2.5 py-1 text-[0.62rem] font-medium text-slate-300 backdrop-blur">
+          {t.tvLabel}
+        </span>
+
         {/* Television */}
         <div className="rounded-[1.1rem] border border-white/12 bg-[#0a0e16] p-1.5 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.95)] sm:rounded-2xl sm:p-2">
           <div className="overflow-hidden rounded-[0.7rem] border border-white/8 sm:rounded-xl">
@@ -33,32 +37,34 @@ export function AppPreview({ t }: { t: Preview }) {
         </div>
         <div className="mx-auto h-2 w-24 rounded-b-md bg-gradient-to-b from-[#1a2334] to-transparent sm:h-3 sm:w-32" />
 
-        {/* Premium card – the settings motif of the amazon build */}
-        <div className="absolute -bottom-10 right-0 w-[52%] max-w-[19rem] rounded-[0.9rem] border border-white/14 bg-[#0b111c] p-1 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.95)]">
-          <div className="overflow-hidden rounded-[0.55rem]">
-            <PremiumScreen t={t} />
+        {/* Phone and premium card sit beside each other below the screen, so the
+            grid and header of the television stay visible. */}
+        <div className="mt-4 flex items-start justify-center gap-3 sm:mt-5 sm:gap-5">
+          <div className="relative w-[24%] max-w-[7.5rem] shrink-0">
+            <span className="absolute -top-2 left-1 rounded-full border border-white/12 bg-ink/85 px-1.5 py-0.5 text-[0.5rem] text-slate-300 backdrop-blur">
+              {t.phoneLabel}
+            </span>
+            <div className="rounded-[0.9rem] border border-white/16 bg-[#0b111c] p-1 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.95)]">
+              <div className="overflow-hidden rounded-[0.6rem]">
+                <PhoneScreen t={t} />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative min-w-0 flex-1 max-w-[20rem]">
+            <span className="absolute -top-2 left-1 rounded-full border border-white/12 bg-ink/85 px-1.5 py-0.5 text-[0.5rem] text-slate-300 backdrop-blur">
+              {t.premiumLabel}
+            </span>
+            <div className="rounded-[0.9rem] border border-white/14 bg-[#0b111c] p-1 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.95)]">
+              <div className="overflow-hidden rounded-[0.55rem]">
+                <PremiumScreen t={t} />
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Phone */}
-        <div className="absolute -bottom-14 left-1 w-[24%] max-w-[7.5rem] rounded-[0.9rem] border border-white/16 bg-[#0b111c] p-1 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.95)] sm:w-[22%]">
-          <div className="overflow-hidden rounded-[0.6rem]">
-            <PhoneScreen t={t} />
-          </div>
-        </div>
-
-        <span className="absolute -top-3 left-4 rounded-full border border-white/12 bg-ink/80 px-2.5 py-1 text-[0.62rem] font-medium text-slate-300 backdrop-blur">
-          {t.tvLabel}
-        </span>
-        <span className="absolute bottom-6 left-[26%] hidden rounded-full border border-white/12 bg-ink/85 px-2 py-0.5 text-[0.55rem] text-slate-300 backdrop-blur sm:block">
-          {t.phoneLabel}
-        </span>
-        <span className="absolute -bottom-3 right-2 rounded-full border border-white/12 bg-ink/85 px-2 py-0.5 text-[0.55rem] text-slate-300 backdrop-blur">
-          {t.premiumLabel}
-        </span>
       </div>
 
-      <figcaption className="mt-14 text-center text-[0.7rem] leading-relaxed text-muted sm:mt-16 sm:text-xs">
+      <figcaption className="mt-5 text-center text-[0.7rem] leading-relaxed text-muted sm:text-xs">
         {t.subtitle}
       </figcaption>
     </figure>
