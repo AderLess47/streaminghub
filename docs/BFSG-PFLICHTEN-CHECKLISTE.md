@@ -99,6 +99,8 @@ Zwei-Faktor-Code, Checkout, Abo-Verwaltung, Geräteaktivierung.
       Dienstleistung ist.
 - [ ] Untertitel und Audiodeskription für Videoinhalte, soweit solche angeboten
       werden.
+- [ ] Für jeden Prüflauf ein Protokoll nach
+      [PRUEFPROTOKOLL-VORLAGE.md](PRUEFPROTOKOLL-VORLAGE.md) anlegen und ablegen.
 
 ## 3. Pflicht 2: Informationen zur Barrierefreiheit
 
@@ -166,7 +168,8 @@ Damit eine Behördenanfrage nicht zum Projekt wird, sammelt man laufend:
 - [ ] Die Informationen zur Barrierefreiheit mit Fassungsdatum, auch ältere
       Fassungen (Aufbewahrungspflicht nach § 14 Abs. 2 BFSG).
 - [ ] Prüfprotokolle: axe-Berichte, Kontrastmessungen, Tastatur- und
-      Reflow-Prüfungen, Datum und Umfang jeweils.
+      Reflow-Prüfungen, Datum und Umfang jeweils – Form und Pflichtfelder nach
+      [PRUEFPROTOKOLL-VORLAGE.md](PRUEFPROTOKOLL-VORLAGE.md).
 - [ ] Protokolle der Prüfungen mit assistiven Technologien.
 - [ ] Liste der bekannten Lücken mit Stand und geplanter Behebung.
 - [ ] Nachweise über Korrekturmaßnahmen und, falls es dazu kommt, die Meldung an
