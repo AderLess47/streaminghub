@@ -179,7 +179,10 @@
 
   .btn-primary {
     color: #fff;
-    background: linear-gradient(135deg, #2563eb 0%, #1d8fe0 55%, #06b6d4 100%);
+    /* White labels need 4.5:1 across the whole gradient: #1d4ed8 6.7:1,
+       #2563eb 5.2:1, #0e7490 5.4:1. The brighter #1d8fe0/#06b6d4 stops of the
+       old gradient only reached 3.5:1 and 2.4:1. */
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #0e7490 100%);
     box-shadow:
       0 12px 32px -14px rgba(37, 99, 235, 0.9),
       0 1px 0 rgba(255, 255, 255, 0.22) inset;
