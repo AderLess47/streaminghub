@@ -67,3 +67,11 @@ jobs:
             'Hintergrund: § 3 Abs. 3 Satz 1 BFSG nimmt Kleinstunternehmen von den Pflichten für Dienstleistungen aus.' \
             'Sobald 10 oder mehr Personen beschäftigt werden oder Umsatz bzw. Bilanzsumme 2 Mio. € übersteigen, greifen die Pflichten.')
           gh issue create --title "BFSG-Prüfung fällig" --body "$body"
+
+      # Ohne diesen Schritt bliebe der Lauf durch `continue-on-error` grün und
+      # GitHub würde keine fehlgeschlagene Ausführung melden.
+      - name: Fail so the overdue check is visible
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::BFSG-Prüfung überfällig – siehe docs/BFSG-ANWENDUNGSBEREICH.md"
+          exit 1
