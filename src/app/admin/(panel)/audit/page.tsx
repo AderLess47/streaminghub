@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/scroll-region";
 import { PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { all } from "@/lib/db";
@@ -32,8 +33,9 @@ export default async function AdminAuditPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.audit} title={t.admin.audit.title} description={t.admin.audit.subtitle} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.audit.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.audit.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.audit.time}</th>
@@ -69,7 +71,7 @@ export default async function AdminAuditPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       <p className="text-[0.68rem] leading-relaxed text-muted">
         Das Protokoll ist append-only. Einträge werden nicht nachträglich verändert; Löschung erfolgt ausschließlich
         durch die automatische Aufbewahrungsfrist (90 Tage, sofern kein Vorfall vorliegt).

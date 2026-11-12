@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { all } from "@/lib/db";
@@ -32,8 +33,9 @@ export default async function AdminRolesPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.roles} title={t.admin.roles.title} description={t.admin.roles.subtitle} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.roles.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.roles.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.roles.permissions}</th>
@@ -53,7 +55,7 @@ export default async function AdminRolesPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       <section className="card p-5">
         <h2 className="text-sm font-semibold">{t.admin.nav.roles} – {t.admin.roles.role}</h2>

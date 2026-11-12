@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { blockPairingCodeAction } from "@/lib/actions/admin";
@@ -35,8 +36,9 @@ export default async function AdminPairingPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.pairing} title={t.admin.pairing.title} description={t.admin.pairing.subtitle} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.pairing.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.pairing.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.pairing.code}</th>
@@ -94,7 +96,7 @@ export default async function AdminPairingPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       <p className="text-[0.68rem] leading-relaxed text-muted">
         Codes werden ausschließlich als Hash gespeichert. Nach Einlösung, Ablauf oder fünf Fehlversuchen sind sie
         ungültig. Vollständige Codes sind hier daher nicht sichtbar.
