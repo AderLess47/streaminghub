@@ -958,6 +958,7 @@ export const en: Dictionary = {
     statusNecessary: "Technically necessary",
     statusOptional: "Optional",
     saved: "Your choice has been saved.",
+    dismissed: "Settings closed – nothing has been saved.",
     settingsTitle: "Cookie settings",
     reopen: "Open settings",
   },

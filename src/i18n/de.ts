@@ -961,6 +961,7 @@ export const de = {
     statusNecessary: "Technisch notwendig",
     statusOptional: "Optional",
     saved: "Deine Auswahl wurde gespeichert.",
+    dismissed: "Einstellungen geschlossen – es wurde nichts gespeichert.",
     settingsTitle: "Cookie-Einstellungen",
     reopen: "Einstellungen öffnen",
   },
