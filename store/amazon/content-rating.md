@@ -1,7 +1,7 @@
 # Amazon content rating questionnaire: answers
 
 Answers for the **Content rating** step of the Amazon Appstore submission for
-StreamingHub 1.2.6 (build 8). Amazon asks about *Subject Matter* (violence,
+StreamingHub 1.3.0 (build 10). Amazon asks about *Subject Matter* (violence,
 cartoon violence, drugs, nudity, sex, intolerance, profanity, academic) and
 *Additional Information* (account creation/personal data, advertisements,
 gambling, location detection or location-based services), then derives the

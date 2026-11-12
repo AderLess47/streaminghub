@@ -21,8 +21,8 @@ android {
         applicationId = "de.streaminghub.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.2.6"
+        versionCode = 10
+        versionName = "1.3.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -43,9 +43,9 @@ android {
         }
         create("amazon") {
             dimension = "distribution"
-            // Flipped to true in phase P4 of docs/IAP-AMAZON.md, once the
-            // purchase flow has been through Amazon's testing.
-            buildConfigField("boolean", "PREMIUM_SALES", "false")
+            // Phase P4: premium is sold through Amazon In-App Purchasing, so the
+            // settings screen shows the purchase card (see docs/IAP-AMAZON.md).
+            buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"amazon\"")
         }
     }

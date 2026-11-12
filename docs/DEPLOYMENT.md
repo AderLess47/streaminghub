@@ -377,8 +377,9 @@ endpoint was unreachable or rejected the token.
 
 Without `AMAZON_RVS_SHARED_SECRET` both the app endpoints and the sync answer
 `503 not_configured`, so nothing silently pretends to verify a purchase. The
-Android Amazon build keeps `PREMIUM_SALES = false` until phase P4 of
-[`IAP-AMAZON.md`](IAP-AMAZON.md) ships.
+Android Amazon build now ships with `PREMIUM_SALES = true` and shows the purchase
+card, so `AMAZON_RVS_SHARED_SECRET` must be set before that build reaches users –
+otherwise the card ends in `not_configured` instead of a purchase.
 
 ### 11.4 Real-Time Notifications registration
 
