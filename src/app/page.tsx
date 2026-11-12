@@ -70,7 +70,7 @@ export default async function HomePage() {
       <section className="relative overflow-hidden">
         <div aria-hidden="true" className="grid-lines pointer-events-none absolute inset-0 -z-10" />
         <div className="shell grid items-center gap-14 pb-16 pt-14 sm:pt-20 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:pb-24">
-          <div className="fade-up max-w-xl">
+          <div className="fade-up max-w-xl" lang={locale}>
             <p className="eyebrow">
               <span className="status-dot bg-cyan" />
               {t.home.hero.eyebrow}

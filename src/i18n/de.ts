@@ -947,6 +947,7 @@ export const de = {
     subscriptionTerms: "Abonnementbedingungen",
     withdrawal: "Widerrufsinformationen",
     accountDeletion: "Konto löschen",
+    accessibility: "Barrierefreiheit",
     cookies: "Cookie-Einstellungen",
     rights: "Alle Rechte vorbehalten.",
     languageNote: "Deutsch ist die Standardsprache. Weitere Sprachen folgen schrittweise.",

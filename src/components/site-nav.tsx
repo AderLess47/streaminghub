@@ -136,7 +136,7 @@ export function SiteNav({
                       : "text-muted hover:bg-white/4 hover:text-fg"
                   }`}
                 >
-                  {t[link.key]}
+                  <span lang={locale}>{t[link.key]}</span>
                 </Link>
               </li>
             ))}
@@ -217,7 +217,7 @@ export function SiteNav({
                       isActive(link.href) ? "bg-white/7 text-fg" : "text-muted"
                     }`}
                   >
-                    {t[link.key]}
+                    <span lang={locale}>{t[link.key]}</span>
                     <Icon name="arrow-right" size={16} className="opacity-50" />
                   </Link>
                 </li>

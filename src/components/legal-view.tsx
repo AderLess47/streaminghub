@@ -9,6 +9,7 @@ const NAV = [
   { href: "/terms", de: "Nutzungsbedingungen", en: "Terms" },
   { href: "/subscription-terms", de: "Abonnementbedingungen", en: "Subscription terms" },
   { href: "/withdrawal", de: "Widerruf", en: "Withdrawal" },
+  { href: "/barrierefreiheit", de: "Barrierefreiheit", en: "Accessibility" },
 ];
 
 export function LegalNav({ locale, active }: { locale: Locale; active: string }) {

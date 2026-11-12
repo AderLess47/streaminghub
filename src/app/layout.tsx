@@ -4,6 +4,7 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { getI18n } from "@/i18n";
+import { localeMeta } from "@/i18n/config";
 import { bootstrap } from "@/lib/bootstrap";
 import { getSessionUser, isStaff } from "@/lib/session";
 
@@ -60,7 +61,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = await getSessionUser();
 
   return (
-    <html lang={locale} dir={dir} suppressHydrationWarning>
+    // Teilübersetzte Sprachen sind überwiegend englisch; dann ist Englisch die
+    // richtige Dokumentsprache, und die übersetzten Stellen tragen lang={locale}.
+    <html lang={localeMeta[locale].complete ? locale : "en"} dir={dir} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
         <a
           href="#main"
@@ -79,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           isStaffUser={Boolean(user && isStaff(user.role))}
         />
         <main id="main">{children}</main>
-        <SiteFooter t={t} role={user?.role ?? null} />
+        <SiteFooter t={t} role={user?.role ?? null} locale={locale} />
         <CookieConsent t={t.consent} />
       </body>
     </html>
