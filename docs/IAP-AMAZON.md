@@ -408,7 +408,9 @@ channel read-only.
    marketplace; submit it for review.
 2. Shared key page → value into `AMAZON_RVS_SHARED_SECRET` (Fly secret, never in
    the repo).
-3. Register the release certificate hash under *Appstore Certificate Hashes*.
+3. Register the release certificate hash under *Appstore Certificate Hashes*:
+   SHA-256 `34aefdb6f9dc697f4e5cd85794e0cb3b39756ef1b0086b24637016c8774ed07e`
+   (`CN=StreamingHub`, build 10).
 4. Register the RTN endpoint URL and complete the confirmation flow; put the topic
    ARN into `AMAZON_RTN_TOPIC_ARN`, set `AMAZON_SYNC_TOKEN` and schedule
    `npm run amazon:sync` once a day as the pull fallback.
