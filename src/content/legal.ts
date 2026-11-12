@@ -65,7 +65,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "5. Zahlungen und Abonnements",
         paragraphs: [
           "Für Premium-Abonnements über den Web-Checkout nutzen wir Stripe Payments Europe, Ltd. (Irland). Zahlungsdaten wie Kartendaten werden direkt bei Stripe eingegeben und nicht auf unseren Servern gespeichert. Wir erhalten Statusinformationen (Zahlungsstatus, Ablaufzeitpunkt, Abo-Kennung).",
-          "Bei Käufen über den Amazon Appstore erfolgt die Abwicklung durch Amazon. Es gelten die Datenschutzbestimmungen von Amazon; wir erhalten Statusinformationen zum Abonnement.",
+          "In Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten; es werden keine externen Zahlungsaufforderungen angezeigt und keine Abrechnungsdaten an uns übermittelt.",
           "Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO sowie Art. 6 Abs. 1 lit. c DSGVO für steuerrechtliche Aufbewahrung.",
         ],
       },
