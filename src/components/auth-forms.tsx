@@ -8,6 +8,7 @@ import type { Locale } from "@/i18n/config";
 import { localeMeta, locales } from "@/i18n/config";
 import { focusSoon } from "./focus-soon";
 import { Icon } from "./icons";
+import { LiveMessage } from "./live-message";
 
 type ApiResponse = {
   ok?: boolean;
@@ -142,11 +143,11 @@ export function LoginForm({
             className="field text-center font-mono text-lg tracking-[0.3em]"
           />
         </div>
-        {error ? (
-          <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
-            {error}
-          </p>
-        ) : null}
+        <LiveMessage
+          ok={false}
+          message={error}
+          className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+        />
         <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
           {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
           {t.mfaCta}
@@ -219,7 +220,7 @@ export function LoginForm({
         <FieldError id="login-password-error" message={fields.password} />
       </div>
 
-      {notice ? <p className="text-xs text-emerald-300">{notice}</p> : null}
+      <LiveMessage ok message={notice} className="text-xs text-emerald-300" />
       {error ? (
         <p
           id="login-error"
@@ -390,11 +391,17 @@ export function RegisterForm({
         </p>
       ) : null}
 
-      {pendingSuccess ? (
-        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-200" role="status">
-          {locale === "de" ? "Konto erstellt. Du wirst weitergeleitet …" : "Account created. Redirecting …"}
-        </p>
-      ) : null}
+      <LiveMessage
+        ok
+        message={
+          pendingSuccess
+            ? locale === "de"
+              ? "Konto erstellt. Du wirst weitergeleitet …"
+              : "Account created. Redirecting …"
+            : null
+        }
+        className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-200"
+      />
       <DevLink url={devLink} hint={t.devLinkHint} />
 
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
@@ -444,11 +451,11 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
           autoComplete="email"
         />
       </div>
-      {sent ? (
-        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 text-xs leading-relaxed text-emerald-200" role="status">
-          {t.resetSent}
-        </p>
-      ) : null}
+      <LiveMessage
+        ok
+        message={sent ? t.resetSent : null}
+        className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 text-xs leading-relaxed text-emerald-200"
+      />
       <DevLink url={devLink} hint={t.devLinkHint} />
       {error ? (
         <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">

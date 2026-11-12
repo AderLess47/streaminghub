@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Dictionary } from "@/i18n/de";
+import type { Locale } from "@/i18n/config";
 import type { Role } from "@/lib/session";
 import { Logo } from "./logo";
 import { CookieSettingsButton } from "./cookie-settings-button";
 
-export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
+export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | null; locale: Locale }) {
   const year = new Date().getFullYear();
 
   return (
@@ -17,14 +18,14 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
             <p className="mt-4 text-xs leading-relaxed text-muted/80">{t.footer.disclaimer}</p>
           </div>
 
-          <FooterColumn title={t.footer.product}>
+          <FooterColumn title={t.footer.product} locale={locale}>
             <FooterLink href="/premium">{t.nav.premium}</FooterLink>
             <FooterLink href="/download">{t.nav.download}</FooterLink>
             <FooterLink href="/activate">{t.nav.activate}</FooterLink>
             <FooterLink href="/status">{t.nav.status}</FooterLink>
           </FooterColumn>
 
-          <FooterColumn title={t.footer.support}>
+          <FooterColumn title={t.footer.support} locale={locale}>
             <FooterLink href="/help">{t.nav.help}</FooterLink>
             <FooterLink href="/faq">{t.nav.faq}</FooterLink>
             <FooterLink href="/contact">{t.nav.contact}</FooterLink>
@@ -38,13 +39,14 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
             </li>
           </FooterColumn>
 
-          <FooterColumn title={t.footer.legal}>
+          <FooterColumn title={t.footer.legal} locale={locale}>
             <FooterLink href="/imprint">{t.footer.imprint}</FooterLink>
             <FooterLink href="/privacy">{t.footer.privacy}</FooterLink>
             <FooterLink href="/account-deletion">{t.footer.accountDeletion}</FooterLink>
             <FooterLink href="/terms">{t.footer.terms}</FooterLink>
             <FooterLink href="/subscription-terms">{t.footer.subscriptionTerms}</FooterLink>
             <FooterLink href="/withdrawal">{t.footer.withdrawal}</FooterLink>
+            <FooterLink href="/barrierefreiheit">{t.footer.accessibility}</FooterLink>
           </FooterColumn>
         </div>
 
@@ -68,9 +70,17 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
   );
 }
 
-function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+function FooterColumn({
+  title,
+  locale,
+  children,
+}: {
+  title: string;
+  locale: Locale;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
+    <div lang={locale}>
       <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-fg/80">{title}</h2>
       <ul className="mt-3 grid gap-2 text-sm text-muted">{children}</ul>
     </div>

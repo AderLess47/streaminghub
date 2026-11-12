@@ -522,3 +522,49 @@
 .poster-c { background: linear-gradient(150deg, #0f766e 0%, #0891b2 50%, #0b1120 100%); }
 .poster-d { background: linear-gradient(150deg, #be185d 0%, #4338ca 65%, #0b1120 100%); }
 .poster-e { background: linear-gradient(150deg, #b45309 0%, #0f766e 70%, #0b1120 100%); }
+
+/*
+ * Erzwungener Kontrastmodus (Windows): Verläufe, Glas und Schlagschatten
+ * verschwinden dort, zurück bleibt oft farbloser Text auf farbloser Fläche.
+ * Diese Regeln liegen außerhalb der Layer, damit sie die Komponenten schlagen.
+ */
+@media (forced-colors: active) {
+  .grad-text {
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+  }
+
+  .card,
+  .chip,
+  .field,
+  .btn,
+  .glass,
+  .poster-a,
+  .poster-b,
+  .poster-c {
+    background-image: none !important;
+    border-color: CanvasText;
+  }
+
+  .btn {
+    background-color: ButtonFace;
+    color: ButtonText;
+    border-color: ButtonText;
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  .fade-up,
+  .fade-up-delay-1,
+  .fade-up-delay-2,
+  .fade-up-delay-3 {
+    animation: none !important;
+  }
+}

@@ -5,31 +5,26 @@ import type { ActionState } from "@/lib/actions/dashboard";
 import type { Dictionary } from "@/i18n/de";
 import { localeMeta, locales, type Locale } from "@/i18n/config";
 import { Icon } from "./icons";
+import { LiveMessage } from "./live-message";
 import { useSubmitFocus } from "./use-submit-focus";
 
 type Action = (prevState: ActionState, formData: FormData) => Promise<ActionState>;
 
 /**
- * Erfolg und Fehler landen in dauerhaft vorhandenen Live-Regionen. Ein Element,
- * das erst mit seinem Text eingefügt wird, wird von Screenreadern oft nicht
- * angesagt – der Container muss schon vor dem Absenden im DOM stehen.
+ * Erfolg und Fehler landen in dauerhaft vorhandenen Live-Regionen (siehe
+ * LiveMessage) – ein erst mit seinem Text eingefügtes role="status" wird von
+ * Screenreadern oft nicht angesagt.
  */
 function Feedback({ state }: { state: ActionState }) {
-  const message = state?.message;
   const ok = Boolean(state?.ok);
-  const style = `rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-    ok ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-200" : "border-rose-500/25 bg-rose-500/8 text-rose-200"
-  }`;
-
   return (
-    <>
-      <div aria-live="polite" aria-atomic="true">
-        {message && ok ? <p className={style}>{message}</p> : null}
-      </div>
-      <div aria-live="assertive" aria-atomic="true">
-        {message && !ok ? <p className={style}>{message}</p> : null}
-      </div>
-    </>
+    <LiveMessage
+      ok={ok}
+      message={state?.message}
+      className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
+        ok ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-200" : "border-rose-500/25 bg-rose-500/8 text-rose-200"
+      }`}
+    />
   );
 }
 

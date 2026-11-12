@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "./icons";
+import { LiveMessage } from "./live-message";
 
 export function CheckoutButton({
   label,
@@ -55,11 +56,11 @@ export function CheckoutButton({
       {!configured ? (
         <p className="mt-2 text-center text-[0.7rem] leading-relaxed text-amber-300/80">{disabledLabel}</p>
       ) : null}
-      {message ? (
-        <p className="mt-2 text-center text-[0.72rem] leading-relaxed text-rose-300" role="status">
-          {message}
-        </p>
-      ) : null}
+      <LiveMessage
+        ok={false}
+        message={message}
+        className="mt-2 text-center text-[0.72rem] leading-relaxed text-rose-300"
+      />
     </div>
   );
 }

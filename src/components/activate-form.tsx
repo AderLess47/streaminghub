@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "./icons";
+import { LiveMessage } from "./live-message";
 
 type Result = { ok: boolean; message: string; deviceName?: string } | null;
 
@@ -144,11 +145,11 @@ export function ActivateForm({
             />
           </div>
 
-          {error ? (
-            <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
-              {error}
-            </p>
-          ) : null}
+          <LiveMessage
+            ok={false}
+            message={error}
+            className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+          />
 
           <button type="submit" className="btn btn-primary" disabled={pending || code.length < 8}>
             {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="key" size={16} />}

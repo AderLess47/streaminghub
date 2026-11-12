@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "./icons";
+import { LiveMessage } from "./live-message";
 
 export function ResendVerification({
   label,
@@ -11,20 +12,20 @@ export function ResendVerification({
   hint: string;
 }) {
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [state, setState] = useState<{ ok: boolean; message: string } | null>(null);
   const [devLink, setDevLink] = useState<string | undefined>();
 
   async function resend() {
     setPending(true);
-    setMessage(null);
+    setState(null);
     try {
       const response = await fetch("/api/auth/resend-verification", { method: "POST" });
       const data = (await response.json()) as { ok?: boolean; devLink?: string; error?: { message?: string } };
       if (response.ok) {
-        setMessage("Bestätigungs-E-Mail wurde erneut erzeugt.");
+        setState({ ok: true, message: "Bestätigungs-E-Mail wurde erneut erzeugt." });
         setDevLink(data.devLink);
       } else {
-        setMessage(data.error?.message ?? "Bitte versuche es später erneut.");
+        setState({ ok: false, message: data.error?.message ?? "Bitte versuche es später erneut." });
       }
     } finally {
       setPending(false);
@@ -37,7 +38,11 @@ export function ResendVerification({
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {label}
       </button>
-      {message ? <p className="mt-1.5 text-[0.7rem] text-emerald-300">{message}</p> : null}
+      <LiveMessage
+        ok={state?.ok ?? false}
+        message={state?.message}
+        className={`mt-1.5 text-[0.7rem] ${state?.ok ? "text-emerald-300" : "text-rose-300"}`}
+      />
       {devLink ? (
         <p className="mt-1 break-all text-[0.65rem] text-cyan-200/80">
           {hint} <a className="underline" href={devLink}>{devLink}</a>

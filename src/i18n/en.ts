@@ -944,6 +944,7 @@ export const en: Dictionary = {
     subscriptionTerms: "Subscription terms",
     withdrawal: "Withdrawal information",
     accountDeletion: "Delete account",
+    accessibility: "Accessibility",
     cookies: "Cookie settings",
     rights: "All rights reserved.",
     languageNote: "German is the default language. Further languages follow gradually.",
