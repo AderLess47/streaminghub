@@ -592,6 +592,7 @@ export const en: Dictionary = {
       marketingLabel: "Product updates by email",
       saved: "Profile saved.",
       passwordTitle: "Change password",
+      passwordHint: "At least 10 characters, with letters and numbers.",
       passwordSaved: "Password changed. Other sessions were signed out.",
       passwordWrong: "The current password is incorrect.",
       privacyTitle: "Data & privacy",

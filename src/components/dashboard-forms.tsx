@@ -17,7 +17,7 @@ function Feedback({ state }: { state: ActionState }) {
           ? "border-emerald-500/25 bg-emerald-500/8 text-emerald-200"
           : "border-rose-500/25 bg-rose-500/8 text-rose-200"
       }`}
-      role="status"
+      role={state.ok ? "status" : "alert"}
     >
       {state.message}
     </p>
@@ -129,8 +129,16 @@ export function ProfileForm({
         <label htmlFor="profile-email" className="field-label">
           {t.emailLabel}
         </label>
-        <input id="profile-email" value={user.email} readOnly disabled className="field" />
-        <p className="mt-1 text-[0.68rem] text-muted">{t.emailNote}</p>
+        <input
+          id="profile-email"
+          value={user.email}
+          readOnly
+          className="field"
+          aria-describedby="profile-email-note"
+        />
+        <p id="profile-email-note" className="mt-1 text-[0.68rem] text-muted">
+          {t.emailNote}
+        </p>
       </div>
       <div>
         <label htmlFor="profile-locale" className="field-label">
@@ -177,7 +185,19 @@ export function PasswordForm({ action, t }: { action: Action; t: Dictionary["das
         <label htmlFor="new-password" className="field-label">
           {t.newPassword}
         </label>
-        <input id="new-password" name="newPassword" type="password" required minLength={10} autoComplete="new-password" className="field" />
+        <input
+          id="new-password"
+          name="newPassword"
+          type="password"
+          required
+          minLength={10}
+          autoComplete="new-password"
+          className="field"
+          aria-describedby="new-password-hint"
+        />
+        <p id="new-password-hint" className="mt-1 text-[0.7rem] text-muted">
+          {t.passwordHint}
+        </p>
       </div>
       <Feedback state={state} />
       <button type="submit" className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
