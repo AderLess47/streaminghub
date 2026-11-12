@@ -86,7 +86,7 @@ export default async function DashboardPage() {
             {t.dashboard.overview.planTitle}
           </p>
           <p className="mt-2 text-sm font-semibold">{planLabel}</p>
-          <Link href="/dashboard/subscription" className="link mt-1 inline-block text-xs">
+          <Link href="/dashboard/subscription" className="link mt-1 inline-flex min-h-11 items-center text-xs">
             {t.dashboard.overview.manageSubscription}
           </Link>
         </div>

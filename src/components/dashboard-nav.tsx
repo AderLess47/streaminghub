@@ -45,7 +45,7 @@ export function DashboardNav({ items, currentLabel }: { items: DashNavItem[]; cu
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`flex shrink-0 snap-start items-center gap-2.5 rounded-xl px-3 py-2.5 text-[0.84rem] font-medium transition ${
+            className={`flex min-h-11 shrink-0 snap-start items-center gap-2.5 rounded-xl px-3 py-2.5 text-[0.84rem] font-medium transition ${
               active
                 ? "border border-brand/30 bg-brand/12 text-fg"
                 : "border border-transparent text-muted hover:bg-white/4 hover:text-fg"

@@ -63,7 +63,7 @@ export default async function AdminTicketsPage() {
                 </td>
                 <td className="whitespace-nowrap text-xs">{dateFormat.format(new Date(row.created_at))}</td>
                 <td>
-                  <Link href={`/admin/tickets/${row.id}`} className="btn btn-ghost btn-sm !px-2">
+                  <Link href={`/admin/tickets/${row.id}`} className="btn btn-ghost btn-sm !min-w-11 !px-2">
                     {t.admin.tickets.open}
                   </Link>
                 </td>

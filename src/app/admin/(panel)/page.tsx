@@ -109,7 +109,7 @@ export default async function AdminOverviewPage({
               </li>
             ))}
           </ul>
-          <Link href="/admin/audit" className="link mt-2 inline-block text-xs">
+          <Link href="/admin/audit" className="link mt-2 inline-flex min-h-11 items-center text-xs">
             {t.admin.nav.audit}
           </Link>
         </section>

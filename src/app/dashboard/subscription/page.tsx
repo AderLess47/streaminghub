@@ -129,13 +129,13 @@ export default async function SubscriptionPage({
           <div className="card p-5">
             <h2 className="text-sm font-semibold">{t.legal.subscriptionTerms}</h2>
             <div className="mt-2 grid gap-1.5 text-xs">
-              <Link href="/subscription-terms" className="link">
+              <Link href="/subscription-terms" className="link inline-flex min-h-11 items-center justify-self-start">
                 {t.footer.subscriptionTerms}
               </Link>
-              <Link href="/withdrawal" className="link">
+              <Link href="/withdrawal" className="link inline-flex min-h-11 items-center justify-self-start">
                 {t.footer.withdrawal}
               </Link>
-              <Link href="/contact" className="link">
+              <Link href="/contact" className="link inline-flex min-h-11 items-center justify-self-start">
                 {t.help.contactCta}
               </Link>
             </div>
