@@ -54,12 +54,14 @@ versioniert.
 
 ```bash
 cd android
-./gradlew assembleDebug
-./gradlew assembleRelease
+./gradlew assembleDirectDebug
+./gradlew assembleDirectRelease
 ```
 
 Die Release-APK liegt danach unter
-`app/build/outputs/apk/release/app-release.apk`.
+`app/build/outputs/apk/direct/release/app-direct-release.apk`.
+The Amazon build is `./gradlew assembleAmazonRelease` (same code, no premium
+surface; see `docs/IAP-AMAZON.md`).
 
 Für Updates muss derselbe Release-Schlüssel verwendet werden. Der Schlüssel
 liegt lokal unter `android/keystore/`, die Zugangsdaten in

@@ -1,5 +1,6 @@
 package de.streaminghub.app.ui
 
+import de.streaminghub.app.BuildConfig
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -236,7 +237,11 @@ fun PairingScreen(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "Die Kopplung ist optional. Deine Playlist und die Wiedergabe funktionieren auch ohne Konto. Das Konto wird für Geräteverwaltung und Premium-Status benötigt.",
+                    if (BuildConfig.PREMIUM_SALES) {
+                        "Die Kopplung ist optional. Deine Playlist und die Wiedergabe funktionieren auch ohne Konto. Das Konto wird für Geräteverwaltung und Premium-Status benötigt."
+                    } else {
+                        "Die Kopplung ist optional. Deine Playlist und die Wiedergabe funktionieren auch ohne Konto. Das Konto wird für die Geräteverwaltung benötigt."
+                    },
                     color = Muted,
                     style = MaterialTheme.typography.bodyMedium,
                 )
