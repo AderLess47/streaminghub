@@ -339,12 +339,20 @@ live.
 | `AMAZON_RVS_BASE` | Fly env (optional) | Defaults to `https://appstore-sdk.amazon.com` |
 | `AMAZON_RVS_SANDBOX` | Fly env (optional) | `1` while testing with App Tester (RVS Cloud Sandbox) |
 | `AMAZON_IAP_SKU` | Fly env (optional) | Defaults to `premium_monthly`; must match the console IAP item |
-| `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration |
+| `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
 
+The easiest path needs no local tooling: add the values under *GitHub → Settings
+→ Secrets and variables → Actions* as `AMAZON_RVS_SHARED_SECRET`,
+`AMAZON_SYNC_TOKEN` (and later `AMAZON_RTN_TOPIC_ARN`), then run *Actions →
+Configure Amazon secrets → Run workflow*. That workflow copies them to Fly with
+the existing `FLY_API_TOKEN` and prints only their names.
+
 ```bash
-flyctl secrets set AMAZON_RVS_SHARED_SECRET=… AMAZON_SYNC_TOKEN=… -a streaminghub-org
-gh secret set AMAZON_SYNC_TOKEN            # same value as the Fly secret
+# Alternative from a machine that has flyctl and gh:
+TOKEN=$(openssl rand -hex 32)
+flyctl secrets set AMAZON_RVS_SHARED_SECRET=… AMAZON_SYNC_TOKEN="$TOKEN" -a streaminghub-org
+printf '%s' "$TOKEN" | gh secret set AMAZON_SYNC_TOKEN   # same value as the Fly secret
 ```
 
 Keep `AMAZON_SYNC_TOKEN` identical in both places – the app rejects any other
@@ -372,7 +380,23 @@ Without `AMAZON_RVS_SHARED_SECRET` both the app endpoints and the sync answer
 Android Amazon build keeps `PREMIUM_SALES = false` until phase P4 of
 [`IAP-AMAZON.md`](IAP-AMAZON.md) ships.
 
-### 11.4 Manual run
+### 11.4 Real-Time Notifications registration
+
+Registering the endpoint has a chicken-and-egg step: the topic ARN only exists
+after the registration, but notifications are rejected without it. The webhook
+handles that: with `AMAZON_RTN_TOPIC_ARN` empty it still verifies the SNS
+signature and accepts a *SubscriptionConfirmation* (returning the topic ARN in
+the response and in the log), and rejects every other message with `503`.
+
+1. Set `AMAZON_RVS_SHARED_SECRET` first (the webhook stays disabled without it).
+2. Register `https://streaminghub.org/api/webhooks/amazon/rtn` in the Amazon
+   Developer Console and let it confirm.
+3. Copy the topic ARN, add it as the `AMAZON_RTN_TOPIC_ARN` repository secret and
+   run *Configure Amazon secrets* again.
+
+From then on, notifications are processed; a foreign topic answers `403`.
+
+### 11.5 Manual run
 
 ```bash
 APP_URL=https://streaminghub.org AMAZON_SYNC_TOKEN=… npm run amazon:sync

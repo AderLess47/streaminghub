@@ -152,6 +152,25 @@ export function parseRtnMessage(message: string): RtnMessage | null {
   };
 }
 
+export type TopicDecision = "ok" | "bootstrap" | "forbidden";
+
+/**
+ * Topic policy for the webhook. While no topic ARN is configured the endpoint
+ * still accepts a *subscription confirmation* – otherwise the registration in
+ * Amazon's console could never complete, because the ARN only exists after it.
+ * Every other message needs a configured, matching topic.
+ */
+export function rtnTopicAllowed(params: {
+  configuredTopic: string;
+  messageType: SnsEnvelope["type"];
+  topicArn: string;
+}): TopicDecision {
+  if (!params.configuredTopic) {
+    return params.messageType === "SubscriptionConfirmation" ? "bootstrap" : "forbidden";
+  }
+  return params.topicArn === params.configuredTopic ? "ok" : "forbidden";
+}
+
 export type RtnEffect = "verify" | "ignore";
 
 /**
