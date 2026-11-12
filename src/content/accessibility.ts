@@ -20,9 +20,9 @@ export const accessibilityDoc: LegalDoc = {
   titleEn: "Accessibility information",
   updated: "2026-11-12",
   introDe:
-    "Diese Informationen richten sich an Verbraucherinnen und Verbraucher und beschreiben, wie barrierefrei die Website streaminghub.org und das Kundenportal nutzbar sind. Sie werden nach § 14 Absatz 1 Nummer 2 des Barrierefreiheitsstärkungsgesetzes (BFSG) in Verbindung mit Anlage 3 Nummer 1 BFSG bereitgestellt.",
+    "Diese Informationen richten sich an Verbraucherinnen und Verbraucher und beschreiben, wie barrierefrei die Website streaminghub.org und das Kundenportal nutzbar sind. Sie folgen dem Aufbau, den § 14 Absatz 1 Nummer 2 des Barrierefreiheitsstärkungsgesetzes (BFSG) in Verbindung mit Anlage 3 Nummer 1 BFSG für Dienstleistungserbringer vorsieht, und werden unabhängig davon bereitgestellt, ob StreamingHub in den Anwendungsbereich des Gesetzes fällt.",
   introEn:
-    "This information is addressed to consumers and describes how accessible the streaminghub.org website and the customer portal are. It is provided under section 14(1) no. 2 of the German Accessibility Strengthening Act (BFSG) in conjunction with Annex 3 no. 1 BFSG.",
+    "This information is addressed to consumers and describes how accessible the streaminghub.org website and the customer portal are. It follows the structure that section 14(1) no. 2 of the German Accessibility Strengthening Act (BFSG) in conjunction with Annex 3 no. 1 BFSG sets out for service providers, and is provided regardless of whether StreamingHub falls within the scope of that act.",
   clausesDe: [
     {
       heading: "1. Beschreibung der Dienstleistung",
