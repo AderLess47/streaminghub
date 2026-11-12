@@ -595,6 +595,7 @@ export const de = {
       marketingLabel: "Produktupdates per E-Mail",
       saved: "Profil gespeichert.",
       passwordTitle: "Passwort ändern",
+      passwordHint: "Mindestens 10 Zeichen, mit Buchstaben und Zahlen.",
       passwordSaved: "Passwort geändert. Andere Sitzungen wurden abgemeldet.",
       passwordWrong: "Das aktuelle Passwort ist falsch.",
       privacyTitle: "Daten & Datenschutz",
