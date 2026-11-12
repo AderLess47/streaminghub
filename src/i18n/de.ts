@@ -103,6 +103,13 @@ export const de = {
       demoSearch: "Suchen",
       demoContinue: "Für dich weiter",
       demoGenres: ["Doku", "Sport", "Nachrichten", "Musik"],
+      premiumLabel: "Premium im Konto",
+      premiumTitle: "Premium",
+      premiumBilling: "Abrechnung über dein Amazon-Konto",
+      premiumActive: "Premium aktiv",
+      premiumRenewal: "Nächste Verlängerung: 12.12.2026",
+      premiumBenefit: "Weiterschauen auf allen Geräten ist aktiv.",
+      premiumRefresh: "Status aktualisieren",
     },
     features: {
       title: "Alles, was ein guter Player braucht",
