@@ -38,7 +38,15 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function NewTicketForm({ action, t }: { action: Action; t: Dictionary["dashboard"]["support"] }) {
+export function NewTicketForm({
+  action,
+  t,
+  busy,
+}: {
+  action: Action;
+  t: Dictionary["dashboard"]["support"];
+  busy: string;
+}) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
@@ -100,7 +108,7 @@ export function NewTicketForm({ action, t }: { action: Action; t: Dictionary["da
         <FieldError id="ticket-message-error" message={fieldErrors.message} />
       </div>
       <Feedback state={state} />
-      <FormStatus pending={pending} label={t.sending} />
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {t.submit}
@@ -153,10 +161,12 @@ export function ProfileForm({
   action,
   user,
   t,
+  busy,
 }: {
   action: Action;
   user: { displayName: string; locale: Locale; marketingOptIn: boolean; email: string };
   t: Dictionary["dashboard"]["settings"];
+  busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
@@ -226,7 +236,7 @@ export function ProfileForm({
         {t.marketingLabel}
       </label>
       <Feedback state={state} />
-      <FormStatus pending={pending} label={t.saving} />
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="check" size={14} />}
         {t.save}
@@ -235,7 +245,15 @@ export function ProfileForm({
   );
 }
 
-export function PasswordForm({ action, t }: { action: Action; t: Dictionary["dashboard"]["settings"] }) {
+export function PasswordForm({
+  action,
+  t,
+  busy,
+}: {
+  action: Action;
+  t: Dictionary["dashboard"]["settings"];
+  busy: string;
+}) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
@@ -279,7 +297,7 @@ export function PasswordForm({ action, t }: { action: Action; t: Dictionary["das
         <FieldError id="new-password-error" message={fieldErrors.newPassword} />
       </div>
       <Feedback state={state} />
-      <FormStatus pending={pending} label={t.saving} />
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="lock" size={14} />}
         {t.passwordTitle}
@@ -296,9 +314,11 @@ export function DataRequestForm({
   description,
   confirmText,
   danger = false,
+  busy,
 }: {
   action: Action;
   t: Dictionary["dashboard"]["settings"];
+  busy: string;
   kind: "export" | "deletion";
   label: string;
   description: string;
@@ -345,7 +365,7 @@ export function DataRequestForm({
       </label>
       <FieldError id={`confirm-${kind}-check-error`} message={fieldErrors.confirm} />
       <Feedback state={state} />
-      <FormStatus pending={pending} label={t.saving} />
+      <FormStatus pending={pending} label={busy} />
       <button
         type="submit"
         ref={submitRef}
@@ -362,16 +382,18 @@ export function DataRequestForm({
 export function SessionsForm({
   action,
   t,
+  busy,
 }: {
   action: Action;
   t: Dictionary["dashboard"]["settings"];
+  busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
   const submitRef = useSubmitFocus(pending);
   return (
     <form action={formAction} className="grid gap-3">
       <Feedback state={state} />
-      <FormStatus pending={pending} label={t.saving} />
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
         <Icon name={pending ? "refresh" : "logout"} size={14} className={pending ? "animate-spin" : ""} />
         {t.logoutOthers}

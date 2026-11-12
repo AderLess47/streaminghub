@@ -46,7 +46,7 @@ export default async function AdminLoginPage() {
                 {t.admin.subtitle}
               </Alert>
               <div className="mt-4">
-                <LoginForm t={t.auth} next="/admin" />
+                <LoginForm t={t.auth} next="/admin" busy={t.ui.sending} />
               </div>
             </>
           )}

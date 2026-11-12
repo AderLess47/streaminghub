@@ -60,6 +60,7 @@ export default async function SettingsPage() {
             <ProfileForm
               action={updateProfileAction}
               t={t.dashboard.settings}
+              busy={t.ui.saving}
               user={{
                 displayName: user.displayName,
                 email: user.email,
@@ -73,7 +74,7 @@ export default async function SettingsPage() {
         <section className="card p-5">
           <h2 className="text-base font-semibold">{t.dashboard.settings.passwordTitle}</h2>
           <div className="mt-4">
-            <PasswordForm action={changePasswordAction} t={t.dashboard.settings} />
+            <PasswordForm action={changePasswordAction} t={t.dashboard.settings} busy={t.ui.saving} />
           </div>
         </section>
 
@@ -84,6 +85,7 @@ export default async function SettingsPage() {
             <DataRequestForm
               action={dataRequestAction}
               t={t.dashboard.settings}
+              busy={t.ui.saving}
               kind="export"
               label={t.dashboard.settings.exportCta}
               description={t.dashboard.settings.exportNote}
@@ -100,6 +102,7 @@ export default async function SettingsPage() {
             <DataRequestForm
               action={dataRequestAction}
               t={t.dashboard.settings}
+              busy={t.ui.saving}
               kind="deletion"
               label={t.dashboard.settings.deleteCta}
               description={t.dashboard.settings.deleteNote}
@@ -129,7 +132,7 @@ export default async function SettingsPage() {
             ))}
           </ul>
           <div className="mt-4">
-            <SessionsForm action={signOutOtherSessionsAction} t={t.dashboard.settings} />
+            <SessionsForm action={signOutOtherSessionsAction} t={t.dashboard.settings} busy={t.ui.saving} />
           </div>
         </section>
       </div>

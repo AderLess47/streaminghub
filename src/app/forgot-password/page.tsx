@@ -16,7 +16,7 @@ export default async function ForgotPasswordPage() {
           <p className="mt-1.5 text-sm text-muted">{t.auth.resetSubtitle}</p>
         </div>
         <div className="card p-6">
-          <ForgotPasswordForm t={t.auth} />
+          <ForgotPasswordForm t={t.auth} busy={t.ui.sending} />
         </div>
       </div>
     </div>

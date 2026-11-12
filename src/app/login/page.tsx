@@ -46,7 +46,7 @@ export default async function LoginPage({
               <Alert tone="success">{t.auth.resetSuccess}</Alert>
             </div>
           ) : null}
-          <LoginForm t={t.auth} next={next} />
+          <LoginForm t={t.auth} next={next} busy={t.ui.sending} />
         </div>
 
         <p className="mt-5 text-center text-xs leading-relaxed text-muted">

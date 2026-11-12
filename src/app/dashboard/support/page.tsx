@@ -73,7 +73,7 @@ export default async function SupportPage() {
         <div className="card p-5">
           <h2 className="text-base font-semibold">{t.dashboard.support.newTicket}</h2>
           <div className="mt-4">
-            <NewTicketForm action={createTicketAction} t={t.dashboard.support} />
+            <NewTicketForm action={createTicketAction} t={t.dashboard.support} busy={t.ui.sending} />
           </div>
         </div>
       </div>

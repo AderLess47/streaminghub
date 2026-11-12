@@ -14,7 +14,15 @@ const FIELD_IDS: Record<string, string> = {
   privacyAccepted: "contact-privacy",
 };
 
-export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; privacyLabel: string }) {
+export function ContactForm({
+  t,
+  privacyLabel,
+  busy,
+}: {
+  t: Dictionary["contact"];
+  privacyLabel: string;
+  busy: string;
+}) {
   const renderedAt = useRef(Date.now());
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<"idle" | "success" | "error">("idle");
@@ -213,10 +221,10 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <FormStatus pending={pending} label={t.sending} />
+        <FormStatus pending={pending} label={busy} />
         <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="mail" size={16} />}
-          {pending ? t.sending : t.submit}
+          {pending ? busy : t.submit}
         </button>
         <p className="max-w-sm text-[0.7rem] leading-relaxed text-muted/80">{t.spamNotice}</p>
       </div>

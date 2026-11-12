@@ -408,7 +408,6 @@ export const en: Dictionary = {
     privacyLabel:
       "I have read the privacy policy and agree to my details being processed to handle this request.",
     submit: "Send message",
-    sending: "Sending …",
     success: "Thank you! Your message has arrived. We will reply by email.",
     error: "The message could not be sent. Please try again later.",
     spamNotice:
@@ -482,7 +481,6 @@ export const en: Dictionary = {
     devLinkHint: "Development mode: email delivery is not configured. Link:",
     loggedOut: "You have been signed out.",
     accountDisabled: "This account is disabled. Please contact support.",
-    submitting: "Sending …",
   },
   dashboard: {
     title: "Dashboard",
@@ -565,7 +563,6 @@ export const en: Dictionary = {
       category: "Category",
       message: "Message",
       submit: "Send request",
-      sending: "Sending …",
       empty: "You have not submitted any support requests yet.",
       statusOpen: "Open",
       statusPending: "In progress",
@@ -599,7 +596,6 @@ export const en: Dictionary = {
       languageLabel: "Preferred language",
       marketingLabel: "Product updates by email",
       saved: "Profile saved.",
-      saving: "Saving …",
       passwordTitle: "Change password",
       passwordHint: "At least 10 characters, with letters and numbers.",
       passwordSaved: "Password changed. Other sessions were signed out.",
