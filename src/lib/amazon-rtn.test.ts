@@ -8,6 +8,7 @@ import {
   notificationEffect,
   parseRtnMessage,
   parseSnsEnvelope,
+  rtnTopicAllowed,
   snsStringToSign,
   verifySnsSignature,
   type SnsEnvelope,
@@ -155,6 +156,27 @@ test("the notification message carries the receipt to re-verify", () => {
   );
   assert.equal(parseRtnMessage(JSON.stringify({ receiptId: "r-1" })), null);
   assert.equal(parseRtnMessage("broken"), null);
+});
+
+test("the topic check allows a subscription bootstrap but nothing else", () => {
+  const topic = "arn:aws:sns:eu-west-1:1:topic";
+
+  assert.equal(
+    rtnTopicAllowed({ configuredTopic: "", messageType: "SubscriptionConfirmation", topicArn: topic }),
+    "bootstrap",
+  );
+  assert.equal(
+    rtnTopicAllowed({ configuredTopic: "", messageType: "Notification", topicArn: topic }),
+    "forbidden",
+  );
+  assert.equal(
+    rtnTopicAllowed({ configuredTopic: topic, messageType: "Notification", topicArn: topic }),
+    "ok",
+  );
+  assert.equal(
+    rtnTopicAllowed({ configuredTopic: topic, messageType: "Notification", topicArn: "arn:aws:sns:eu-west-1:1:other" }),
+    "forbidden",
+  );
 });
 
 test("only subscription notifications trigger a verification", () => {

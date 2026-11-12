@@ -7,6 +7,7 @@ import {
   notificationEffect,
   parseRtnMessage,
   parseSnsEnvelope,
+  rtnTopicAllowed,
   verifySnsSignature,
 } from "@/lib/amazon-rtn";
 import {
@@ -25,7 +26,7 @@ export const runtime = "nodejs";
  * a re-verification – RVS keeps deciding what the customer is entitled to.
  */
 export async function POST(request: Request) {
-  if (!isAmazonIapConfigured() || !env.billing.amazonRtnTopicArn) {
+  if (!isAmazonIapConfigured()) {
     return json(
       { error: { code: "not_configured", message: "Amazon-Benachrichtigungen sind nicht konfiguriert." } },
       { status: 503 },
@@ -46,7 +47,12 @@ export async function POST(request: Request) {
   if (!certificate || !verifySnsSignature(envelope, certificate)) {
     return json({ error: { code: "forbidden", message: "Signatur ungültig." } }, { status: 403 });
   }
-  if (envelope.topicArn !== env.billing.amazonRtnTopicArn) {
+  const topic = rtnTopicAllowed({
+    configuredTopic: env.billing.amazonRtnTopicArn,
+    messageType: envelope.type,
+    topicArn: envelope.topicArn,
+  });
+  if (topic === "forbidden") {
     return json({ error: { code: "forbidden", message: "Unbekanntes Topic." } }, { status: 403 });
   }
 
@@ -62,7 +68,12 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
-    return json({ ok: true, confirmed: true });
+    if (topic === "bootstrap") {
+      // Registration bootstrap: log the ARN so it can be configured, it is not
+      // a secret. Notifications stay rejected until the env var is set.
+      console.info("amazon rtn subscription confirmed for topic", envelope.topicArn);
+    }
+    return json({ ok: true, confirmed: true, topicArn: envelope.topicArn });
   }
 
   if (envelope.type !== "Notification") return json({ ok: true, ignored: true });
