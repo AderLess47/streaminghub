@@ -212,6 +212,7 @@ production server those two checks are skipped, since dev links are withheld.
 
 - `docs/DEPLOYMENT.md` – hosting, HTTPS, DNS, environment, provider setup, backups
 - `docs/API.md` – app integration contract
+- `docs/BFSG-ANWENDUNGSBEREICH.md` – whether the accessibility act applies, and the two figures the operator still has to confirm
 - `/docs/api` – rendered API documentation + OpenAPI 3.1 JSON
 
 ## Legal content disclaimer
