@@ -63,10 +63,14 @@ export function SiteNav({
       <div
         className={`glass sticky top-0 z-50 transition-shadow ${scrolled ? "shadow-[0_10px_40px_-24px_rgba(0,0,0,0.9)]" : ""}`}
       >
-        <nav className="shell flex h-16 items-center justify-between gap-4" aria-label="Hauptnavigation">
-          <Link href="/" className="flex items-center gap-2.5 rounded-lg" aria-label="StreamingHub Startseite">
+        <nav className="shell flex h-16 items-center justify-between gap-2 sm:gap-4" aria-label="Hauptnavigation">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg"
+            aria-label="StreamingHub Startseite"
+          >
             <LogoMark size={32} />
-            <span className="text-[1.02rem] font-semibold tracking-tight">
+            <span className="truncate text-[1.02rem] font-semibold tracking-tight">
               Streaming<span className="grad-text">Hub</span>
             </span>
           </Link>
@@ -124,7 +128,7 @@ export function SiteNav({
             )}
           </div>
 
-          <div className="flex items-center gap-1 lg:hidden">
+          <div className="flex shrink-0 items-center gap-1 lg:hidden">
             <LanguageSwitcher locale={locale} label={t.language} compact />
             <button
               type="button"
