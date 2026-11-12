@@ -31,6 +31,14 @@ data class ManagedPlaylist(
     val updatedAt: String?,
 )
 
+/** Subscription state as confirmed by the server after a purchase. */
+data class AmazonSubscriptionState(
+    val premiumActive: Boolean,
+    val status: String,
+    val channel: String,
+    val currentPeriodEnd: String?,
+)
+
 data class AccountInfo(
     val email: String,
     val displayName: String,
@@ -135,6 +143,51 @@ class StreamingHubApi(
                         )
                     }
             },
+        )
+    }
+
+    /**
+     * Sends an Amazon receipt for verification. Premium is granted by the
+     * server response only, never by the store alone.
+     */
+    suspend fun submitAmazonReceipt(
+        activationToken: String,
+        receiptId: String,
+        appUserId: String,
+        productId: String,
+    ): AmazonSubscriptionState = withContext(Dispatchers.IO) {
+        val body = JSONObject()
+            .put("receiptId", receiptId)
+            .put("appUserId", appUserId)
+            .put("productId", productId)
+        val json = call(
+            path = "/api/v1/amazon/purchase",
+            method = "POST",
+            bearerToken = activationToken,
+            body = body,
+        )
+        json.subscriptionState()
+    }
+
+    /** Pull model: renewals and cancellations recorded by Amazon. */
+    suspend fun refreshAmazonSubscription(activationToken: String): AmazonSubscriptionState =
+        withContext(Dispatchers.IO) {
+            val json = call(
+                path = "/api/v1/amazon/refresh",
+                method = "POST",
+                bearerToken = activationToken,
+            )
+            json.subscriptionState()
+        }
+
+    private fun JSONObject.subscriptionState(): AmazonSubscriptionState {
+        val subscription = optJSONObject("subscription")
+        return AmazonSubscriptionState(
+            premiumActive = subscription?.optBoolean("premiumActive", false) ?: false,
+            status = subscription?.optString("status").orEmpty().ifBlank { "none" },
+            channel = subscription?.optString("channel").orEmpty().ifBlank { "web" },
+            currentPeriodEnd = subscription?.optString("currentPeriodEnd")
+                ?.takeIf { it.isNotBlank() },
         )
     }
 

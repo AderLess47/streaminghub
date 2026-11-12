@@ -6,6 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +33,7 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
     val accountState = viewModel.accountState
     val epgState = viewModel.epgState
     val lowSpecMode = viewModel.lowSpecMode
+    val premiumState by viewModel.premiumState.collectAsState()
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
     var showAddPlaylist by rememberSaveable { mutableStateOf(false) }
     var showAddEpg by rememberSaveable { mutableStateOf(false) }
@@ -66,6 +69,11 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
 
     BackHandler(enabled = screen != Screen.Home) {
         screen = Screen.Home
+    }
+
+    // Reload the store offer and the subscription whenever settings open.
+    LaunchedEffect(screen) {
+        if (screen == Screen.Settings) viewModel.loadPremium()
     }
 
     when (val current = screen) {
@@ -126,6 +134,9 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
             demoMode = state.demoMode,
             onLoadDemo = viewModel::loadDemoLibrary,
             onRemoveDemo = viewModel::removeDemoLibrary,
+            premiumState = premiumState,
+            onBuyPremium = { viewModel.buyPremium() },
+            onRestorePremium = { viewModel.restorePremium() },
         )
 
         Screen.Pairing -> PairingScreen(

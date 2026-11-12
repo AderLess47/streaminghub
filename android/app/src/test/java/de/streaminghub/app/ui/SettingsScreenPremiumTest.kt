@@ -11,6 +11,8 @@ import de.streaminghub.app.AccountUiState
 import de.streaminghub.app.AppUiState
 import de.streaminghub.app.EpgUiState
 import de.streaminghub.app.data.AccountDeletion
+import de.streaminghub.app.billing.PREMIUM_CHANNEL_AMAZON
+import de.streaminghub.app.billing.PremiumBillingState
 import de.streaminghub.app.data.AccountInfo
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -51,6 +53,9 @@ class SettingsScreenPremiumTest {
         accountInfo: AccountInfo?,
         openedPath: MutableList<String> = mutableListOf(),
         pairClicks: IntArray = intArrayOf(0),
+        premiumChannel: String = PREMIUM_CHANNEL_AMAZON,
+        premiumState: PremiumBillingState = PremiumBillingState.Ready("2,49 €"),
+        buyClicks: IntArray = intArrayOf(0),
     ) {
         compose.setContent {
             SettingsScreen(
@@ -77,6 +82,10 @@ class SettingsScreenPremiumTest {
                 onLoadDemo = {},
                 onRemoveDemo = {},
                 premiumSales = premiumSales,
+                premiumChannel = premiumChannel,
+                premiumState = premiumState,
+                onBuyPremium = { buyClicks[0] += 1 },
+                onRestorePremium = {},
             )
         }
     }
@@ -96,6 +105,34 @@ class SettingsScreenPremiumTest {
         compose.onNodeWithText("Optional – für Geräteverwaltung").assertExists()
         compose.onNodeWithText("Konto im Web verwalten").assertDoesNotExist()
         compose.onNodeWithText("Gerät koppeln").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the Amazon purchase card starts a purchase`() {
+        val buys = intArrayOf(0)
+        render(premiumSales = true, accountInfo = null, buyClicks = buys)
+
+        compose.onNodeWithTag("settings-list")
+            .performScrollToNode(hasText("Premium über Amazon abschließen"))
+        compose.waitForIdle()
+        compose.onNodeWithText("Premium über Amazon abschließen").performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, buys[0])
+    }
+
+    @Test
+    fun `the Amazon build hides the purchase card as long as sales are off`() {
+        render(premiumSales = false, accountInfo = null)
+
+        compose.onNodeWithText("Premium über Amazon abschließen").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the direct build has no Amazon purchase card`() {
+        render(premiumSales = true, accountInfo = null, premiumChannel = "web")
+
+        compose.onNodeWithText("Premium über Amazon abschließen").assertDoesNotExist()
     }
 
     @Test
