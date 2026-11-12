@@ -74,7 +74,8 @@ sample data; no broadcaster or programme data is represented.
   on the website only, and the app merely shows the status. **Open point:** Amazon
   requires digital content to be sold through Amazon IAP; confirm with the policy
   review whether a web-sold subscription that unlocks playback is acceptable, or
-  whether the premium gate must be removed for the Amazon build.
+  whether the premium gate must be removed for the Amazon build — see
+  [`../../docs/IAP-AMAZON.md`](../../docs/IAP-AMAZON.md).
 
 ## Before submitting
 
