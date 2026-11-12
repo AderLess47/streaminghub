@@ -64,6 +64,7 @@ export const de = {
     noResults: "Keine Ergebnisse gefunden.",
     resultsFor: "{count} Treffer für „{query}“",
     resultsAll: "{count} Einträge",
+    resultsOfTotal: "{count} von {total} Einträgen",
     errorGeneric: "Es ist ein Fehler aufgetreten. Bitte versuche es erneut.",
     saved: "Änderungen gespeichert.",
     confirm: "Bestätigen",
