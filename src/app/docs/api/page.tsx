@@ -41,9 +41,18 @@ export default async function ApiDocsPage() {
         description="Dokumentierte REST-Schnittstelle für die Anbindung der StreamingHub-App (Fire TV, Android TV, Android). Die App stellt keine Inhalte bereit und erhält keine Playlist-Daten."
       />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-start">
-        <div className="grid gap-4">
-          <div className="card overflow-hidden">
+      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="card min-w-0 overflow-hidden">
+            {/* Tabelle darf bei 320 px waagerecht scrollen, statt die Seite zu
+                verbreitern; tabIndex macht den Bereich mit der Tastatur
+                scrollbar (WCAG 2.1.1, 1.4.10). */}
+            <div
+              role="region"
+              aria-label="Endpunkte der App-API"
+              tabIndex={0}
+              className="min-w-0 overflow-x-auto"
+            >
             <table className="data-table">
               <thead>
                 <tr>
@@ -64,6 +73,7 @@ export default async function ApiDocsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="grid gap-3">
@@ -114,7 +124,7 @@ curl "https://streaminghub.org/api/v1/pairing/status?requestId=…" \\
           </div>
         </div>
 
-        <aside className="grid gap-4">
+        <aside className="grid min-w-0 gap-4">
           <div className="card p-5">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <Icon name="file-text" size={16} className="text-cyan" />

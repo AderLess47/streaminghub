@@ -13,4 +13,5 @@ Korrektur ist ein neues Protokoll mit Verweis auf das vorherige.
 
 | Datum | Umfang | Ergebnis |
 | --- | --- | --- |
-| 12.11.2026 | [Öffentliche Seiten](pruefprotokoll-2026-11-12-oeffentliche-seiten.md), 16 Seiten | keine axe-Verstöße gegen WCAG 2.2 A/AA, 2 Best-Practice-Hinweise, 1 offene Barriere beim Reflow auf `/docs/api` |
+| 12.11.2026 | [Öffentliche Seiten](pruefprotokoll-2026-11-12-oeffentliche-seiten.md), 16 Seiten | keine axe-Verstöße gegen WCAG 2.2 A/AA, 2 Best-Practice-Hinweise, 1 Barriere beim Reflow auf `/docs/api` |
+| 12.11.2026 | [Reflow `/docs/api` behoben](pruefprotokoll-2026-11-12-docs-api-reflow.md), 1 Seite, 4 Breiten | Barriere 1 behoben: Seite bleibt bei 320 px bei 305 px, Tabelle scrollt im eigenen Bereich, axe 0 Verstöße |
