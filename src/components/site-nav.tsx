@@ -117,7 +117,9 @@ export function SiteNav({
             aria-label="StreamingHub Startseite"
           >
             <LogoMark size={32} />
-            <span className="truncate text-[1.02rem] font-semibold tracking-tight">
+                            {/* Below 360 px the wordmark would only show "Strea…"; the logo mark
+                    keeps the link recognisable and its aria-label names the site. */}
+                <span className="truncate text-[1.02rem] font-semibold tracking-tight max-[359px]:hidden">
               Streaming<span className="grad-text">Hub</span>
             </span>
           </Link>
