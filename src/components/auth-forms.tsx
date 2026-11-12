@@ -7,6 +7,7 @@ import type { Dictionary } from "@/i18n/de";
 import type { Locale } from "@/i18n/config";
 import { localeMeta, locales } from "@/i18n/config";
 import { focusSoon } from "./focus-soon";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
 
@@ -86,10 +87,12 @@ export function LoginForm({
   t,
   next,
   mfaEnrolled,
+  busy,
 }: {
   t: Dictionary["auth"];
   next?: string;
   mfaEnrolled?: boolean;
+  busy: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<"credentials" | "mfa">("credentials");
@@ -114,7 +117,7 @@ export function LoginForm({
 
   if (step === "mfa") {
     return (
-      <form
+      <form aria-busy={pending}
         className="grid gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
@@ -148,6 +151,7 @@ export function LoginForm({
           message={error}
           className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
         />
+        <FormStatus pending={pending} label={busy} />
         <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
           {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
           {t.mfaCta}
@@ -167,7 +171,7 @@ export function LoginForm({
   }
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -232,6 +236,7 @@ export function LoginForm({
         </p>
       ) : null}
 
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="lock" size={15} />}
         {t.loginCta}
@@ -251,10 +256,12 @@ export function RegisterForm({
   t,
   next,
   locale,
+  busy,
 }: {
   t: Dictionary["auth"];
   next?: string;
   locale: Locale;
+  busy: string;
 }) {
   const router = useRouter();
   const [pendingSuccess, setPendingSuccess] = useState(false);
@@ -281,7 +288,7 @@ export function RegisterForm({
   );
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -404,6 +411,7 @@ export function RegisterForm({
       />
       <DevLink url={devLink} hint={t.devLinkHint} />
 
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="user" size={15} />}
         {t.registerCta}
@@ -419,7 +427,7 @@ export function RegisterForm({
   );
 }
 
-export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
+export function ForgotPasswordForm({ t, busy }: { t: Dictionary["auth"]; busy: string }) {
   const [sent, setSent] = useState(false);
   const [devLink, setDevLink] = useState<string | undefined>();
   const [email, setEmail] = useState("");
@@ -430,7 +438,7 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
   });
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -462,6 +470,7 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
           {error}
         </p>
       ) : null}
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="mail" size={15} />}
         {t.resetCta}
@@ -475,7 +484,15 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
   );
 }
 
-export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: string }) {
+export function ResetPasswordForm({
+  t,
+  token,
+  busy,
+}: {
+  t: Dictionary["auth"];
+  token: string;
+  busy: string;
+}) {
   const router = useRouter();
   const [done, setDone] = useState(false);
   const { pending, error, fields, submit } = useAuthSubmit(
@@ -495,7 +512,7 @@ export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: 
   }
 
   return (
-    <form
+    <form aria-busy={pending}
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
@@ -538,6 +555,7 @@ export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: 
           {error}
         </p>
       ) : null}
+      <FormStatus pending={pending} label={busy} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
         {t.newPasswordCta}

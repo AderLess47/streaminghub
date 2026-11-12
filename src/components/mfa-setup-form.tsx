@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { MfaState } from "@/lib/actions/admin";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 
 export function MfaSetupForm({
@@ -9,13 +10,13 @@ export function MfaSetupForm({
   labels,
 }: {
   action: (prevState: MfaState, formData: FormData) => Promise<MfaState>;
-  labels: { code: string; cta: string };
+  labels: { code: string; cta: string; busy: string };
 }) {
   const [state, formAction, pending] = useActionState<MfaState, FormData>(action, null);
 
   return (
     <div>
-      <form action={formAction} className="grid gap-3">
+      <form aria-busy={pending} action={formAction} className="grid gap-3">
         <div>
           <label htmlFor="mfa-setup-code" className="field-label">
             {labels.code}
@@ -35,6 +36,7 @@ export function MfaSetupForm({
             {state.message}
           </p>
         ) : null}
+        <FormStatus pending={pending} label={labels.busy} />
         <button type="submit" className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
           {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="shield" size={14} />}
           {labels.cta}

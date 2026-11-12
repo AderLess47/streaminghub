@@ -146,7 +146,13 @@ export function SiteNav({
           </ul>
 
           <div className="hidden items-center gap-2 xl:flex">
-            <LanguageSwitcher locale={locale} label={t.language} compact />
+            <LanguageSwitcher
+              locale={locale}
+              label={t.language}
+              pendingLabel={t.languagePending}
+              changedLabel={t.languageChanged}
+              compact
+            />
             {user ? (
               <>
                 {isStaffUser ? (
@@ -181,7 +187,13 @@ export function SiteNav({
           </div>
 
           <div className="flex shrink-0 items-center gap-1 xl:hidden">
-            <LanguageSwitcher locale={locale} label={t.language} compact />
+            <LanguageSwitcher
+              locale={locale}
+              label={t.language}
+              pendingLabel={t.languagePending}
+              changedLabel={t.languageChanged}
+              compact
+            />
             <button
               ref={menuButtonRef}
               type="button"
@@ -208,6 +220,7 @@ export function SiteNav({
             id="mobile-menu"
             ref={menuPanelRef}
             role="dialog"
+            aria-modal="true"
             aria-label={t.menu}
             className="relative mx-4 mt-3 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-line bg-panel-2 p-4 shadow-2xl"
           >

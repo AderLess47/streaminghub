@@ -15,7 +15,7 @@ export default async function ContactPage() {
       <PageHeader eyebrow="Support" title={t.contact.title} description={t.contact.subtitle} />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.7fr] lg:items-start">
-        <ContactForm t={t.contact} privacyLabel={t.footer.privacy} />
+        <ContactForm t={t.contact} privacyLabel={t.footer.privacy} busy={t.ui.sending} />
 
         <aside className="grid gap-4">
           <div className="card p-5">

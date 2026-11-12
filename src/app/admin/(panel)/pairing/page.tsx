@@ -1,4 +1,5 @@
 import { ScrollRegion } from "@/components/scroll-region";
+import { FormStatus } from "@/components/form-status";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { blockPairingCodeAction } from "@/lib/actions/admin";
@@ -76,6 +77,7 @@ export default async function AdminPairingPage() {
                       <form action={blockPairingCodeAction}>
                         <input type="hidden" name="requestId" value={row.id} />
                         <input type="hidden" name="returnTo" value="/admin/pairing" />
+                        <FormStatus label={t.ui.saving} />
                         <button type="submit" className="btn btn-ghost btn-sm">
                           {t.admin.pairing.revoke}
                         </button>

@@ -28,12 +28,15 @@ export const de = {
     logout: "Abmelden",
     menu: "Menü",
     language: "Sprache",
+    languagePending: "Sprache wird geändert …",
+    languageChanged: "Sprache geändert: {language}",
     closeMenu: "Menü schließen",
     skipToContent: "Zum Inhalt springen",
   },
   ui: {
     save: "Speichern",
     saving: "Wird gespeichert …",
+    sending: "Wird gesendet …",
     cancel: "Abbrechen",
     remove: "Entfernen",
     copy: "Kopieren",
@@ -407,7 +410,6 @@ export const de = {
     privacyLabel:
       "Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Angaben zur Bearbeitung der Anfrage einverstanden.",
     submit: "Nachricht senden",
-    sending: "Wird gesendet …",
     success:
       "Danke! Deine Nachricht ist eingegangen. Wir melden uns per E-Mail bei dir.",
     error: "Die Nachricht konnte nicht gesendet werden. Bitte versuche es später erneut.",
@@ -961,6 +963,7 @@ export const de = {
     statusNecessary: "Technisch notwendig",
     statusOptional: "Optional",
     saved: "Deine Auswahl wurde gespeichert.",
+    dismissed: "Einstellungen geschlossen – es wurde nichts gespeichert.",
     settingsTitle: "Cookie-Einstellungen",
     reopen: "Einstellungen öffnen",
   },

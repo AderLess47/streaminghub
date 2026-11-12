@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/icons";
+import { FormStatus } from "@/components/form-status";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { replyTicketAction, setTicketStatusAction } from "@/lib/actions/admin";
@@ -120,6 +121,7 @@ export default async function AdminTicketDetailPage({
               <option value="closed">{t.dashboard.support.statusClosed}</option>
             </select>
           </div>
+          <FormStatus label={t.ui.saving} />
           <button type="submit" className="btn btn-primary btn-sm justify-self-start">
             <Icon name="mail" size={14} />
             {t.admin.tickets.reply}
@@ -141,6 +143,7 @@ export default async function AdminTicketDetailPage({
             <option value="pending">{t.dashboard.support.statusPending}</option>
             <option value="closed">{t.dashboard.support.statusClosed}</option>
           </select>
+          <FormStatus label={t.ui.saving} />
           <button type="submit" className="btn btn-outline btn-sm justify-self-start">
             {t.ui.save}
           </button>

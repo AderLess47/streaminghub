@@ -37,6 +37,7 @@ export default async function AdminLoginPage() {
                 hint: t.admin.login.mfaStepHint,
                 cta: t.admin.login.continue,
                 error: t.auth.mfaInvalid,
+                busy: t.ui.sending,
               }}
             />
           ) : (
@@ -45,7 +46,7 @@ export default async function AdminLoginPage() {
                 {t.admin.subtitle}
               </Alert>
               <div className="mt-4">
-                <LoginForm t={t.auth} next="/admin" />
+                <LoginForm t={t.auth} next="/admin" busy={t.ui.sending} />
               </div>
             </>
           )}

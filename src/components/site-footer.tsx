@@ -62,7 +62,7 @@ export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | nu
               {role ? t.footer.account : t.nav.login}
             </Link>
             <CookieSettingsButton label={t.footer.cookies} />
-            <span className="text-muted/70">{t.footer.languageNote}</span>
+            <span className="text-muted/80">{t.footer.languageNote}</span>
           </div>
         </div>
       </div>

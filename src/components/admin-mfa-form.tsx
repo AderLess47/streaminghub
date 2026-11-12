@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 
 export function AdminMfaForm({
   labels,
 }: {
-  labels: { title: string; hint: string; cta: string; error: string };
+  labels: { title: string; hint: string; cta: string; error: string; busy: string };
 }) {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -39,7 +40,7 @@ export function AdminMfaForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <form aria-busy={pending} onSubmit={submit} className="grid gap-4">
       <div className="flex items-start gap-2 rounded-xl border border-line/60 bg-white/3 px-3 py-2.5">
         <Icon name="shield" size={16} className="mt-0.5 text-cyan" />
         <div>
@@ -62,6 +63,7 @@ export function AdminMfaForm({
           {error}
         </p>
       ) : null}
+      <FormStatus pending={pending} label={labels.busy} />
       <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
         {labels.cta}

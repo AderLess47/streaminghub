@@ -27,12 +27,15 @@ export const en: Dictionary = {
     logout: "Sign out",
     menu: "Menu",
     language: "Language",
+    languagePending: "Changing language …",
+    languageChanged: "Language changed: {language}",
     closeMenu: "Close menu",
     skipToContent: "Skip to content",
   },
   ui: {
     save: "Save",
     saving: "Saving …",
+    sending: "Sending …",
     cancel: "Cancel",
     remove: "Remove",
     copy: "Copy",
@@ -405,7 +408,6 @@ export const en: Dictionary = {
     privacyLabel:
       "I have read the privacy policy and agree to my details being processed to handle this request.",
     submit: "Send message",
-    sending: "Sending …",
     success: "Thank you! Your message has arrived. We will reply by email.",
     error: "The message could not be sent. Please try again later.",
     spamNotice:
@@ -958,6 +960,7 @@ export const en: Dictionary = {
     statusNecessary: "Technically necessary",
     statusOptional: "Optional",
     saved: "Your choice has been saved.",
+    dismissed: "Settings closed – nothing has been saved.",
     settingsTitle: "Cookie settings",
     reopen: "Open settings",
   },

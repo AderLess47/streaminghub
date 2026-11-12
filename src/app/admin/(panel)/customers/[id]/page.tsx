@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { FormStatus } from "@/components/form-status";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
@@ -208,6 +209,7 @@ export default async function AdminCustomerDetailPage({
                 <p className="text-[0.68rem] leading-relaxed text-muted">
                   {t.admin.customers.playlistSourceWarning}
                 </p>
+                <FormStatus label={t.ui.saving} />
                 <button
                   type="submit"
                   disabled={activeDevices.length === 0}
@@ -290,6 +292,7 @@ export default async function AdminCustomerDetailPage({
                 <option value="support">support</option>
                 <option value="admin">admin</option>
               </select>
+              <FormStatus label={t.ui.saving} />
               <button type="submit" className="btn btn-outline btn-sm">
                 {t.ui.save}
               </button>
@@ -298,6 +301,7 @@ export default async function AdminCustomerDetailPage({
               <input type="hidden" name="userId" value={user.id} />
               <input type="hidden" name="disable" value={user.disabled_at ? "0" : "1"} />
               <input type="hidden" name="returnTo" value={`/admin/customers/${user.id}`} />
+              <FormStatus label={t.ui.saving} />
               <button type="submit" className="btn btn-danger btn-sm">
                 {user.disabled_at ? t.admin.customers.enable : t.admin.customers.disable}
               </button>
@@ -305,6 +309,7 @@ export default async function AdminCustomerDetailPage({
             <form action={resetCustomerMfaAction}>
               <input type="hidden" name="userId" value={user.id} />
               <input type="hidden" name="returnTo" value={`/admin/customers/${user.id}`} />
+              <FormStatus label={t.ui.saving} />
               <button type="submit" className="btn btn-ghost btn-sm">
                 {t.admin.customers.resetMfa}
               </button>
