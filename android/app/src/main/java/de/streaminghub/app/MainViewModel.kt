@@ -7,6 +7,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import de.streaminghub.app.billing.BillingReceipt
+import de.streaminghub.app.billing.PremiumBillingProvider
+import de.streaminghub.app.billing.PremiumBillingState
+import de.streaminghub.app.billing.PremiumPurchaseController
+import de.streaminghub.app.billing.SubmissionResult
 import de.streaminghub.app.data.AccountInfo
 import de.streaminghub.app.data.DemoLibrary
 import de.streaminghub.app.data.DeviceIdentity
@@ -25,6 +30,7 @@ import de.streaminghub.app.model.EpgProgramme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,6 +103,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val secureStore = SecureTokenStore(application)
     private val settingsRepository = SettingsRepository(application)
     private val api = StreamingHubApi()
+
+    private val premiumController by lazy {
+        PremiumPurchaseController(
+            billing = PremiumBillingProvider.create(getApplication()),
+            submitReceipt = { receipt -> submitAmazonReceipt(receipt) },
+            refreshSubscription = { refreshAmazonSubscription() },
+        )
+    }
     private var pairingJob: Job? = null
     private var playlistRefreshJob: Job? = null
 
@@ -343,6 +357,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // ---- Account and device pairing -------------------------------------------------
+
+    // ---- Premium (Amazon IAP) ---------------------------------------------------
+
+    val premiumState: StateFlow<PremiumBillingState>
+        get() = premiumController.state
+
+    fun loadPremium() {
+        viewModelScope.launch { premiumController.load() }
+    }
+
+    fun buyPremium() {
+        viewModelScope.launch {
+            premiumController.purchase()
+            refreshAccount()
+        }
+    }
+
+    fun restorePremium() {
+        viewModelScope.launch {
+            premiumController.restore()
+            refreshAccount()
+        }
+    }
+
+    private suspend fun submitAmazonReceipt(receipt: BillingReceipt): SubmissionResult {
+        val token = secureStore.loadToken()
+            ?: throw IllegalStateException("Dieses Gerät ist nicht mit einem Konto verbunden.")
+        val state = api.submitAmazonReceipt(
+            activationToken = token,
+            receiptId = receipt.receiptId,
+            appUserId = receipt.appUserId,
+            productId = receipt.productId,
+        )
+        return SubmissionResult(state.premiumActive, state.currentPeriodEnd)
+    }
+
+    private suspend fun refreshAmazonSubscription(): SubmissionResult {
+        val token = secureStore.loadToken()
+            ?: throw IllegalStateException("Dieses Gerät ist nicht mit einem Konto verbunden.")
+        val state = api.refreshAmazonSubscription(token)
+        return SubmissionResult(state.premiumActive, state.currentPeriodEnd)
+    }
 
     fun refreshAccount() {
         val token = secureStore.loadToken()

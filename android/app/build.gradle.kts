@@ -39,10 +39,14 @@ android {
         create("direct") {
             dimension = "distribution"
             buildConfigField("boolean", "PREMIUM_SALES", "true")
+            buildConfigField("String", "PREMIUM_CHANNEL", "\"web\"")
         }
         create("amazon") {
             dimension = "distribution"
+            // Flipped to true in phase P4 of docs/IAP-AMAZON.md, once the
+            // purchase flow has been through Amazon's testing.
             buildConfigField("boolean", "PREMIUM_SALES", "false")
+            buildConfigField("String", "PREMIUM_CHANNEL", "\"amazon\"")
         }
     }
 
@@ -115,6 +119,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.5.1")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Amazon In-App Purchasing (Appstore SDK) is only part of the store build.
+    "amazonImplementation"("com.amazon.device:amazon-appstore-sdk:3.0.9")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     testImplementation("junit:junit:4.13.2")

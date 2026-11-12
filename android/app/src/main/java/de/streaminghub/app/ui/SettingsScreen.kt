@@ -50,6 +50,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.streaminghub.app.AccountUiState
+import de.streaminghub.app.billing.PREMIUM_CHANNEL_AMAZON
+import de.streaminghub.app.billing.PremiumBillingState
 import de.streaminghub.app.AppUiState
 import de.streaminghub.app.BuildConfig
 import de.streaminghub.app.EpgUiState
@@ -90,6 +92,10 @@ fun SettingsScreen(
     onLoadDemo: () -> Unit,
     onRemoveDemo: () -> Unit,
     premiumSales: Boolean = BuildConfig.PREMIUM_SALES,
+    premiumChannel: String = BuildConfig.PREMIUM_CHANNEL,
+    premiumState: PremiumBillingState = PremiumBillingState.Loading,
+    onBuyPremium: () -> Unit = {},
+    onRestorePremium: () -> Unit = {},
 ) {
     var showRemoveConfirmation by remember { mutableStateOf(false) }
     var showRemoveEpgConfirmation by remember { mutableStateOf(false) }
@@ -280,6 +286,16 @@ fun SettingsScreen(
                         icon = Icons.Rounded.Delete,
                         onClick = { onOpenWebsite(AccountDeletion.PATH) },
                         modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            if (premiumSales && premiumChannel == PREMIUM_CHANNEL_AMAZON) {
+                item {
+                    PremiumCard(
+                        state = premiumState,
+                        onBuy = onBuyPremium,
+                        onRestore = onRestorePremium,
                     )
                 }
             }

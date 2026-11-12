@@ -117,9 +117,11 @@ endpoints `POST /api/v1/amazon/purchase` and `POST /api/v1/amazon/refresh`
 (`npm run test:amazon-iap`, also part of CI). P3 is in as well: the RTN webhook
 (`src/lib/amazon-rtn.ts`, `POST /api/webhooks/amazon/rtn`), the pull sync
 (`src/lib/amazon-sync.ts`, `POST /api/internal/amazon-sync`) and the scheduler
-script `scripts/amazon-sync.mjs` (`npm run amazon:sync`). The Android purchase
-flow follows in P2. Build 9 (option A) stays the live Amazon binary until every
-gate in the rollout table below is met.
+script `scripts/amazon-sync.mjs` (`npm run amazon:sync`). P2 is in as well: the
+Amazon flavour integrates the Appstore SDK, renders the purchase card and
+restores a purchase through `getPurchaseUpdates`. The sales flag stays `false`
+until P4. Build 9 (option A) stays the live Amazon binary until every gate in the
+rollout table below is met.
 
 ### 0. Preconditions
 
@@ -150,9 +152,11 @@ New client code, all behind the flavor:
 
 | File | Responsibility |
 | --- | --- |
-| `android/app/src/amazon/java/de/streaminghub/app/billing/AmazonIapClient.kt` | `PurchasingService.registerListener`, `getProductData`, `purchase`, `getPurchaseUpdates`, `notifyFulfillment` |
-| `.../billing/AmazonIapState.kt` | Sealed state: `Unavailable`, `Loading`, `Price(displayPrice)`, `Purchasing`, `Active(renewalDate, autoRenewing)`, `Error(reason)` |
-| `.../ui/PremiumCard.kt` | Price, „Premium über Amazon abschließen“, „Abo verwalten“, restore action |
+| `android/app/src/main/java/.../billing/PremiumBilling.kt` | Store interface, offer, receipt and outcome types; `UnavailablePremiumBilling` for the direct build |
+| `android/app/src/main/java/.../billing/PremiumPurchaseController.kt` | State machine `Loading`/`Unavailable`/`Ready`/`Purchasing`/`Pending`/`Active`/`Error`; submits the receipt, acknowledges only after the server agreed |
+| `android/app/src/amazon/java/.../billing/AmazonPremiumBilling.kt` | `registerListener`, `getProductData`, `purchase`, `getPurchaseUpdates`, `notifyFulfillment` |
+| `.../billing/PremiumBillingProvider.kt` | Per-flavour factory (Amazon SDK vs. unavailable) |
+| `android/app/src/main/java/.../ui/PremiumCard.kt` | Price, „Premium über Amazon abschließen“, „Kauf wiederherstellen“, renewal date, errors |
 
 The UI must be reachable with the Fire TV remote: one focusable button, no text
 input, no scroll trap. Purchase result handling:
@@ -456,7 +460,7 @@ Manual (device required):
 | --- | --- | --- |
 | P0 | Premium feature exists and is gated in the app | one shipped feature behind `premiumActive` |
 | P1 | `amazon-iap.ts`, `iap_receipts`, `/purchase` + `/refresh`, tests 1–12 | suite green, no secret in logs |
-| P2 | SDK in the Amazon flavour, purchase UI, restore | App Tester purchase end-to-end |
+| P2 (done) | SDK in the Amazon flavour, purchase UI, restore, 16 Robolectric/JVM tests | App Tester purchase end-to-end (needs a device) |
 | P3 | RTN endpoint and daily sync | renewal and cancel reflected within minutes |
 | P4 | `PREMIUM_SALES = true` for `amazon`, version bump, LAT, submission | review passes, build 9 replaced |
 
