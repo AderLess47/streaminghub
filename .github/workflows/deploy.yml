@@ -1,0 +1,54 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to deploy
+        required: false
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Fly
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+
+      # Pinned installer instead of a floating action, so a deploy never runs
+      # code that changed since the last one.
+      - name: Install flyctl
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          flyctl deploy --remote-only --config fly.toml --app streaminghub-org
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy"
+            echo
+            echo "- ref: \`${{ inputs.ref || 'main' }}\`"
+            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
