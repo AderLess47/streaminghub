@@ -135,7 +135,9 @@ jobs:
             "app/build/generated/source/buildConfig/amazon/release/de/streaminghub/app/BuildConfig.java"
           grep -q 'PREMIUM_CHANNEL = "amazon"' \
             "app/build/generated/source/buildConfig/amazon/release/de/streaminghub/app/BuildConfig.java"
-          unzip -l "$APK" | grep -q 'com/amazon/device/iap'
+          # The SDK classes live in classes.dex, so assert the resolved dependency.
+          ./gradlew --no-daemon -q :app:dependencies --configuration amazonReleaseRuntimeClasspath \
+            | grep -q 'amazon-appstore-sdk:3.0.9'
           BUILD_TOOLS="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools/35.0.0"
           "$BUILD_TOOLS/apksigner" verify --print-certs "$APK"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionName='${APK_VERSION}'"
