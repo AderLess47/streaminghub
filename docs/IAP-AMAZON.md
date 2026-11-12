@@ -114,9 +114,12 @@ Fire TV tier starts to make sense — and the moment Amazon will expect IAP.
 Status: P1 implemented — `src/lib/amazon-iap.ts` (RVS client and receipt rules),
 `src/lib/amazon-subscriptions.ts` (persistence), `iap_receipts` and the two app
 endpoints `POST /api/v1/amazon/purchase` and `POST /api/v1/amazon/refresh`
-(`npm run test:amazon-iap`, also part of CI). Real-Time Notifications and the
-Android purchase flow follow in P3 and P2. Build 9 (option A) stays the live
-Amazon binary until every gate in the rollout table below is met.
+(`npm run test:amazon-iap`, also part of CI). P3 is in as well: the RTN webhook
+(`src/lib/amazon-rtn.ts`, `POST /api/webhooks/amazon/rtn`), the pull sync
+(`src/lib/amazon-sync.ts`, `POST /api/internal/amazon-sync`) and the scheduler
+script `scripts/amazon-sync.mjs` (`npm run amazon:sync`). The Android purchase
+flow follows in P2. Build 9 (option A) stays the live Amazon binary until every
+gate in the rollout table below is met.
 
 ### 0. Preconditions
 
@@ -369,6 +372,12 @@ pattern, re-verifies every receipt whose `renewal_date` or `cancel_date` lies
 within ±3 days and marks overdue rows `canceled`. It logs counts only, never
 receipt or customer identifiers.
 
+The webhook lives in `src/app/api/webhooks/amazon/rtn`: it verifies the SNS
+signature against the certificate from an allowlisted `amazonaws.com` host,
+rejects stale messages and a foreign `TopicArn`, records each processed event in
+`subscription_events` (so SNS retries are no-ops) and then re-verifies the
+receipt with RVS. `SubscriptionConfirmation` fetches the confirmation URL once.
+
 Cancellation stays in the Amazon account. The app shows „Abo verwalten“ linking
 to Amazon's subscription page, and the dashboard already renders the Amazon
 channel read-only.
@@ -391,7 +400,8 @@ channel read-only.
    the repo).
 3. Register the release certificate hash under *Appstore Certificate Hashes*.
 4. Register the RTN endpoint URL and complete the confirmation flow; put the topic
-   ARN into `AMAZON_RTN_TOPIC_ARN`.
+   ARN into `AMAZON_RTN_TOPIC_ARN`, set `AMAZON_SYNC_TOKEN` and schedule
+   `npm run amazon:sync` once a day as the pull fallback.
 5. App Tester on a Fire TV device with the sandbox shared secret
    (`AMAZON_RVS_SANDBOX=1`).
 6. Live App Testing run before submission; `betaProduct`/`testTransaction`

@@ -47,6 +47,7 @@ export const env = {
     amazonRvsSandbox: bool(process.env.AMAZON_RVS_SANDBOX),
     amazonIapSku: process.env.AMAZON_IAP_SKU ?? "premium_monthly",
     amazonRtnTopicArn: process.env.AMAZON_RTN_TOPIC_ARN ?? "",
+    amazonSyncToken: process.env.AMAZON_SYNC_TOKEN ?? "",
   },
   downloads: {
     /**

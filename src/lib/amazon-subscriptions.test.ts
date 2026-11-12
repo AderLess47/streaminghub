@@ -1,37 +1,10 @@
+import "./ts-resolve-hooks.ts";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import * as nodeModule from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
 import type { AmazonReceipt } from "./amazon-iap.ts";
-
-/**
- * The application modules import each other without file extensions (Next.js
- * resolves those itself). This hook teaches plain Node the same resolution for
- * the dynamic imports below, so the persistence code runs unmodified.
- */
-const { registerHooks } = nodeModule as unknown as {
-  registerHooks?: (hooks: {
-    resolve: (
-      specifier: string,
-      context: unknown,
-      nextResolve: (specifier: string, context: unknown) => unknown,
-    ) => unknown;
-  }) => void;
-};
-registerHooks?.({
-  resolve(specifier, context, nextResolve) {
-    if (specifier.startsWith(".") && !/\.[cm]?[jt]s$/.test(specifier)) {
-      try {
-        return nextResolve(specifier, context);
-      } catch {
-        return nextResolve(`${specifier}.ts`, context);
-      }
-    }
-    return nextResolve(specifier, context);
-  },
-});
 
 const databasePath = path.join(os.tmpdir(), `streaminghub-amazon-${process.pid}.db`);
 process.env.DATABASE_PATH = databasePath;

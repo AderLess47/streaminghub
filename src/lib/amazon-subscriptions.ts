@@ -63,6 +63,22 @@ export function getLatestReceipt(userId: string): ReceiptRow | null {
   );
 }
 
+export function hasNotification(receiptId: string, notificationType: string): boolean {
+  return Boolean(
+    get<{ id: string }>(
+      `SELECT id FROM subscription_events WHERE provider_event_id = ?`,
+      `amazon:${notificationType}:${receiptId}`,
+    ),
+  );
+}
+
+/** Records a processed Real-Time Notification so SNS retries are no-ops. */
+export function recordNotification(userId: string, receiptId: string, notificationType: string) {
+  recordEvent(userId, `amazon.rtn.${notificationType}`, `amazon:${notificationType}:${receiptId}`, {
+    notificationType,
+  });
+}
+
 function recordEvent(userId: string, eventType: string, providerEventId: string, payload: unknown) {
   run(
     `INSERT OR IGNORE INTO subscription_events
