@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
 
   return (
-    <div className="shell grid gap-6 py-8 lg:grid-cols-[15rem_1fr] lg:gap-8 lg:py-10">
+    <div className="shell grid grid-cols-1 gap-6 py-8 lg:grid-cols-[15rem_1fr] lg:gap-8 lg:py-10">
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="card mb-4 hidden p-4 lg:block">
           <p className="text-[0.68rem] uppercase tracking-[0.12em] text-muted">{t.dashboard.welcome}</p>

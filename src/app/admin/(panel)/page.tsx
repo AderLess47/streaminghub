@@ -40,7 +40,7 @@ export default async function AdminOverviewPage() {
   ];
 
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-1 gap-6">
       <PageHeader eyebrow={t.admin.title} title={t.admin.nav.overview} description={t.admin.subtitle} />
 
       {!staff.mfaEnrolled ? (
@@ -64,7 +64,7 @@ export default async function AdminOverviewPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="card p-5">
           <h2 className="text-sm font-semibold">{t.admin.overview.recentSignups}</h2>
           <ul className="mt-3 divide-y divide-line/40">

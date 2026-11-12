@@ -37,18 +37,18 @@ export default async function AdminEmailsPage() {
   });
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       <PageHeader eyebrow={t.admin.nav.emails} title={t.admin.emails.title} description={t.admin.emails.subtitle} />
 
       {!isEmailConfigured() ? <Alert tone="warning">{t.admin.emails.providerMissing}</Alert> : null}
 
-      <div className="grid gap-2">
+      <div className="grid grid-cols-1 gap-2">
         {mails.map((mail) => (
           <details key={mail.id} className="card px-4 py-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs marker:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 text-xs marker:hidden [&::-webkit-details-marker]:hidden">
               <div className="min-w-0">
                 <p className="truncate text-[0.82rem] text-slate-200">{mail.subject}</p>
-                <p className="text-[0.68rem] text-muted">
+                <p className="break-words text-[0.68rem] text-muted">
                   {mail.to_email} · {dateFormat.format(new Date(mail.created_at))} · {mail.kind}
                   {mail.provider_status ? ` · ${mail.provider_status}` : ""} · {mail.attempts}
                 </p>

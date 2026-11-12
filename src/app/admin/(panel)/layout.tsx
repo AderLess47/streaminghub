@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <div className="shell grid gap-6 py-8 lg:grid-cols-[16rem_1fr] lg:gap-8 lg:py-10">
+    <div className="shell grid grid-cols-1 gap-6 py-8 lg:grid-cols-[16rem_1fr] lg:gap-8 lg:py-10">
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <div className="card mb-4 p-4">
           <p className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.12em] text-muted">
