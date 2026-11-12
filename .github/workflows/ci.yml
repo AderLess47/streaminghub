@@ -38,3 +38,6 @@ jobs:
 
       - name: Database migration test
         run: npm run test:db-migration
+
+      - name: Amazon IAP receipt tests
+        run: npm run test:amazon-iap

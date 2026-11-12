@@ -51,3 +51,33 @@ export function verifyDeviceToken(token: string): DeviceTokenPayload | null {
     return null;
   }
 }
+
+export type DeviceAuthentication =
+  | { ok: true; userId: string; deviceId: string }
+  | { ok: false; code: "unauthorized" | "forbidden"; message: string };
+
+/**
+ * Resolves the bearer token of an app request against the device row, so an
+ * unlinked or revoked device loses access immediately.
+ */
+export function authenticateDevice(request: Request): DeviceAuthentication {
+  const authorization = request.headers.get("authorization") ?? "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!token) return { ok: false, code: "unauthorized", message: "Bearer-Token fehlt." };
+
+  const payload = verifyDeviceToken(token);
+  if (!payload) {
+    return { ok: false, code: "unauthorized", message: "Token ungültig oder abgelaufen." };
+  }
+
+  const device = get<{ status: string }>(
+    `SELECT status FROM devices WHERE id = ? AND user_id = ?`,
+    payload.deviceId,
+    payload.userId,
+  );
+  if (!device || device.status !== "active") {
+    return { ok: false, code: "forbidden", message: "Dieses Gerät ist nicht mehr aktiviert." };
+  }
+
+  return { ok: true, userId: payload.userId, deviceId: payload.deviceId };
+}

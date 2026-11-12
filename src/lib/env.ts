@@ -5,7 +5,7 @@
  * being simulated.
  */
 import path from "node:path";
-import { androidRelease } from "@/lib/android-release";
+import { androidRelease } from "./android-release";
 
 const bool = (value: string | undefined) => value === "1" || value?.toLowerCase() === "true";
 
@@ -38,6 +38,15 @@ export const env = {
     stripeApiBase: (process.env.STRIPE_API_BASE ?? "https://api.stripe.com").replace(/\/$/, ""),
     stripeTimeoutMs: Number(process.env.STRIPE_TIMEOUT_MS ?? 10000),
     amazonStoreUrl: process.env.AMAZON_STORE_URL ?? "",
+    /** Amazon In-App Purchasing (Appstore SDK) receipt verification. */
+    amazonRvsSharedSecret: process.env.AMAZON_RVS_SHARED_SECRET ?? "",
+    amazonRvsBase: (process.env.AMAZON_RVS_BASE ?? "https://appstore-sdk.amazon.com").replace(
+      /\/$/,
+      "",
+    ),
+    amazonRvsSandbox: bool(process.env.AMAZON_RVS_SANDBOX),
+    amazonIapSku: process.env.AMAZON_IAP_SKU ?? "premium_monthly",
+    amazonRtnTopicArn: process.env.AMAZON_RTN_TOPIC_ARN ?? "",
   },
   downloads: {
     /**
@@ -61,6 +70,8 @@ export const isBillingConfigured = () =>
       env.billing.stripePriceId &&
       env.billing.stripeWebhookSecret,
   );
+export const isAmazonIapConfigured = () =>
+  Boolean(env.billing.amazonRvsSharedSecret && env.billing.amazonIapSku);
 
 /** Company / operator details. Placeholders are intentional until confirmed. */
 const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);

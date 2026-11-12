@@ -243,6 +243,34 @@ CREATE TABLE IF NOT EXISTS data_requests (
   processed_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS iap_receipts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL DEFAULT 'amazon',
+  receipt_id TEXT NOT NULL,
+  app_user_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  term_sku TEXT,
+  product_type TEXT NOT NULL,
+  status TEXT NOT NULL,            -- active | canceled | expired | invalid
+  auto_renewing INTEGER NOT NULL DEFAULT 0,
+  purchase_date TEXT,
+  renewal_date TEXT,
+  cancel_date TEXT,
+  grace_period_end TEXT,
+  test_transaction INTEGER NOT NULL DEFAULT 0,
+  raw_response TEXT,
+  verified_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_iap_receipt ON iap_receipts(provider, receipt_id);
+CREATE INDEX IF NOT EXISTS idx_iap_user ON iap_receipts(user_id, provider);
+
+-- One Amazon customer may only ever hold premium on one account.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_amazon_customer
+  ON subscriptions(provider_customer_id) WHERE provider = 'amazon';
+
 CREATE TABLE IF NOT EXISTS request_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   route TEXT NOT NULL,
