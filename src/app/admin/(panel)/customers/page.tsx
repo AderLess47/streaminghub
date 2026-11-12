@@ -1,7 +1,7 @@
 import { CustomerTable } from "@/components/admin/customer-table";
 import { Alert, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { requireStaff } from "@/lib/session";
 
 type Row = {
@@ -37,6 +37,8 @@ export default async function AdminCustomersPage({
      ORDER BY u.created_at DESC LIMIT 100`,
   );
 
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM users`)?.c ?? 0;
+
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "short" });
   const okMessage =
     params.ok === "role"
@@ -69,7 +71,7 @@ export default async function AdminCustomersPage({
         </Alert>
       ) : null}
 
-      <CustomerTable rows={tableRows} dictionary={t} initialQuery={q} />
+      <CustomerTable rows={tableRows} dictionary={t} initialQuery={q} total={total} />
       <p className="text-[0.68rem] leading-relaxed text-muted">
         {t.admin.roles.note}
       </p>

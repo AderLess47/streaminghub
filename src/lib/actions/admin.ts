@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { get, nowIso, run } from "@/lib/db";
+import { all, get, nowIso, run } from "@/lib/db";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
 import { requireAdmin, requireStaff, getSessionUser } from "@/lib/session";
@@ -16,12 +16,73 @@ export type MfaState = {
   recoveryCodes?: string[];
 } | null;
 
+export type CustomerSearchRow = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  verified: boolean;
+  devices: number;
+  subscriptionStatus: string;
+  created: string;
+  disabled: boolean;
+};
+
 const ROLE_VALUES = ["customer", "support", "admin"] as const;
 type RoleValue = (typeof ROLE_VALUES)[number];
 
 function adminPath(formData: FormData, fallback: string) {
   const raw = String(formData.get("returnTo") ?? "");
   return raw.startsWith("/admin") ? raw : fallback;
+}
+
+/**
+ * Sucht Konten, die in der geladenen Liste nicht enthalten sind. Die Kundentabelle
+ * filtert im Browser; sobald mehr Konten existieren als geladen werden, fehlten
+ * ältere Treffer ohne diesen Weg.
+ */
+export async function searchCustomersAction(query: string): Promise<CustomerSearchRow[]> {
+  const staff = await requireStaff();
+  const needle = query.trim().slice(0, 80);
+  if (needle.length < 2) return [];
+
+  const like = `%${needle}%`;
+  const rows = all<{
+    id: string;
+    email: string;
+    display_name: string;
+    role: string;
+    email_verified: number;
+    created_at: string;
+    disabled_at: string | null;
+    devices: number;
+    subscription_status: string;
+  }>(
+    `SELECT u.id, u.email, u.display_name, u.role, u.email_verified, u.created_at, u.disabled_at,
+       (SELECT COUNT(*) FROM devices d WHERE d.user_id = u.id AND d.status = 'active') AS devices,
+       COALESCE((SELECT s.status FROM subscriptions s WHERE s.user_id = u.id), 'none') AS subscription_status
+     FROM users u
+     WHERE u.email LIKE ? OR u.display_name LIKE ?
+     ORDER BY u.created_at DESC LIMIT 100`,
+    like,
+    like,
+  );
+
+  const dateFormat = new Intl.DateTimeFormat(staff.locale === "de" ? "de-DE" : "en-GB", {
+    dateStyle: "short",
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
+    role: row.role,
+    verified: Boolean(row.email_verified),
+    devices: row.devices,
+    subscriptionStatus: row.subscription_status,
+    created: dateFormat.format(new Date(row.created_at)),
+    disabled: Boolean(row.disabled_at),
+  }));
 }
 
 function fail(message: string): never {

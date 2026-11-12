@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui";
 import type { Dictionary } from "@/i18n/de";
 import {
   resetCustomerMfaAction,
+  searchCustomersAction,
   toggleCustomerDisabledAction,
   updateCustomerRoleAction,
 } from "@/lib/actions/admin";
@@ -28,23 +29,58 @@ export function CustomerTable({
   rows,
   dictionary,
   initialQuery,
+  total,
 }: {
   rows: CustomerRow[];
   dictionary: Dictionary;
   initialQuery: string;
+  /** Gesamtzahl der Konten; ist sie größer als die geladene Liste, sucht der Server mit. */
+  total: number;
 }) {
+  const truncated = total > rows.length;
   const t = dictionary;
   const [query, setQuery] = useState(initialQuery);
+  const [remote, setRemote] = useState<CustomerRow[]>([]);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const needle = query.trim().toLowerCase();
+
+  // Reicht die geladene Liste nicht aus (mehr Konten in der Datenbank), fragt der
+  // Server nach den übrigen Treffern – entprellt, damit nicht jeder Tastendruck zählt.
+  useEffect(() => {
+    if (!truncated || needle.length < 2) {
+      setRemote([]);
+      setSearching(false);
+      return;
+    }
+    let cancelled = false;
+    setRemote([]);
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const found = await searchCustomersAction(needle);
+        if (!cancelled) setRemote(found);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [needle, truncated]);
+
   const visible = useMemo(() => {
     if (!needle) return rows;
-    return rows.filter(
+    const local = rows.filter(
       (row) =>
         row.email.toLowerCase().includes(needle) || row.displayName.toLowerCase().includes(needle),
     );
-  }, [rows, needle]);
+    if (!truncated) return local;
+    const seen = new Set(local.map((row) => row.id));
+    return [...local, ...remote.filter((row) => !seen.has(row.id))];
+  }, [rows, needle, remote, truncated]);
 
   // Der Filter steht in der Adresse, damit ein Neuladen ihn behält – ohne Navigation.
   useEffect(() => {
@@ -56,7 +92,9 @@ export function CustomerTable({
 
   const summary = needle
     ? t.ui.resultsFor.replace("{count}", String(visible.length)).replace("{query}", query.trim())
-    : t.ui.resultsAll.replace("{count}", String(rows.length));
+    : truncated
+      ? t.ui.resultsOfTotal.replace("{count}", String(rows.length)).replace("{total}", String(total))
+      : t.ui.resultsAll.replace("{count}", String(rows.length));
 
   return (
     <>
@@ -91,7 +129,7 @@ export function CustomerTable({
       </form>
 
       <p id="customers-result-summary" role="status" className="text-[0.7rem] text-muted">
-        {summary}
+        {searching ? `${summary} · ${t.ui.loading}` : summary}
       </p>
 
       <ScrollRegion
