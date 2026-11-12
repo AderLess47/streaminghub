@@ -52,9 +52,13 @@ function useAuthSubmit(onSuccess: (data: ApiResponse) => void) {
   return { pending, error, fields, submit, setError };
 }
 
-function FieldError({ message }: { message?: string }) {
+function FieldError({ message, id }: { message?: string; id: string }) {
   if (!message) return null;
-  return <p className="mt-1 text-xs text-rose-300">{message}</p>;
+  return (
+    <p id={id} className="mt-1 text-xs text-rose-300">
+      {message}
+    </p>
+  );
 }
 
 function DevLink({ url, hint }: { url?: string; hint: string }) {
@@ -176,8 +180,9 @@ export function LoginForm({
           onChange={(event) => setCredentials((prev) => ({ ...prev, email: event.target.value }))}
           className="field"
           aria-invalid={Boolean(fields.email)}
+          aria-describedby={fields.email ? "login-email-error" : undefined}
         />
-        <FieldError message={fields.email} />
+        <FieldError id="login-email-error" message={fields.email} />
       </div>
 
       <div>
@@ -198,8 +203,9 @@ export function LoginForm({
           onChange={(event) => setCredentials((prev) => ({ ...prev, password: event.target.value }))}
           className="field"
           aria-invalid={Boolean(fields.password)}
+          aria-describedby={fields.password ? "login-password-error" : undefined}
         />
-        <FieldError message={fields.password} />
+        <FieldError id="login-password-error" message={fields.password} />
       </div>
 
       {notice ? <p className="text-xs text-emerald-300">{notice}</p> : null}
@@ -266,15 +272,34 @@ export function RegisterForm({
         <label htmlFor="register-name" className="field-label">
           {t.nameLabel}
         </label>
-        <input id="register-name" name="displayName" autoComplete="name" required minLength={2} maxLength={80} className="field" />
-        <FieldError message={fields.displayName} />
+        <input
+          id="register-name"
+          name="displayName"
+          autoComplete="name"
+          required
+          minLength={2}
+          maxLength={80}
+          className="field"
+          aria-invalid={Boolean(fields.displayName)}
+          aria-describedby={fields.displayName ? "register-name-error" : undefined}
+        />
+        <FieldError id="register-name-error" message={fields.displayName} />
       </div>
       <div>
         <label htmlFor="register-email" className="field-label">
           {t.emailLabel}
         </label>
-        <input id="register-email" name="email" type="email" autoComplete="email" required className="field" />
-        <FieldError message={fields.email} />
+        <input
+          id="register-email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          className="field"
+          aria-invalid={Boolean(fields.email)}
+          aria-describedby={fields.email ? "register-email-error" : undefined}
+        />
+        <FieldError id="register-email-error" message={fields.email} />
       </div>
       <div>
         <label htmlFor="register-password" className="field-label">
@@ -288,13 +313,26 @@ export function RegisterForm({
           required
           minLength={10}
           className="field"
+          aria-invalid={Boolean(fields.password)}
+          aria-describedby={["register-password-hint", fields.password ? "register-password-error" : null]
+            .filter(Boolean)
+            .join(" ")}
         />
-        <p className="mt-1 text-[0.7rem] text-muted">{t.passwordHint}</p>
-        <FieldError message={fields.password} />
+        <p id="register-password-hint" className="mt-1 text-[0.7rem] text-muted">
+          {t.passwordHint}
+        </p>
+        <FieldError id="register-password-error" message={fields.password} />
       </div>
 
       <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
-        <input type="checkbox" name="acceptTerms" required className="mt-0.5 size-4 accent-brand" />
+        <input
+          type="checkbox"
+          name="acceptTerms"
+          required
+          className="mt-0.5 size-4 accent-brand"
+          aria-invalid={Boolean(fields.acceptTerms)}
+          aria-describedby={fields.acceptTerms ? "register-terms-error" : undefined}
+        />
         <span>
           {t.acceptTerms}{" "}
           <Link href="/terms" className="link">
@@ -306,7 +344,7 @@ export function RegisterForm({
           </Link>
         </span>
       </label>
-      <FieldError message={fields.acceptTerms} />
+      <FieldError id="register-terms-error" message={fields.acceptTerms} />
 
       <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
         <input type="checkbox" name="marketingOptIn" className="mt-0.5 size-4 accent-brand" />
@@ -437,9 +475,15 @@ export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: 
           required
           minLength={10}
           className="field"
+          aria-invalid={Boolean(fields.password)}
+          aria-describedby={["reset-password-hint", fields.password ? "reset-password-error" : null]
+            .filter(Boolean)
+            .join(" ")}
         />
-        <p className="mt-1 text-[0.7rem] text-muted">{t.passwordHint}</p>
-        <FieldError message={fields.password} />
+        <p id="reset-password-hint" className="mt-1 text-[0.7rem] text-muted">
+          {t.passwordHint}
+        </p>
+        <FieldError id="reset-password-error" message={fields.password} />
       </div>
       {error ? (
         <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
