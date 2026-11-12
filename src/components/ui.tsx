@@ -68,7 +68,10 @@ export function Alert({
   const iconName: IconName = icon ?? (tone === "success" ? "check" : tone === "danger" ? "alert" : tone === "warning" ? "alert" : "info");
 
   return (
-    <div className={`flex gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed ${styles}`} role={tone === "danger" ? "alert" : undefined}>
+    <div
+      className={`flex gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed ${styles}`}
+      role={tone === "danger" ? "alert" : "status"}
+    >
       <Icon name={iconName} size={18} className="mt-0.5 shrink-0 opacity-80" />
       <div>
         {title ? <p className="font-semibold">{title}</p> : null}

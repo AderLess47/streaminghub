@@ -120,8 +120,15 @@ export default async function AdminTicketDetailPage({
 
         <form action={setTicketStatusAction} className="card grid gap-3 p-5">
           <input type="hidden" name="ticketId" value={ticket.id} />
-          <p className="text-sm font-semibold">{t.admin.tickets.statusChange}</p>
-          <select name="status" defaultValue={ticket.status} className="field">
+          <p id="admin-status-heading" className="text-sm font-semibold">
+            {t.admin.tickets.statusChange}
+          </p>
+          <select
+            name="status"
+            defaultValue={ticket.status}
+            className="field"
+            aria-labelledby="admin-status-heading"
+          >
             <option value="open">{t.dashboard.support.statusOpen}</option>
             <option value="pending">{t.dashboard.support.statusPending}</option>
             <option value="closed">{t.dashboard.support.statusClosed}</option>

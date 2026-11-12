@@ -106,7 +106,12 @@ export default async function AdminCustomersPage({
                   <form action={updateCustomerRoleAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="userId" value={row.id} />
                     <input type="hidden" name="returnTo" value="/admin/customers" />
-                    <select name="role" defaultValue={row.role} className="field !w-auto !py-1 !text-xs">
+                    <select
+                      name="role"
+                      defaultValue={row.role}
+                      className="field !w-auto !py-1 !text-xs"
+                      aria-label={`${t.admin.customers.role}: ${row.email}`}
+                    >
                       <option value="customer">customer</option>
                       <option value="support">support</option>
                       <option value="admin">admin</option>

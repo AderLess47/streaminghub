@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
-import { Badge, PageHeader, StatusPill } from "@/components/ui";
+import { Alert, Badge, PageHeader, StatusPill } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { all, get } from "@/lib/db";
 import { env, isBillingConfigured, isEmailConfigured } from "@/lib/env";
@@ -11,9 +11,14 @@ export const dynamic = "force-dynamic";
 const count = (sql: string, ...params: (string | number)[]) =>
   get<{ c: number }>(sql, ...params)?.c ?? 0;
 
-export default async function AdminOverviewPage() {
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const staff = await requireStaff();
   const { t, locale } = await getI18n();
+  const query = await searchParams;
 
   const customers = count(`SELECT COUNT(*) AS c FROM users WHERE role = 'customer'`);
   const devices = count(`SELECT COUNT(*) AS c FROM devices WHERE status = 'active'`);
@@ -42,6 +47,8 @@ export default async function AdminOverviewPage() {
   return (
     <div className="grid grid-cols-1 gap-6">
       <PageHeader eyebrow={t.admin.title} title={t.admin.nav.overview} description={t.admin.subtitle} />
+
+      {query.error ? <Alert tone="danger">{query.error}</Alert> : null}
 
       {!staff.mfaEnrolled ? (
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-amber-100">
