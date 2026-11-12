@@ -54,7 +54,7 @@ export function HelpTopics({
       <div className="mt-6 grid gap-3">
         {filtered.map((topic) => (
           <details key={topic.key} className="card group px-5 py-4" open={Boolean(normalized)}>
-            <summary className="flex cursor-pointer list-none items-start justify-between gap-4 marker:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-4 marker:hidden [&::-webkit-details-marker]:hidden">
               <div>
                 <h3 className="text-[0.98rem] font-medium text-fg">{topic.title}</h3>
                 <p className="mt-0.5 text-[0.8rem] text-muted">{topic.description}</p>

@@ -8,7 +8,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
           key={item.id}
           className="group card overflow-hidden px-5 py-4 transition-colors open:border-brand/35"
         >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[0.95rem] font-medium text-fg marker:hidden [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-[0.95rem] font-medium text-fg marker:hidden [&::-webkit-details-marker]:hidden">
             <span>{item.question}</span>
             <span
               aria-hidden="true"

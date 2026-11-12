@@ -271,7 +271,7 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/help" className="link mt-5 inline-flex items-center gap-1 text-sm">
+            <Link href="/help" className="link mt-5 inline-flex min-h-11 items-center gap-1 text-sm">
               {t.help.title}
               <Icon name="arrow-right" size={14} />
             </Link>

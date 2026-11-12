@@ -67,7 +67,10 @@ export default async function HelpPage() {
             <p className="mt-1.5 text-xs text-muted">{t.contact.responseTimeValue}</p>
             <h3 className="mt-3 text-sm font-semibold">{t.contact.hours}</h3>
             <p className="mt-1.5 text-xs text-muted">{t.contact.hoursValue}</p>
-            <a href="mailto:service@streaminghub.org" className="link mt-3 inline-block text-xs">
+            <a
+              href="mailto:service@streaminghub.org"
+              className="link mt-3 inline-flex min-h-11 items-center text-xs"
+            >
               service@streaminghub.org
             </a>
           </div>

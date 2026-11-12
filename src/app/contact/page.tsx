@@ -23,7 +23,10 @@ export default async function ContactPage() {
               <Icon name="mail" size={16} className="text-cyan" />
               {t.contact.supportEmailLabel}
             </h2>
-            <a href={`mailto:${env.supportEmail}`} className="link mt-2 inline-block text-sm">
+            <a
+              href={`mailto:${env.supportEmail}`}
+              className="link mt-2 inline-flex min-h-11 items-center text-sm"
+            >
               {env.supportEmail}
             </a>
             <p className="mt-2 text-xs leading-relaxed text-muted">{t.contact.accountHint}</p>
