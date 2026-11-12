@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { all } from "@/lib/db";
@@ -33,8 +34,9 @@ export default async function AdminTicketsPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.tickets} title={t.admin.tickets.title} description={t.admin.subtitle} />
 
-      <div className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.tickets.title} className="card overflow-x-auto">
         <table className="data-table">
+          <caption className="sr-only">{t.admin.tickets.title}</caption>
           <thead>
             <tr>
               <th>{t.admin.tickets.subject}</th>
@@ -76,7 +78,7 @@ export default async function AdminTicketsPage() {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }
