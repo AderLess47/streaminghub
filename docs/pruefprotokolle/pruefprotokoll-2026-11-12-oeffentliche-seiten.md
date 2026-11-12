@@ -123,6 +123,21 @@ Grids, nicht nur der `overflow-hidden`-Container. Nachmessung und Änderung
 stehen in
 [pruefprotokoll-2026-11-12-docs-api-reflow.md](pruefprotokoll-2026-11-12-docs-api-reflow.md).
 
+Nachtrag 12.11.2026, Barrieren 2 und 3: ebenfalls behoben, ohne Änderung der
+Darstellung.
+
+- Barriere 2 (`/premium`): Das `aside` lag in einem `<section>` innerhalb von
+  `<main>`; als complementary-Landmark war es dort nicht zulässig. Es ist jetzt
+  ein `div` mit denselben Klassen – die Karte bleibt an derselben Stelle und in
+  derselben Größe.
+- Barriere 3 (`/help`): Die Themenüberschriften sprangen von `h1` auf `h3`. Aus
+  `<h3>` wurde `<h2>` in `src/components/help-topics.tsx`, Klassen unverändert
+  (`text-[0.98rem] font-medium`), Überschriftenfolge jetzt H1 → H2.
+
+Nachgeprüft mit axe-core 4.10.2 im Browser: `/premium` und `/help` melden
+**0 Befunde**, auch mit dem vollständigen Regelsatz. Nicht geprüft: Darstellung
+in anderen Browsern und mit Screenreadern.
+
 ## 7. Prüfung mit assistiven Technologien
 
 Nicht durchgeführt. Die Tabelle bleibt leer, statt ein Ergebnis zu behaupten.
