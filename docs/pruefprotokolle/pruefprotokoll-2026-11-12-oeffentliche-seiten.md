@@ -135,8 +135,22 @@ Darstellung.
   (`text-[0.98rem] font-medium`), Überschriftenfolge jetzt H1 → H2.
 
 Nachgeprüft mit axe-core 4.10.2 im Browser: `/premium` und `/help` melden
-**0 Befunde**, auch mit dem vollständigen Regelsatz. Nicht geprüft: Darstellung
-in anderen Browsern und mit Screenreadern.
+**0 Befunde**, auch mit dem vollständigen Regelsatz.
+
+Geometrievergleich alt gegen neu, im selben Browser und auf demselben Dev-Server,
+indem die beiden Dateien kurz auf den vorherigen Stand zurückgesetzt wurden:
+
+| Messpunkt | vorher (`aside` / `h3`) | nachher (`div` / `h2`) |
+| --- | --- | --- |
+| Preiskarte 1280 px | 487 × 473 px bei x = 730 | 487 × 473 px bei x = 730 |
+| Preiskarte 390 px | 338 × 527 px bei x = 18 | 338 × 527 px bei x = 18 |
+| Themenüberschrift | 15,68 px, Gewicht 500, Außenabstand 0, Zeilenhöhe 23,52 px | identisch |
+
+Die Darstellung ist damit messbar unverändert, nicht nur behauptet. In Produktion
+zusätzlich geprüft: `div` und `h2` sind ausgeliefert, Überschriftenfolge
+H1 → H2, axe 0 Befunde.
+
+Nicht geprüft: Darstellung in anderen Browsern und mit Screenreadern.
 
 ## 7. Prüfung mit assistiven Technologien
 
