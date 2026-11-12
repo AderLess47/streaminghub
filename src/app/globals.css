@@ -260,6 +260,8 @@
   }
 
   .btn-sm {
+    /* Bleibt auch als"kleiner" Knopf fingerbreit (44 px hoch). */
+    min-height: 2.75rem;
     padding: 0.55rem 0.95rem;
     font-size: 0.83rem;
   }
@@ -297,6 +299,12 @@
     font-size: 0.75rem;
     color: #cbd5e1;
     white-space: nowrap;
+  }
+
+  /* Nur klickbare Chips werden fingerbreit; Status-Badges bleiben flach. */
+  a.chip,
+  button.chip {
+    min-height: 2.75rem;
   }
 
   .chip-brand {

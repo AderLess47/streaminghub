@@ -185,7 +185,7 @@ export function SiteNav({
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
               aria-controls="mobile-menu"
-              className="grid size-10 place-items-center rounded-lg border border-line/60 text-fg"
+              className="grid size-11 place-items-center rounded-lg border border-line/60 text-fg"
               aria-label={open ? t.closeMenu : t.menu}
             >
               <Icon name={open ? "close" : "menu"} size={20} />

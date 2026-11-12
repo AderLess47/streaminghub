@@ -29,7 +29,10 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
             <FooterLink href="/faq">{t.nav.faq}</FooterLink>
             <FooterLink href="/contact">{t.nav.contact}</FooterLink>
             <li>
-              <a href="mailto:service@streaminghub.org" className="transition hover:text-fg">
+              <a
+                href="mailto:service@streaminghub.org"
+                className="inline-flex min-h-9 items-center transition hover:text-fg"
+              >
                 service@streaminghub.org
               </a>
             </li>
@@ -50,7 +53,10 @@ export function SiteFooter({ t, role }: { t: Dictionary; role: Role | null }) {
             © {year} StreamingHub. {t.footer.rights}
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Link href={role ? "/dashboard" : "/login"} className="transition hover:text-fg">
+            <Link
+              href={role ? "/dashboard" : "/login"}
+              className="inline-flex min-h-9 items-center transition hover:text-fg"
+            >
               {role ? t.footer.account : t.nav.login}
             </Link>
             <CookieSettingsButton label={t.footer.cookies} />
@@ -74,7 +80,7 @@ function FooterColumn({ title, children }: { title: string; children: React.Reac
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <li>
-      <Link href={href} className="transition hover:text-fg">
+      <Link href={href} className="inline-flex min-h-9 items-center transition hover:text-fg">
         {children}
       </Link>
     </li>

@@ -120,7 +120,7 @@ export default async function DownloadPage() {
             <p className="mt-1 text-xs leading-relaxed text-muted">{t.download.downloaderHint}</p>
             <a
               href="/app.apk"
-              className="mt-2 inline-block font-mono text-xs text-cyan underline decoration-cyan/30 underline-offset-2"
+              className="mt-2 inline-flex min-h-11 items-center font-mono text-xs text-cyan underline decoration-cyan/30 underline-offset-2"
             >
               {t.download.downloaderUrl}
             </a>

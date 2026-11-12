@@ -35,7 +35,7 @@ export function LanguageSwitcher({
       <select
         value={value}
         onChange={(event) => void change(event.target.value as Locale)}
-        className={`cursor-pointer appearance-none rounded-lg border border-transparent bg-transparent py-1 pe-4 ps-0.5 text-xs font-medium text-muted transition hover:text-fg focus-visible:border-cyan/40 ${
+        className={`min-h-9 cursor-pointer appearance-none rounded-lg border border-transparent bg-transparent py-1 pe-4 ps-0.5 text-xs font-medium text-muted transition hover:text-fg focus-visible:border-cyan/40 ${
           // A select sizes itself to its widest option, which pushes the header
           // past the viewport on phones. Compact mode pins it to the visible label.
           compact ? "w-[5.4rem] truncate" : "sm:text-[0.8rem]"

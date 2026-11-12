@@ -62,7 +62,7 @@ export function Logo({ size = 36, withWordmark = true, className = "", href = "/
 
   if (!href) return content;
   return (
-    <Link href={href} aria-label="StreamingHub Startseite" className="rounded-lg">
+    <Link href={href} aria-label="StreamingHub Startseite" className="inline-flex min-h-6 items-center rounded-lg">
       {content}
     </Link>
   );
