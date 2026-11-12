@@ -171,7 +171,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "5. Payments and subscriptions",
         paragraphs: [
           "For premium subscriptions via the web checkout we use Stripe Payments Europe, Ltd. (Ireland). Payment details such as card data are entered directly with Stripe and are not stored on our servers. We receive status information (payment status, period end, subscription reference).",
-          "Purchases via the Amazon Appstore are processed by Amazon. Amazon's privacy terms apply; we receive subscription status information.",
+          "Premium is currently not offered in Amazon Appstore builds; no external payment prompts are shown and no billing data reaches us.",
           "Legal bases are Art. 6(1)(b) GDPR and Art. 6(1)(c) GDPR for statutory retention.",
         ],
       },
