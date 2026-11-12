@@ -120,6 +120,32 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run release:apk
 
+      # The Amazon Appstore build is the same code with premium sales disabled
+      # (BuildConfig.PREMIUM_SALES=false, see docs/IAP-AMAZON.md). It is never
+      # published on the public download page; the run attaches it for the
+      # console upload instead.
+      - name: Build, verify and attach the Amazon Appstore APK
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew --no-daemon assembleAmazonRelease
+          APK="app/build/outputs/apk/amazon/release/app-amazon-release.apk"
+          test -f "$APK"
+          grep -q 'PREMIUM_SALES = false' \
+            "app/build/generated/source/buildConfig/amazon/release/de/streaminghub/app/BuildConfig.java"
+          BUILD_TOOLS="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools/35.0.0"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionName='${APK_VERSION}'"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionCode='${APK_VERSION_CODE}'"
+          echo "Amazon APK: $(stat -c%s "$APK") bytes, $(sha256sum "$APK" | cut -d' ' -f1)"
+
+      - name: Attach the Amazon Appstore APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: streaminghub-amazon-apk
+          path: android/app/build/outputs/apk/amazon/release/app-amazon-release.apk
+          if-no-files-found: error
+
       - name: Install flyctl
         run: |
           curl -fsSL https://fly.io/install.sh | sh
