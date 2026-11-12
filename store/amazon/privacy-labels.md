@@ -1,7 +1,7 @@
 # Amazon privacy labels: questionnaire answers
 
 Answers for the Amazon Appstore *User Data Privacy Questionnaire* for
-StreamingHub (`de.streaminghub.app`, version 1.3.0, website
+StreamingHub (`de.streaminghub.app`, version 1.4.0, website
 `streaminghub.org`). Every row below is derived from the shipped code, not from
 intent — the evidence column names the file that collects or stores the value.
 

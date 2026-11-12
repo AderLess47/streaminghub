@@ -21,8 +21,8 @@ android {
         applicationId = "de.streaminghub.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.3.0"
+        versionCode = 11
+        versionName = "1.4.0"
 
         vectorDrawables {
             useSupportLibrary = true
