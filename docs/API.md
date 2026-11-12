@@ -93,6 +93,23 @@ The playlist content itself remains on the device.
 Returns **403** once the device has been unlinked in the portal or by support –
 revocation is immediate despite the stateless token.
 
+## 3a. Cross-device resume (premium)
+
+`GET /api/v1/progress` lists the watch positions a premium account keeps:
+
+```json
+{ "items": [{ "url": "https://anbieter.example/vod/folge-1.mp4", "positionMs": 124000, "durationMs": 2700000, "updatedAt": "2026-11-12T10:00:00.000Z" }] }
+```
+
+`PUT /api/v1/progress` with `{ "url", "positionMs", "durationMs" }` stores a
+position; a finished title (within the last 10 seconds) or one below five
+seconds is removed instead of resumed. Both methods need the device bearer token
+and an active subscription – without premium the answer is `402
+premium_required`. Positions belong to one account and are never shared across
+accounts. A device resumes at the later of its local and the synced position, so
+offline progress is never lost. Playlist content and stream URLs stay on the
+device.
+
 ## 4. Website-side redemption (already implemented)
 
 `POST /api/devices/activate` with the customer session cookie:

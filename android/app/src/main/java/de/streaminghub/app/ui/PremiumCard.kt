@@ -52,6 +52,12 @@ fun PremiumCard(
                     color = Foreground,
                     style = MaterialTheme.typography.bodyLarge,
                 )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Enthält Weiterschauen auf allen Geräten: deine Wiedergabeposition wird zwischen deinen Geräten synchronisiert.",
+                    color = Muted,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Spacer(Modifier.height(10.dp))
                 PrimaryAction(
                     text = "Premium über Amazon abschließen",
@@ -95,6 +101,11 @@ fun PremiumCard(
                     text = "Premium aktiv",
                     color = Cyan,
                     style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = "Weiterschauen auf allen Geräten ist aktiv.",
+                    color = Muted,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 state.currentPeriodEnd?.let { end ->
                     Text(

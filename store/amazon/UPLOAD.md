@@ -100,9 +100,9 @@ tell them apart.
   premium card with the Amazon price, a purchase must arrive as “Abo aktiv” only
   after the server confirmed it, and restoring on a second install must bring the
   subscription back.
-- **Premium gates no shipped feature yet.** Amazon requires described
-  functionality to work, and a subscription that unlocks nothing is a refund and
-  rejection risk. Treat this as the blocker to clear before submission (`docs/IAP-AMAZON.md` § 0).
+- **Test the premium value:** start a title, stop after a minute, then open the
+  same title on the second device – it must resume at the synced position. A free
+  account must start at the beginning and keep its position local.
 - Re-read the content-rating answers if demo entries change.
 - Keep this file updated with the next artifact hash; the console keeps the
   uploaded binary, not this document.

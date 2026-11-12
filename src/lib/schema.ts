@@ -271,6 +271,18 @@ CREATE INDEX IF NOT EXISTS idx_iap_user ON iap_receipts(user_id, provider);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_amazon_customer
   ON subscriptions(provider_customer_id) WHERE provider = 'amazon';
 
+-- Cross-device resume for premium accounts: one position per title and user.
+CREATE TABLE IF NOT EXISTS watch_progress (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  media_url TEXT NOT NULL,
+  device_id TEXT REFERENCES devices(id) ON DELETE SET NULL,
+  position_ms INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, media_url)
+);
+CREATE INDEX IF NOT EXISTS idx_watch_progress_user ON watch_progress(user_id, updated_at);
+
 CREATE TABLE IF NOT EXISTS request_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   route TEXT NOT NULL,

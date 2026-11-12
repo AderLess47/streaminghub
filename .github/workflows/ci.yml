@@ -41,3 +41,6 @@ jobs:
 
       - name: Amazon IAP receipt tests
         run: npm run test:amazon-iap
+
+      - name: Test cross-device resume rules
+        run: npm run test:progress
