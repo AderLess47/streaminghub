@@ -18,12 +18,12 @@ export default async function AdminContentPage({
   const faqItems = getAllFaqRows();
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-1 gap-5">
       <PageHeader eyebrow={t.admin.nav.content} title={t.admin.content.title} description={t.admin.content.subtitle} />
 
       {params.ok ? <Alert tone="success">{params.ok === "faq" ? t.admin.content.saved : t.admin.content.saved}</Alert> : null}
 
-      <form action={saveSettingsAction} className="card grid gap-3 p-5">
+      <form action={saveSettingsAction} className="card grid grid-cols-1 gap-3 p-5">
         <h2 className="text-sm font-semibold">{t.admin.content.announcement}</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
@@ -82,7 +82,7 @@ export default async function AdminContentPage({
         </button>
       </form>
 
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <h2 className="text-sm font-semibold">
           {t.admin.content.faqTitle} <Badge tone="neutral">{faqItems.length}</Badge>
         </h2>
@@ -158,7 +158,7 @@ export default async function AdminContentPage({
         ))}
       </div>
 
-      <form action={saveFaqAction} className="card grid gap-3 p-5">
+      <form action={saveFaqAction} className="card grid grid-cols-1 gap-3 p-5">
         <h2 className="text-sm font-semibold">{t.admin.content.newEntry}</h2>
         <div className="grid gap-3 md:grid-cols-[1fr_10rem_6rem]">
           <div>
