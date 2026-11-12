@@ -49,6 +49,29 @@ submitting, either capture the same five screens on a real Fire TV device
 running app and fix any deviation. Treat this folder as layout-ready artwork,
 not as verified captures.
 
+## Gap check against build 11 (2026-11-12)
+
+The artwork was drawn on 2026-11-11, before phases P2/P4 (Amazon purchase) and
+before the adaptive layout. It does **not** represent the submitted 1.4.0 build:
+
+| Asset | Problem | Required |
+| --- | --- | --- |
+| `screenshots/05-kopplung.png` | Says `StreamingHub 1.2.3` in the footer | Must read `1.4.0`, or the line must go |
+| all five screenshots | No premium surface anywhere, although the listing now sells a subscription | Add a capture of *Einstellungen → Konto & Gerät* with the premium card and its price |
+| `screenshots/01-live-tv.png`, `02-filme.png` | Six columns of roughly 130 dp cards, no featured card and no header action icons | Build 11 renders 224 dp cards on a television (about three columns at 320 dpi), a hero card and three header buttons |
+| listings | The copy promises phone/tablet adaptation | Only verifiable with a capture on such a device; the TV gallery cannot show it |
+
+No vector source exists in the repository, so these images cannot be edited
+faithfully — they have to be captured again on a Fire TV:
+
+```bash
+adb exec-out screencap -p > store/amazon/screenshots/01-live-tv.png
+```
+
+Until then, treat the gallery as pre-1.4.0 artwork and do not submit it. The
+icons, the background and the promotional image carry no version string and no
+premium claim, so they stay usable.
+
 ## Regenerating
 
 The images are generated artwork. The banner and launcher icons that ship
