@@ -2,7 +2,16 @@
 
 import { useRef, useState } from "react";
 import type { Dictionary } from "@/i18n/de";
+import { focusSoon } from "./focus-soon";
 import { Icon } from "./icons";
+
+const FIELD_IDS: Record<string, string> = {
+  name: "contact-name",
+  email: "contact-email",
+  subject: "contact-subject",
+  message: "contact-message",
+  privacyAccepted: "contact-privacy",
+};
 
 export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; privacyLabel: string }) {
   const renderedAt = useRef(Date.now());
@@ -45,7 +54,10 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
         return;
       }
       if (data.error?.fields?.length) {
-        setFieldErrors(Object.fromEntries(data.error.fields.map((f) => [f.path, f.message])));
+        const errors = Object.fromEntries(data.error.fields.map((f) => [f.path, f.message]));
+        setFieldErrors(errors);
+        const firstPath = data.error.fields[0]?.path;
+        focusSoon(FIELD_IDS[firstPath] ?? "contact-error");
       }
       setErrorMessage(data.error?.message ?? t.error);
       setState("error");
@@ -167,6 +179,7 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
 
       <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
         <input
+          id="contact-privacy"
           type="checkbox"
           name="privacyAccepted"
           required
@@ -188,7 +201,12 @@ export function ContactForm({ t, privacyLabel }: { t: Dictionary["contact"]; pri
       ) : null}
 
       {state === "error" ? (
-        <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
+        <p
+          id="contact-error"
+          tabIndex={-1}
+          className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+          role="alert"
+        >
           {errorMessage}
         </p>
       ) : null}

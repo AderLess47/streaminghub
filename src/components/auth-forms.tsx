@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import type { Dictionary } from "@/i18n/de";
 import type { Locale } from "@/i18n/config";
 import { localeMeta, locales } from "@/i18n/config";
+import { focusSoon } from "./focus-soon";
 import { Icon } from "./icons";
 
 type ApiResponse = {
@@ -16,7 +17,10 @@ type ApiResponse = {
   redirectTo?: string;
 };
 
-function useAuthSubmit(onSuccess: (data: ApiResponse) => void) {
+function useAuthSubmit(
+  onSuccess: (data: ApiResponse) => void,
+  options?: { fieldIds?: Record<string, string>; alertId?: string },
+) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -40,9 +44,13 @@ function useAuthSubmit(onSuccess: (data: ApiResponse) => void) {
         setFields(Object.fromEntries(data.error.fields.map((f) => [f.path, f.message])));
       }
       setError(data.error?.message ?? null);
+      const firstPath = data.error?.fields?.[0]?.path;
+      const fieldTarget = firstPath ? options?.fieldIds?.[firstPath] : undefined;
+      focusSoon(fieldTarget ?? options?.alertId ?? null);
       return data;
     } catch {
       setError("Netzwerkfehler. Bitte versuche es erneut.");
+      focusSoon(options?.alertId ?? null);
       return null;
     } finally {
       setPending(false);
@@ -89,16 +97,19 @@ export function LoginForm({
   const [notice, setNotice] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const { pending, error, fields, submit, setError } = useAuthSubmit((data) => {
-    if (data.mfaRequired) {
-      setStep("mfa");
-      return;
-    }
-    startTransition(() => {
-      router.push(data.redirectTo ?? next ?? "/dashboard");
-      router.refresh();
-    });
-  });
+  const { pending, error, fields, submit, setError } = useAuthSubmit(
+    (data) => {
+      if (data.mfaRequired) {
+        setStep("mfa");
+        return;
+      }
+      startTransition(() => {
+        router.push(data.redirectTo ?? next ?? "/dashboard");
+        router.refresh();
+      });
+    },
+    { fieldIds: { email: "login-email", password: "login-password" }, alertId: "login-error" },
+  );
 
   if (step === "mfa") {
     return (
@@ -210,7 +221,12 @@ export function LoginForm({
 
       {notice ? <p className="text-xs text-emerald-300">{notice}</p> : null}
       {error ? (
-        <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
+        <p
+          id="login-error"
+          tabIndex={-1}
+          className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -243,14 +259,25 @@ export function RegisterForm({
   const [pendingSuccess, setPendingSuccess] = useState(false);
   const [devLink, setDevLink] = useState<string | undefined>();
 
-  const { pending, error, fields, submit } = useAuthSubmit((data) => {
-    setPendingSuccess(true);
-    setDevLink(data.devLink);
-    setTimeout(() => {
-      router.push(next ?? "/dashboard");
-      router.refresh();
-    }, 1200);
-  });
+  const { pending, error, fields, submit } = useAuthSubmit(
+    (data) => {
+      setPendingSuccess(true);
+      setDevLink(data.devLink);
+      setTimeout(() => {
+        router.push(next ?? "/dashboard");
+        router.refresh();
+      }, 1200);
+    },
+    {
+      fieldIds: {
+        displayName: "register-name",
+        email: "register-email",
+        password: "register-password",
+        acceptTerms: "register-terms",
+      },
+      alertId: "register-error",
+    },
+  );
 
   return (
     <form
@@ -327,6 +354,7 @@ export function RegisterForm({
       <label className="flex items-start gap-2.5 text-xs leading-relaxed text-muted">
         <input
           type="checkbox"
+          id="register-terms"
           name="acceptTerms"
           required
           className="mt-0.5 size-4 accent-brand"
@@ -352,7 +380,12 @@ export function RegisterForm({
       </label>
 
       {error ? (
-        <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
+        <p
+          id="register-error"
+          tabIndex={-1}
+          className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -438,10 +471,13 @@ export function ForgotPasswordForm({ t }: { t: Dictionary["auth"] }) {
 export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: string }) {
   const router = useRouter();
   const [done, setDone] = useState(false);
-  const { pending, error, fields, submit } = useAuthSubmit(() => {
-    setDone(true);
-    setTimeout(() => router.push("/login?reset=1"), 1400);
-  });
+  const { pending, error, fields, submit } = useAuthSubmit(
+    () => {
+      setDone(true);
+      setTimeout(() => router.push("/login?reset=1"), 1400);
+    },
+    { fieldIds: { password: "reset-password" }, alertId: "reset-error" },
+  );
 
   if (done) {
     return (
@@ -486,7 +522,12 @@ export function ResetPasswordForm({ t, token }: { t: Dictionary["auth"]; token: 
         <FieldError id="reset-password-error" message={fields.password} />
       </div>
       {error ? (
-        <p className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200" role="alert">
+        <p
+          id="reset-error"
+          tabIndex={-1}
+          className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
