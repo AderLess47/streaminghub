@@ -61,7 +61,7 @@ jobs:
             '- [ ] Jahresumsatz oder Jahresbilanzsumme des letzten Geschäftsjahres erheben' \
             '- [ ] Gegen die Schwelle prüfen: unter 10 Personen und höchstens 2 Mio. €' \
             '- [ ] Ergebnis und Datum im Entscheidungsblock eintragen' \
-            '- [ ] Bei geänderter Einordnung: Pflichten nach BFSG prüfen und /barrierefreiheit anpassen' \
+            '- [ ] Bei geänderter Einordnung: docs/BFSG-PFLICHTEN-CHECKLISTE.md abarbeiten und /barrierefreiheit anpassen' \
             '- [ ] Issue schließen' \
             '' \
             'Hintergrund: § 3 Abs. 3 Satz 1 BFSG nimmt Kleinstunternehmen von den Pflichten für Dienstleistungen aus.' \
