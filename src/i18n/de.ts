@@ -658,6 +658,7 @@ export const de = {
       subscription: "Abonnement",
       lastLogin: "Letzte Anmeldung",
       search: "Kunden durchsuchen",
+      clearFilter: "Filter zurücksetzen",
       disable: "Konto deaktivieren",
       enable: "Konto aktivieren",
       detail: "Kundendetail",

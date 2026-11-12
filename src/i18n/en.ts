@@ -655,6 +655,7 @@ export const en: Dictionary = {
       subscription: "Subscription",
       lastLogin: "Last sign-in",
       search: "Search customers",
+      clearFilter: "Clear filter",
       disable: "Disable account",
       enable: "Enable account",
       detail: "Customer detail",
