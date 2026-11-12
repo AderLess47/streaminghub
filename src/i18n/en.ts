@@ -102,6 +102,13 @@ export const en: Dictionary = {
       demoSearch: "Search",
       demoContinue: "Continue for you",
       demoGenres: ["Docs", "Sport", "News", "Music"],
+      premiumLabel: "Premium in the account",
+      premiumTitle: "Premium",
+      premiumBilling: "Billed through your Amazon account",
+      premiumActive: "Premium active",
+      premiumRenewal: "Next renewal: 12 Dec 2026",
+      premiumBenefit: "Continue watching on every device is active.",
+      premiumRefresh: "Refresh status",
     },
     features: {
       title: "Everything a good player needs",
