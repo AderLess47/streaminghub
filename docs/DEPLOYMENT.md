@@ -316,3 +316,67 @@ Once available, the clean insertion points are `src/app/api/auth/login/route.ts`
 - [ ] Payment + email providers configured (or intentionally left disabled)
 - [ ] `APP_URL` matches the live domain
 - [ ] Rate limits reviewed for expected traffic
+- [ ] Amazon IAP secrets set and the daily sync green (once Fire TV IAP is live)
+
+## 11. Amazon IAP sync
+
+Amazon subscriptions are kept current in two ways: Real-Time Notifications push
+every purchase, renewal and cancellation to `/api/webhooks/amazon/rtn`, and a
+daily pull re-verifies receipts near their renewal date as a fallback. The pull
+run is `npm run amazon:sync`, which calls the token-protected
+`POST /api/internal/amazon-sync` on the deployed app.
+
+`.github/workflows/amazon-sync.yml` runs it daily at 04:41 UTC and on demand via
+*Actions → Amazon IAP sync → Run workflow*. Without `AMAZON_SYNC_TOKEN` the job
+skips with a notice instead of failing, so the schedule stays quiet until IAP is
+live.
+
+### 11.1 Secrets
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `AMAZON_RVS_SHARED_SECRET` | Fly secret | Shared key from the Developer Console (*Shared Key*), used by RVS |
+| `AMAZON_RVS_BASE` | Fly env (optional) | Defaults to `https://appstore-sdk.amazon.com` |
+| `AMAZON_RVS_SANDBOX` | Fly env (optional) | `1` while testing with App Tester (RVS Cloud Sandbox) |
+| `AMAZON_IAP_SKU` | Fly env (optional) | Defaults to `premium_monthly`; must match the console IAP item |
+| `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration |
+| `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
+
+```bash
+flyctl secrets set AMAZON_RVS_SHARED_SECRET=… AMAZON_SYNC_TOKEN=… -a streaminghub-org
+gh secret set AMAZON_SYNC_TOKEN            # same value as the Fly secret
+```
+
+Keep `AMAZON_SYNC_TOKEN` identical in both places – the app rejects any other
+value, and a mismatch shows up as `403 forbidden` in the workflow log. Never put
+these values in the repository, in `fly.toml` or in the chat.
+
+### 11.2 What the run does
+
+The sync selects Amazon receipts whose `renewal_date`, `cancel_date` or grace
+period ends within ±3 days (plus receipts with no date and an old verification),
+re-verifies each one with RVS and updates the subscription row. It logs counts
+only – never receipt ids, Amazon customer ids or tokens:
+
+```json
+{"checked":3,"updated":2,"canceled":1,"failed":0}
+```
+
+`failed > 0` marks the workflow with a warning; a non-zero exit code means the
+endpoint was unreachable or rejected the token.
+
+### 11.3 Behaviour without configuration
+
+Without `AMAZON_RVS_SHARED_SECRET` both the app endpoints and the sync answer
+`503 not_configured`, so nothing silently pretends to verify a purchase. The
+Android Amazon build keeps `PREMIUM_SALES = false` until phase P4 of
+[`IAP-AMAZON.md`](IAP-AMAZON.md) ships.
+
+### 11.4 Manual run
+
+```bash
+APP_URL=https://streaminghub.org AMAZON_SYNC_TOKEN=… npm run amazon:sync
+```
+
+The command prints the same JSON summary and exits non-zero when the endpoint
+fails, which is what the workflow relies on.
