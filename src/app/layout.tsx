@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { CookieConsent } from "@/components/cookie-consent";
 import { LogoGradientDefs } from "@/components/logo";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { getI18n } from "@/i18n";
@@ -86,6 +87,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main id="main" tabIndex={-1} className="focus:outline-none">
           {children}
         </main>
+        <RouteAnnouncer />
         <SiteFooter t={t} role={user?.role ?? null} locale={locale} />
         <CookieConsent t={t.consent} />
       </body>
