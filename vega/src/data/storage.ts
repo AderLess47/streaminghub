@@ -160,6 +160,28 @@ export async function clearProgress(): Promise<void> {
   await AsyncStorage.removeItem(KEY.progress);
 }
 
+/**
+ * Übernimmt die im Konto gespeicherten Stände (Premium). Je Eintrag gewinnt der
+ * weiter fortgeschrittene Stand, damit ein lokal vorgespulter Film nicht auf
+ * einen älteren Serverstand zurückfällt. Einträge ohne Laufzeit sind Live-Sender
+ * und werden nicht übernommen.
+ */
+export async function mergeRemoteProgress(
+  items: { url: string; positionMs: number; durationMs: number }[],
+): Promise<ProgressMap> {
+  const current = await loadProgress();
+  let changed = false;
+  for (const item of items) {
+    if (!(item.positionMs > 0) || !(item.durationMs > 0)) continue;
+    if (item.positionMs > (current[item.url] ?? 0)) {
+      current[item.url] = Math.round(item.positionMs);
+      changed = true;
+    }
+  }
+  if (changed) await writeJson(KEY.progress, current);
+  return current;
+}
+
 /* -------------------------------- Einstellungen --------------------------- */
 
 export async function loadSettings(): Promise<Settings> {

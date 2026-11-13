@@ -21,6 +21,7 @@ import {
   loadPlaylist,
   loadProgress,
   loadSettings,
+  mergeRemoteProgress,
   saveActivationToken,
   saveDeviceName,
   saveEpg,
@@ -285,6 +286,26 @@ export function App() {
     });
   }, []);
 
+  /* Wiedergabestand aus dem Konto holen (Premium): Fortsetzen auf dem Gerät,
+   * auf dem der Film zuletzt weiter lief. Ohne Abo antwortet die API mit 402,
+   * dann bleibt der lokale Stand. */
+  useEffect(() => {
+    if (!token || !account?.premiumActive) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const items = await api.fetchWatchProgress(token);
+        const merged = await mergeRemoteProgress(items);
+        if (!cancelled) setProgress(merged);
+      } catch {
+        // Kein Netz oder kein Premium: lokal bleibt alles erhalten.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.premiumActive, api, token]);
+
   const handleProgress = useCallback(
     (channel: Channel, positionMs: number, durationMs: number) => {
       void persistProgress(channel.url, positionMs, durationMs).then(async () => {
@@ -395,10 +416,19 @@ export function App() {
   }, [settings]);
 
   const clearProgressPoints = useCallback(async () => {
+    const removed = Object.keys(progress);
     await clearProgress();
     setProgress({});
     setNotice("Wiedergabestand gelöscht.");
-  }, []);
+    // Ohne das käme der Stand beim nächsten Start aus dem Konto zurück.
+    if (token && account?.premiumActive) {
+      for (const url of removed) {
+        void api.saveWatchProgress(token, url, 0, 0).catch(() => {
+          // Lokal ist gelöscht; der Server folgt beim nächsten Versuch.
+        });
+      }
+    }
+  }, [account?.premiumActive, api, progress, token]);
 
   const unpair = useCallback(async () => {
     await clearActivationToken();

@@ -163,7 +163,7 @@ export const de = {
         continueWatching: {
           title: "Geräteübergreifendes Weiterschauen",
           description:
-            "Auf dem Fernseher beginnen, auf dem Tablet fortsetzen. Diese Funktion befindet sich in Entwicklung.",
+            "Auf dem Fernseher beginnen, auf dem Tablet weiterschauen. Der Stand liegt im Konto und wird auf jedem gekoppelten Gerät übernommen (Premium).",
         },
       },
     },

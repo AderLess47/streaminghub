@@ -162,7 +162,7 @@ export const en: Dictionary = {
         continueWatching: {
           title: "Cross-device resume",
           description:
-            "Start on the TV, continue on the tablet. This feature is in development.",
+            "Start on the TV, continue on the tablet. The position is kept in your account and picked up on every paired device (premium).",
         },
       },
     },
