@@ -1,4 +1,5 @@
 import AVKit
+import Combine
 import SwiftUI
 import StreamingHubCore
 
@@ -15,6 +16,7 @@ struct PlayerView: View {
     @State private var player = AVPlayer()
     @State private var failure: String?
     @State private var timeObserver: Any?
+    @State private var observations: Set<AnyCancellable> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +30,7 @@ struct PlayerView: View {
                         .font(.callout)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
-                    Button("Schließen") { model.player = nil }
+                    Button("Zurück zur Senderliste") { close() }
                         .buttonStyle(.borderedProminent)
                 }
                 .padding(32)
@@ -60,13 +62,14 @@ struct PlayerView: View {
 
     private func prepare() async {
         guard let url = channel.playbackURL else {
-            failure = "Die Adresse dieses Eintrags ist keine abspielbare URL."
+            failure = "Die Adresse dieses Eintrags ist keine abspielbare URL. \(PlaybackFailureText.backHint)"
             DiagnosticsLog.shared.record("Eintrag ohne abspielbare URL.", level: .warn, area: "player")
             return
         }
 
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
+        watch(item, url: url)
         #if !os(macOS)
         player.allowsExternalPlayback = true
         #endif
@@ -89,12 +92,46 @@ struct PlayerView: View {
         }
     }
 
+    /// Beobachtet den Item-Status und das Ende-ohne-Wiedergabe-Ereignis. Ohne
+    /// das bleibt ein Lizenz-, Netz- oder Codecfehler als schwarzes Bild stehen.
+    private func watch(_ item: AVPlayerItem, url: URL) {
+        item.publisher(for: \.status)
+            .receive(on: DispatchQueue.main)
+            .sink { status in
+                guard status == .failed else { return }
+                presentFailure(item.error as NSError?, url: url, context: "status")
+            }
+            .store(in: &observations)
+
+        NotificationCenter.default
+            .publisher(for: .AVPlayerItemFailedToPlayToEndTime, object: item)
+            .receive(on: DispatchQueue.main)
+            .sink { note in
+                let error = note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? NSError
+                presentFailure(error, url: url, context: "failedToPlayToEndTime")
+            }
+            .store(in: &observations)
+    }
+
+    private func presentFailure(_ error: NSError?, url: URL, context: String) {
+        DiagnosticsLog.shared.record(
+            "Wiedergabe fehlgeschlagen (\(context)): \(error?.domain ?? "-") \(error?.code ?? 0)",
+            level: .warn,
+            area: "player"
+        )
+        failure = PlaybackFailureText.message(
+            for: error,
+            insecure: PlaybackFailureText.isInsecure(url)
+        )
+    }
+
     private func close() {
         teardown()
         model.player = nil
     }
 
     private func teardown() {
+        observations.removeAll()
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
             self.timeObserver = nil
