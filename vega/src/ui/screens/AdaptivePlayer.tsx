@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { KeplerVideoSurfaceView } from "@amazon-devices/react-native-w3cmedia";
 import type { Channel } from "../../model/types";
 import { createHlsAdapter, hasHlsAdapter, type HlsAdapter } from "../../player/hls";
+import { insecureTransportHint } from "../../data/transport";
 import { Button, Notice } from "../components";
 import { colors, radius, space, text as sizes } from "../theme";
 
@@ -110,6 +111,11 @@ export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress }: Props
           <Text style={styles.meta} numberOfLines={1}>
             {channel.group} · {status}
           </Text>
+          {insecureTransportHint(channel.url) ? (
+            <Text style={styles.meta} numberOfLines={2}>
+              {insecureTransportHint(channel.url)}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.controls}>
           <Button

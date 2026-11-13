@@ -4,6 +4,7 @@ import { KeplerVideoView, VideoPlayer } from "@amazon-devices/react-native-w3cme
 import type { Channel } from "../../model/types";
 import { logError, logEvent, redactUrl } from "../../data/diagnostics";
 import { isAdaptiveSource } from "../../player/hls";
+import { insecureTransportHint } from "../../data/transport";
 import { Button, Notice } from "../components";
 import { AdaptivePlayer } from "./AdaptivePlayer";
 import { colors, radius, space, text as sizes } from "../theme";
@@ -41,6 +42,7 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
   const [position, setPosition] = useState(resumeMs / 1000);
   const [duration, setDuration] = useState(0);
   const adaptive = isAdaptiveSource(channel.url);
+  const insecureHint = insecureTransportHint(channel.url);
 
   useEffect(() => {
     // Adaptive Quellen laufen über AdaptivePlayer/Shaka, nicht über den
@@ -176,6 +178,11 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
             {channel.group} · {status}
             {duration > 0 ? ` · ${formatClock(position)} / ${formatClock(duration)}` : ""}
           </Text>
+          {insecureHint ? (
+            <Text style={styles.meta} numberOfLines={2}>
+              {insecureHint}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.controls}>
           <Button label={paused ? "Abspielen" : "Pause"} onPress={togglePlayback} hasTVPreferredFocus />
