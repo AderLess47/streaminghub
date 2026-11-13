@@ -67,6 +67,7 @@ jobs:
             -destination "id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/dd-ios" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             -quiet build-for-testing
 
       - name: Simulator smoke test
@@ -107,6 +108,7 @@ jobs:
             -destination 'generic/platform=tvOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd-tvos" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             -quiet build
 
       - name: Build macOS
