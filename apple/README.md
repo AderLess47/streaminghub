@@ -61,7 +61,7 @@ weder Xcode noch einen Swift-Compiler. Das heißt:
 | --- | --- |
 | Core-Bibliothek kompiliert und XCTest-Suite läuft | CI-Job `Apple core tests` mit offizieller Swift-Toolchain; **29 Prüfungen, alle grün** |
 | App-Ziele kompilieren (iOS, tvOS, macOS) | CI-Job `Apple app build` auf `macos-15`: XcodeGen erzeugt das Projekt, `xcodebuild` baut alle drei Ziele ohne Signierung |
-| App startet im iOS-Simulator und zeigt Sender | XCUITest `LaunchSmokeTests` im selben Job: Start, Demo-Inhalte laden, erster Sender sichtbar; der Lauf prüft, dass wirklich ein Test ausgeführt wurde |
+| App startet im iOS-Simulator und zeigt Sender | XCUITest `LaunchSmokeTests` im selben Job: Start, Demo-Inhalte laden, erster Sender sichtbar, Sender öffnen, Player erscheint, Rückweg zur Senderliste; der Lauf prüft, dass wirklich ein Test ausgeführt wurde |
 | Parser, Regeln, Demo gegen die Kotlin- und TypeScript-Fassung | dieselben Fälle wie dort, zusätzlich hier als Test festgeschrieben |
 | SwiftUI-Oberfläche bedienen, Gerät, VoiceOver, StoreKit, echte Wiedergabe | **nicht geprüft** – ein Smoke-Test ersetzt keinen Gerätelauf |
 | tvOS-Oberfläche mit Fernbedienung, Fokusführung, Wiedergabe am Fernseher | **nicht geprüft** – gebaut, aber nicht bedient |
