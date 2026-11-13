@@ -191,6 +191,8 @@ fun PlayerScreen(
     LaunchedEffect(retrySignal) {
         if (retrySignal == 0) return@LaunchedEffect
         delay(PlaybackRetry.POLL_MS)
+        // Der Nutzer war schneller da (Knopf oder neue Wiedergabe): nicht doppelt starten.
+        if (errorMessage == null) return@LaunchedEffect
         if (PlaybackRetry.isOnline(context)) {
             autoRetries += 1
             errorMessage = null
