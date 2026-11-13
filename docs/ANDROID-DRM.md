@@ -35,6 +35,9 @@ Text „Dieses Gerät unterstützt das DRM-Verfahren des Senders nicht.“
 
 ## Gerätetest-Checkliste für DRM-Sender
 
+Ausfüllbar als [ANDROID-DRM-PRUEFPROTOKOLL.md](ANDROID-DRM-PRUEFPROTOKOLL.md) –
+ein Protokoll je Lauf und Gerät.
+
 Nicht automatisierbar: Emulatoren haben kein Widevine, L1 gibt es nur auf
 zertifizierter Hardware. Mindestens prüfen:
 
