@@ -1,0 +1,74 @@
+name: Apple app
+
+# Baut die SwiftUI-App für iOS, tvOS und macOS. Die Core-Tests laufen weiterhin in
+# `ci.yml` auf Linux; hier geht es nur um das, was ohne Xcode ungeprüft bleibt:
+# Compilerfehler in den App-Zielen.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apple/**"
+      - ".github/workflows/apple-app.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Apple app build
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: apple
+        run: xcodegen generate
+
+      - name: Build iOS
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme StreamingHub_iOS \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd-ios" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build > "$RUNNER_TEMP/ios.log" 2>&1 || { tail -120 "$RUNNER_TEMP/ios.log"; exit 1; }
+          tail -3 "$RUNNER_TEMP/ios.log"
+
+      - name: Build tvOS
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme StreamingHub_tvOS \
+            -destination 'generic/platform=tvOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd-tvos" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build > "$RUNNER_TEMP/tvos.log" 2>&1 || { tail -120 "$RUNNER_TEMP/tvos.log"; exit 1; }
+          tail -3 "$RUNNER_TEMP/tvos.log"
+
+      - name: Build macOS
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme StreamingHub_macOS \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd-macos" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            build > "$RUNNER_TEMP/macos.log" 2>&1 || { tail -120 "$RUNNER_TEMP/macos.log"; exit 1; }
+          tail -3 "$RUNNER_TEMP/macos.log"
