@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
- * Führt `scripts/progress-api.test.ts` headless aus.
+ * Führt `scripts/api-routes.test.ts` headless aus: Fortschritt, Geräte-
+ * Aktivierung und Playlist-Abruf.
  *
- * Die Route importiert über den Next-Alias `@/…`; esbuild bündelt sie mit
+ * Die Routen importieren über den Next-Alias `@/…`; esbuild bündelt sie mit
  * `@` → `src` und ersetzt nur die Teile, die ohne Server fehlen
- * (Geräte-Auth, Premium-Status, NextResponse-Helfer). Die Datenbank ist eine
+ * (Session, Premium-Status, NextResponse-Helfer). Die Datenbank ist eine
  * echte SQLite-Datei in einem temporären Verzeichnis, das Schema legt
  * `src/lib/db.ts` selbst an.
  *
- * Aufruf: npm run test:progress-api
+ * Aufruf: npm run test:api
  */
 
 import { spawnSync } from "node:child_process";
@@ -19,9 +20,9 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workDir = mkdtempSync(path.join(tmpdir(), "streaminghub-progress-"));
-const bundle = path.join(workDir, "progress-api.mjs");
+const bundle = path.join(workDir, "api-routes.mjs");
 const databasePath = path.join(workDir, "test.db");
-const fakes = path.join(repoRoot, "scripts", "fakes", "progress-api.ts");
+const fakes = path.join(repoRoot, "scripts", "fakes", "api.ts");
 
 try {
   const esbuild = spawnSync(
@@ -29,14 +30,14 @@ try {
     [
       "--yes",
       "esbuild@0.25.0",
-      path.join(repoRoot, "scripts", "progress-api.test.ts"),
+      path.join(repoRoot, "scripts", "api-routes.test.ts"),
       "--bundle",
       "--platform=node",
       "--format=esm",
       "--target=node22",
       `--alias:@/lib/api=${fakes}`,
-      `--alias:@/lib/device-auth=${fakes}`,
       `--alias:@/lib/payments=${fakes}`,
+      `--alias:@/lib/session=${fakes}`,
       `--alias:@=${path.join(repoRoot, "src")}`,
       `--outfile=${bundle}`,
       "--log-level=warning",
