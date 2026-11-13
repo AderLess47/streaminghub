@@ -94,9 +94,10 @@ die App enthält deshalb keinen Link zur Web-Bezahlung.
 - `docs/API.md` kennt die Plattformwerte `firetv`, `androidtv`, `android`, `ios`
   und `web` – keinen für macOS. Der Mac meldet sich deshalb als `ios`
   (`AppModel.platform`). Sauber wäre ein zusätzlicher Wert in der API.
-- Verlängerungen meldet die App als neue Transaktion; ohne App-Start bleibt der
-  Serverstand alt, bis der Zeitraum abläuft. Ein Webhook (App Store Server
-  Notifications V2) würde das schließen.
+- Verlängerungen und Erstattungen kommen auch ohne App-Start an: Apple schickt
+  sie als App Store Server Notifications an `/api/v1/apple/notifications`.
+  Meldet die App zusätzlich eine Transaktion, gilt derselbe Zustand –
+  Duplikate erkennt der Server.
 - Die Playlist wird vollständig im Speicher gehalten. Bei sehr großen Listen
   (Zehntausende Einträge) wäre eine seitenweise Ablage nötig; der Low-Spec-Modus
   ist bisher nur ein Schalter ohne eigene Grenze.

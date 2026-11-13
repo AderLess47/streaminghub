@@ -17,10 +17,12 @@ const directory = mkdtempSync(path.join(os.tmpdir(), "streaminghub-apple-"));
 process.env.DATABASE_PATH = path.join(directory, "test.db");
 
 const { get, nowIso, run } = await import("./db.ts");
-const { applyVerifiedTransaction, appleSubscriptionView, getAppleReceipt, refreshStoredAppleReceipt } =
+const { applyAppleNotification, applyVerifiedTransaction, appleSubscriptionView, getAppleReceipt, refreshStoredAppleReceipt } =
   await import("./apple-subscriptions.ts");
-const { transactionState } = await import("./apple-iap.ts");
+const { transactionState, verifyAppleNotification } = await import("./apple-iap.ts");
 const { getSubscription } = await import("./payments.ts");
+
+import { buildNotification, rootPem } from "./__fixtures__/apple/jws.ts";
 
 import type { AppleTransaction } from "./apple-iap.ts";
 
@@ -152,6 +154,167 @@ test("refresh ends an elapsed period that the app never renewed", () => {
   assert.equal(view.status, "canceled");
   assert.equal(view.premiumActive, false);
   assert.equal(getAppleReceipt(tx.originalTransactionId)?.status, "expired");
+});
+
+/** Baut und prüft eine echte Store-Notification gegen die Testkette. */
+function storeNotification(
+  notificationType: string,
+  transaction: Record<string, unknown>,
+  options: { notificationUUID?: string; now?: number } = {},
+) {
+  const now = options.now ?? Date.now();
+  const signedPayload = buildNotification({
+    notificationType,
+    transaction,
+    now,
+    notificationUUID: options.notificationUUID,
+  });
+  const verified = verifyAppleNotification({
+    signedPayload,
+    bundleId: "org.streaminghub.app",
+    productId: "premium_monthly",
+    trustedRoots: [rootPem],
+    allowSandbox: false,
+    now,
+  });
+  if (!verified.ok) throw new Error(`Testmeldung ungültig: ${verified.code}`);
+  return verified.notification;
+}
+
+function purchase(userId: string, overrides: Partial<AppleTransaction> = {}) {
+  const tx = transaction(overrides);
+  applyVerifiedTransaction({ userId, transaction: tx, state: transactionState(tx) });
+  return tx;
+}
+
+test("a notification without a known receipt is acknowledged but not applied", () => {
+  createUser("user-unknown");
+  const outcome = applyAppleNotification(
+    storeNotification("DID_RENEW", { originalTransactionId: "1000000000000100" }),
+  );
+  assert.equal(outcome.handled, false);
+  if (!outcome.handled) assert.equal(outcome.reason, "unknown_transaction");
+  assert.equal(getSubscription("user-unknown")?.status ?? "none", "none");
+});
+
+test("DID_RENEW extends the subscription without the app", () => {
+  createUser("user-webhook-renew");
+  const tx = purchase("user-webhook-renew", { originalTransactionId: "1000000000000101" });
+  const renewedUntil = Date.now() + 60 * 86_400_000;
+
+  const outcome = applyAppleNotification(
+    storeNotification("DID_RENEW", {
+      transactionId: "2000000000000201",
+      originalTransactionId: tx.originalTransactionId,
+      expiresDate: renewedUntil,
+    }),
+  );
+
+  assert.equal(outcome.handled, true);
+  const view = appleSubscriptionView("user-webhook-renew");
+  assert.equal(view.status, "active");
+  assert.equal(view.premiumActive, true);
+  assert.equal(view.currentPeriodEnd, new Date(renewedUntil).toISOString());
+  assert.equal(receiptCount(tx.originalTransactionId), 1);
+});
+
+test("a refund notification ends premium immediately", () => {
+  createUser("user-webhook-refund");
+  const tx = purchase("user-webhook-refund", { originalTransactionId: "1000000000000102" });
+
+  const outcome = applyAppleNotification(
+    storeNotification("REFUND", {
+      originalTransactionId: tx.originalTransactionId,
+      revocationDate: Date.now() - 1_000,
+    }),
+  );
+
+  assert.equal(outcome.handled, true);
+  const view = appleSubscriptionView("user-webhook-refund");
+  assert.equal(view.status, "canceled");
+  assert.equal(view.premiumActive, false);
+  assert.equal(getAppleReceipt(tx.originalTransactionId)?.status, "canceled");
+});
+
+test("an EXPIRED notification ends an elapsed subscription", () => {
+  const base = Date.now();
+  const periodEnd = base + 60_000;
+  createUser("user-webhook-expired");
+  const tx = purchase("user-webhook-expired", {
+    originalTransactionId: "1000000000000103",
+    expiresDate: periodEnd,
+  });
+
+  // Die Meldung kommt nach Ablauf der Periode an – gleiche Transaktion, gleiches Ende.
+  const receivedAt = base + 120_000;
+  const notification = storeNotification(
+    "EXPIRED",
+    { originalTransactionId: tx.originalTransactionId, expiresDate: periodEnd },
+    { now: receivedAt },
+  );
+  const outcome = applyAppleNotification(notification, receivedAt);
+
+  assert.equal(outcome.handled, true);
+  assert.equal(appleSubscriptionView("user-webhook-expired").premiumActive, false);
+  assert.equal(getAppleReceipt(tx.originalTransactionId)?.status, "expired");
+});
+
+test("a late EXPIRED notification cannot cancel a renewed period", () => {
+  createUser("user-webhook-late");
+  const tx = purchase("user-webhook-late", { originalTransactionId: "1000000000000104" });
+  const renewedUntil = Date.now() + 60 * 86_400_000;
+  applyAppleNotification(
+    storeNotification("DID_RENEW", {
+      originalTransactionId: tx.originalTransactionId,
+      expiresDate: renewedUntil,
+    }),
+  );
+
+  // Die alte Periode läuft ab; die Meldung kommt verspätet an.
+  const outcome = applyAppleNotification(
+    storeNotification("EXPIRED", {
+      originalTransactionId: tx.originalTransactionId,
+      expiresDate: Date.now() + 30 * 86_400_000,
+    }),
+  );
+
+  assert.equal(outcome.handled, false);
+  if (!outcome.handled) assert.equal(outcome.reason, "stale");
+  const view = appleSubscriptionView("user-webhook-late");
+  assert.equal(view.premiumActive, true);
+  assert.equal(view.currentPeriodEnd, new Date(renewedUntil).toISOString());
+});
+
+test("the same notification is applied once", () => {
+  createUser("user-webhook-duplicate");
+  const tx = purchase("user-webhook-duplicate", { originalTransactionId: "1000000000000105" });
+  const notification = storeNotification(
+    "DID_RENEW",
+    { originalTransactionId: tx.originalTransactionId, expiresDate: Date.now() + 60 * 86_400_000 },
+    { notificationUUID: "5f0c1d0e-0000-4000-8000-0000000000aa" },
+  );
+
+  assert.equal(applyAppleNotification(notification).handled, true);
+  const second = applyAppleNotification(notification);
+  assert.equal(second.handled, false);
+  if (!second.handled) assert.equal(second.reason, "duplicate");
+});
+
+test("a notification does not take over a web subscription", () => {
+  createUser("user-webhook-web");
+  const tx = purchase("user-webhook-web", { originalTransactionId: "1000000000000106" });
+  run(`UPDATE subscriptions SET channel = 'web', provider = 'stripe' WHERE user_id = ?`, "user-webhook-web");
+
+  const outcome = applyAppleNotification(
+    storeNotification("DID_RENEW", {
+      originalTransactionId: tx.originalTransactionId,
+      expiresDate: Date.now() + 60 * 86_400_000,
+    }),
+  );
+
+  assert.equal(outcome.handled, false);
+  if (!outcome.handled) assert.equal(outcome.reason, "other_channel");
+  assert.equal(getSubscription("user-webhook-web")?.channel, "web");
 });
 
 test("refresh leaves an active period alone", () => {

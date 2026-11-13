@@ -11,11 +11,13 @@ im Konto geführt wird. Gegenstück zu [`IAP-AMAZON.md`](IAP-AMAZON.md).
 4. Der Server prüft Signaturkette und Ansprüche, schreibt Beleg und Abo-Zeile und
    antwortet mit dem Abo-Stand.
 5. Erst dann gilt Premium in der App. Ohne Serverantwort schaltet sie nichts frei.
+6. Verlängerung, Erstattung und Ablauf meldet Apple zusätzlich selbst als
+   **App Store Server Notification** an `/api/v1/apple/notifications` – dafür
+   muss die App nicht laufen.
 
-Verlängerungen kommen als neue Transaktion über `Transaction.updates` und laufen
-durch denselben Endpunkt. `POST /api/v1/apple/refresh` prüft nur den gespeicherten
-Zeitraum: Ist er abgelaufen und hat die App keine Verlängerung gemeldet, endet
-Premium.
+`POST /api/v1/apple/refresh` prüft den gespeicherten Zeitraum, wenn die App
+startet: Ist er abgelaufen und hat weder die App noch Apple eine Verlängerung
+gemeldet, endet Premium.
 
 ## Was der Server prüft
 
@@ -33,6 +35,36 @@ Premium.
 Die Wurzel liegt als Konstante in `src/lib/apple-root-ca.ts` (öffentliches
 Zertifikat, Quelle: apple.com/certificateauthority). Sie wird nicht zur Laufzeit
 geladen – die Prüfung soll nicht von einer zweiten Verbindung abhängen.
+
+## Benachrichtigungen von Apple
+
+App Store Server Notifications V2 gehen an `POST /api/v1/apple/notifications`.
+Apple ruft den Endpunkt ohne Token auf – der Beleg ist das signierte
+`signedPayload`. Geprüft werden die äußere Notification, die darin steckende
+signierte Transaktion und, wenn vorhanden, die signierte Verlängerungsinfo,
+jeweils mit derselben Kette bis Apple Root CA G3. Anders als beim Kauf sind
+abgelaufene und erstattete Transaktionen hier gültige Nachrichten; genau das
+teilen sie mit.
+
+| Meldung | Wirkung |
+| --- | --- |
+| `SUBSCRIBED`, `DID_RENEW`, `OFFER_REDEEMED`, `RENEWAL_EXTENDED`, `REFUND_REVERSED`, `TEST` | Zeitraum und Status aus der Transaktion übernehmen |
+| `REFUND`, `REVOKE` | Premium endet sofort (`revocationDate`) |
+| `EXPIRED`, `GRACE_PERIOD_EXPIRED` | Premium endet, sobald der Zeitraum vorbei ist |
+| `DID_CHANGE_RENEWAL_STATUS`, `DID_FAIL_TO_RENEW`, `CONSUMPTION_REQUEST`, `PRICE_INCREASE` | quittiert, ändert nichts – der laufende Zeitraum gilt weiter |
+| unbekannte Typen | quittiert, damit Apple nicht tagelang erneut zustellt |
+
+Zwei Schutzregeln:
+
+- **Duplikate:** `notificationUUID` landet in `subscription_events`; dieselbe
+  Meldung wird nur einmal angewendet.
+- **Reihenfolge:** Eine Meldung, deren Zeitraum vor dem gespeicherten endet, wird
+  verworfen. Sonst könnte eine verspätete `EXPIRED`-Meldung ein bereits
+  verlängertes Abo beenden.
+
+Ohne gespeicherten Beleg gibt es kein Konto, dem eine Meldung gehört; sie wird mit
+`200` quittiert, aber nicht angewendet. Ungültige Belege bekommen `400` und
+landen im Audit-Log.
 
 ## Konfiguration
 
@@ -59,16 +91,14 @@ Es gibt keine stille Zusammenführung zwischen Web-, Amazon- und App-Store-Abo:
 
 ## Grenzen dieser Fassung
 
-- **Kein App Store Server API und keine Server Notifications V2.** Verlängerungen
-  kennt der Server deshalb erst, wenn die App sie meldet. Wer die App monatelang
-  nicht öffnet, verliert Premium (die Periode läuft ab) und bekommt es beim
-  nächsten Start zurück, sobald die Transaktion eintrifft. Wer das ohne App-Start
-  braucht, ergänzt einen Webhook auf `signedPayload` – die Prüflogik dafür ist
-  bereits vorhanden.
+- **Kein App Store Server API.** Der Server fragt Apple nicht aktiv nach dem
+  Status; er kennt nur, was Käufe und Notifications melden. Für den Normalfall
+  reicht das, für Nachfragen beim Support wäre die API der nächste Schritt.
 - **Kein `appAccountToken`.** Die Zuordnung läuft über den Geräte-Token des
   Aufrufs, nicht über eine im Kauf mitgegebene Konto-ID.
-- **Keine Erstattungs-Ereignisse in Echtzeit.** `revocationDate` wird bei der
-  nächsten gemeldeten Transaktion bzw. beim Refresh ausgewertet.
+- **Benachrichtigungen brauchen die öffentliche URL.** Ein lokal laufender
+  Server bekommt keine Zustellung; Testläufe brauchen ein Deployment oder eine
+  Weiterleitung.
 
 ## Prüfungen
 
@@ -76,12 +106,19 @@ Es gibt keine stille Zusammenführung zwischen Web-, Amazon- und App-Store-Abo:
 (`src/lib/__fixtures__/apple/`): gültige Transaktion, fehlendes Zwischenzertifikat,
 manipulierte Nutzlast, fremder Schlüssel, unbekannte Wurzel, fremdes Bundle,
 fremdes Produkt, falscher Produkttyp, Sandbox ohne Freigabe, Ablauf, Widerruf,
-kaputte Eingaben, Zustandsregeln, Konfliktregeln und das Replay-Fenster.
-Die Testkette ist kein Geheimnis und nicht für den Produktivbetrieb gedacht.
+kaputte Eingaben, Zustandsregeln, Konfliktregeln und das Replay-Fenster – plus
+dieselben Regeln für Notifications (äußere Hülle, innere Transaktion,
+Verlängerungsinfo, manipulierte Hülle, fehlende Transaktion, Sandbox, Wirkung der
+Meldungstypen). Die Testkette ist kein Geheimnis und nicht für den
+Produktivbetrieb gedacht.
 
 `src/lib/apple-subscriptions.test.ts` prüft zusätzlich die Schreibwege gegen eine
 echte SQLite-Datei: Beleg und Abo-Zeile entstehen in einer Transaktion, eine
 Verlängerung aktualisiert denselben Beleg statt einen zweiten anzulegen, der
 Unique-Index verhindert die Zuordnung zu einem zweiten Konto, eine Erstattung
 beendet Premium sofort, und der Refresh beendet eine abgelaufene Periode, ohne
-eine laufende anzutasten.
+eine laufende anzutasten. Für Notifications kommt dazu: unbekannte Transaktion
+wird quittiert statt geschrieben, `DID_RENEW` verlängert ohne App-Start, `REFUND`
+beendet Premium sofort, `EXPIRED` beendet eine abgelaufene Periode, eine
+verspätete `EXPIRED`-Meldung kann ein verlängertes Abo nicht kippen, dieselbe
+`notificationUUID` wirkt nur einmal, und ein Web-Abo wird nicht übernommen.

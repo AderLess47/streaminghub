@@ -7,6 +7,11 @@
  * sich also nicht selbst freischalten, und ein abgefangener Beleg nützt nichts,
  * weil Signatur und Produkt geprüft werden.
  *
+ * Dieselbe Prüfung trägt die App Store Server Notifications V2: Apple schickt
+ * ein `signedPayload`, darin stecken eine zweite signierte Transaktion und die
+ * Verlängerungsinfo. Beide JWS laufen durch `verifyAppleJws`, damit es nur einen
+ * Ort für Kette, Signatur und Zertifikatslaufzeiten gibt.
+ *
  * Alles in dieser Datei ist rein: Konfiguration kommt als Argument, die
  * Persistenz liegt in `apple-subscriptions.ts`. Dadurch lässt sich die Prüfung
  * ohne Netz, Datenbank oder Next.js testen (siehe `apple-iap.test.ts`).
@@ -30,6 +35,25 @@ export type AppleTransaction = {
   appAccountToken: string | null;
 };
 
+export type AppleRenewalInfo = {
+  originalTransactionId: string | null;
+  autoRenewProductId: string | null;
+  autoRenewStatus: number | null;
+  expirationIntent: number | null;
+  gracePeriodExpiresDate: number | null;
+};
+
+export type AppleNotification = {
+  notificationType: string;
+  notificationSubtype: string | null;
+  notificationUUID: string;
+  version: string | null;
+  environment: string;
+  signedDate: number;
+  transaction: AppleTransaction;
+  renewalInfo: AppleRenewalInfo | null;
+};
+
 export type AppleErrorCode =
   | "malformed"
   | "bad_signature"
@@ -44,6 +68,10 @@ export type AppleErrorCode =
 
 export type AppleVerifyResult =
   | { ok: true; transaction: AppleTransaction }
+  | { ok: false; code: AppleErrorCode; message: string };
+
+export type AppleNotificationResult =
+  | { ok: true; notification: AppleNotification }
   | { ok: false; code: AppleErrorCode; message: string };
 
 export type AppleSubscriptionState = {
@@ -73,6 +101,11 @@ const asNumber = (value: unknown): number | null =>
 const asString = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
 
+const asObject = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
 type JwsHeader = {
   alg?: string;
   x5c?: unknown;
@@ -96,28 +129,29 @@ function parseJson(value: Buffer | null): Record<string, unknown> | null {
   }
 }
 
+export type AppleJwsResult =
+  | { ok: true; payload: Record<string, unknown> }
+  | { ok: false; code: AppleErrorCode; message: string };
+
 /**
- * Prüft eine StoreKit-Transaktion gegen die übergebenen Wurzelzertifikate.
+ * Prüft ein Apple-JWS (Transaktion oder Notification) gegen die übergebenen
+ * Wurzelzertifikate und gibt die Nutzlast zurück.
  *
  * `trustedRoots` sind PEM-Zeichenketten; produktiv ist das Apples Root CA G3,
  * im Test eine eigens erzeugte Kette.
  */
-export function verifyAppleTransaction(options: {
-  jws: string;
-  bundleId: string;
-  productId: string;
-  trustedRoots: string[];
-  allowSandbox: boolean;
-  now?: number;
-}): AppleVerifyResult {
+export function verifyAppleJws(
+  jws: string,
+  options: { trustedRoots: string[]; now?: number },
+): AppleJwsResult {
   const now = options.now ?? Date.now();
-  const fail = (code: AppleErrorCode): AppleVerifyResult => ({
+  const fail = (code: AppleErrorCode): AppleJwsResult => ({
     ok: false,
     code,
     message: APPLE_ERROR_MESSAGES[code],
   });
 
-  const parts = options.jws.trim().split(".");
+  const parts = jws.trim().split(".");
   if (parts.length !== 3) return fail("malformed");
   const [headerPart, payloadPart, signaturePart] = parts as [string, string, string];
 
@@ -204,10 +238,13 @@ export function verifyAppleTransaction(options: {
   }
   if (!signatureValid) return fail("bad_signature");
 
-  // 5. Ansprüche.
   const payload = parseJson(decodeSegment(payloadPart));
   if (!payload) return fail("malformed");
+  return { ok: true, payload };
+}
 
+/** Liest die Felder einer Transaktion; prüft nur, dass die Kennungen da sind. */
+export function parseAppleTransaction(payload: Record<string, unknown>): AppleTransaction | null {
   const transaction: AppleTransaction = {
     transactionId: asString(payload.transactionId) ?? "",
     originalTransactionId: asString(payload.originalTransactionId) ?? "",
@@ -223,8 +260,38 @@ export function verifyAppleTransaction(options: {
   };
 
   if (!transaction.transactionId || !transaction.originalTransactionId || !transaction.productId) {
-    return fail("malformed");
+    return null;
   }
+  return transaction;
+}
+
+/**
+ * Prüft eine StoreKit-Transaktion gegen die übergebenen Wurzelzertifikate.
+ *
+ * `trustedRoots` sind PEM-Zeichenketten; produktiv ist das Apples Root CA G3,
+ * im Test eine eigens erzeugte Kette.
+ */
+export function verifyAppleTransaction(options: {
+  jws: string;
+  bundleId: string;
+  productId: string;
+  trustedRoots: string[];
+  allowSandbox: boolean;
+  now?: number;
+}): AppleVerifyResult {
+  const now = options.now ?? Date.now();
+  const fail = (code: AppleErrorCode): AppleVerifyResult => ({
+    ok: false,
+    code,
+    message: APPLE_ERROR_MESSAGES[code],
+  });
+
+  const verified = verifyAppleJws(options.jws, { trustedRoots: options.trustedRoots, now });
+  if (!verified.ok) return fail(verified.code);
+
+  const transaction = parseAppleTransaction(verified.payload);
+  if (!transaction) return fail("malformed");
+
   if (transaction.bundleId !== options.bundleId) return fail("wrong_bundle");
   if (transaction.productId !== options.productId) return fail("wrong_product");
   if (transaction.productType !== "Auto-Renewable Subscription") return fail("unsupported_type");
@@ -239,6 +306,134 @@ export function verifyAppleTransaction(options: {
   }
 
   return { ok: true, transaction };
+}
+
+/**
+ * Prüft ein `signedPayload` aus App Store Server Notifications V2.
+ *
+ * Anders als beim Kauf sind abgelaufene und erstattete Transaktionen hier
+ * ausdrücklich gültige Nachrichten – genau das teilen sie ja mit. Geprüft
+ * werden Signaturkette, Bundle, Produkt, Abo-Typ und die Sandbox-Freigabe.
+ */
+export function verifyAppleNotification(options: {
+  signedPayload: string;
+  bundleId: string;
+  productId: string;
+  trustedRoots: string[];
+  allowSandbox: boolean;
+  now?: number;
+}): AppleNotificationResult {
+  const now = options.now ?? Date.now();
+  const fail = (code: AppleErrorCode): AppleNotificationResult => ({
+    ok: false,
+    code,
+    message: APPLE_ERROR_MESSAGES[code],
+  });
+
+  const outer = verifyAppleJws(options.signedPayload, {
+    trustedRoots: options.trustedRoots,
+    now,
+  });
+  if (!outer.ok) return fail(outer.code);
+
+  const payload = outer.payload;
+  const data = asObject(payload.data);
+  const notificationType = asString(payload.notificationType);
+  const notificationUUID = asString(payload.notificationUUID);
+  const signedTransactionInfo = data ? asString(data.signedTransactionInfo) : null;
+  if (!notificationType || !notificationUUID || !data || !signedTransactionInfo) {
+    return fail("malformed");
+  }
+
+  // Die Hülle nennt Bundle und Umgebung selbst; beide müssen zur Installation passen.
+  const envelopeBundle = asString(data.bundleId);
+  if (envelopeBundle && envelopeBundle !== options.bundleId) return fail("wrong_bundle");
+  const environment = asString(data.environment) ?? asString(payload.environment) ?? "";
+  if (environment === "Sandbox" && !options.allowSandbox) return fail("sandbox_not_allowed");
+
+  const inner = verifyAppleJws(signedTransactionInfo, {
+    trustedRoots: options.trustedRoots,
+    now,
+  });
+  if (!inner.ok) return fail(inner.code);
+
+  const transaction = parseAppleTransaction(inner.payload);
+  if (!transaction) return fail("malformed");
+  if (transaction.bundleId !== options.bundleId) return fail("wrong_bundle");
+  if (transaction.productId !== options.productId) return fail("wrong_product");
+  if (transaction.productType !== "Auto-Renewable Subscription") return fail("unsupported_type");
+  if (transaction.environment === "Sandbox" && !options.allowSandbox) {
+    return fail("sandbox_not_allowed");
+  }
+
+  // Die Verlängerungsinfo ist optional, aber wenn sie da ist, wird sie geprüft.
+  let renewalInfo: AppleRenewalInfo | null = null;
+  const signedRenewalInfo = asString(data.signedRenewalInfo);
+  if (signedRenewalInfo) {
+    const renewal = verifyAppleJws(signedRenewalInfo, {
+      trustedRoots: options.trustedRoots,
+      now,
+    });
+    if (!renewal.ok) return fail(renewal.code);
+    const info = renewal.payload;
+    renewalInfo = {
+      originalTransactionId: asString(info.originalTransactionId),
+      autoRenewProductId: asString(info.autoRenewProductId),
+      autoRenewStatus: asNumber(info.autoRenewStatus),
+      expirationIntent: asNumber(info.expirationIntent),
+      gracePeriodExpiresDate: asNumber(info.gracePeriodExpiresDate),
+    };
+  }
+
+  return {
+    ok: true,
+    notification: {
+      notificationType,
+      notificationSubtype: asString(payload.subtype),
+      notificationUUID,
+      version: asString(payload.version),
+      environment,
+      signedDate: asNumber(payload.signedDate) ?? 0,
+      transaction,
+      renewalInfo,
+    },
+  };
+}
+
+/**
+ * Welche Meldungen den gespeicherten Zustand ändern.
+ *
+ * `DID_FAIL_TO_RENEW` (Zahlung wird erneut versucht) und
+ * `DID_CHANGE_RENEWAL_STATUS` ändern nichts am laufenden Zeitraum; der Ablauf
+ * wird weiterhin über `expiresDate` bzw. `EXPIRED` erkannt. Unbekannte Typen
+ * werden ignoriert, damit neue Apple-Meldungen keinen Fehler auslösen – Apple
+ * würde sonst tagelang erneut zustellen.
+ */
+export function notificationEffect(
+  notification: AppleNotification,
+):
+  | { kind: "apply" }
+  | { kind: "ignore"; reason: "no_state_change" | "unknown_type" } {
+  switch (notification.notificationType) {
+    case "SUBSCRIBED":
+    case "DID_RENEW":
+    case "OFFER_REDEEMED":
+    case "RENEWAL_EXTENDED":
+    case "REFUND":
+    case "REFUND_REVERSED":
+    case "REVOKE":
+    case "EXPIRED":
+    case "GRACE_PERIOD_EXPIRED":
+    case "TEST":
+      return { kind: "apply" };
+    case "DID_CHANGE_RENEWAL_STATUS":
+    case "DID_FAIL_TO_RENEW":
+    case "CONSUMPTION_REQUEST":
+    case "PRICE_INCREASE":
+      return { kind: "ignore", reason: "no_state_change" };
+    default:
+      return { kind: "ignore", reason: "unknown_type" };
+  }
 }
 
 /**
