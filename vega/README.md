@@ -129,7 +129,8 @@ Node: Playlist-Parser, XMLTV-Parser, HLS-Nahtstelle und die Speicherschicht
 
 ```bash
 cd vega
-npm run test:headless                      # Parser und HLS-Nahtstelle, kein SDK nötig
+npm run test:headless                      # Parser, HLS-Nahtstelle und Speicher, kein SDK nötig
+npm run test:resume                        # Fortschritt/Fortsetzen gegen die Serverregeln
 npm run verify:shaka                       # Voraussetzungen, Setup, Typprüfung, Build, .vpkg
 npm run verify:shaka -- --device VirtualDevice:Tv --start-vvd \
     --smoke-url https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8

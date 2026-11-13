@@ -11,7 +11,8 @@
     "doctor": "vega project doctor",
     "setup:shaka": "node scripts/setup-shaka.mjs",
     "verify:shaka": "node scripts/verify-shaka.mjs",
-    "test:headless": "node scripts/headless-check.mjs"
+    "test:headless": "node scripts/headless-run.mjs scripts/headless-check.ts",
+    "test:resume": "node scripts/headless-run.mjs scripts/headless-resume.ts"
   },
   "dependencies": {
     "@amazon-devices/react-native-kepler": "4.0.2",

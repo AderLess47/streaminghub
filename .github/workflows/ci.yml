@@ -45,6 +45,12 @@ jobs:
         working-directory: vega
         run: npm run test:headless
 
+      # Fortschritt und Fortsetzen: App-Regeln gegen die Serverregeln aus
+      # src/lib/watch-progress.ts.
+      - name: Vega resume rules
+        working-directory: vega
+        run: npm run test:resume
+
       - name: Download page test
         run: npm run test:download-page
 
