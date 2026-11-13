@@ -1,6 +1,8 @@
-# StreamingHub für iOS, iPadOS und macOS
+# StreamingHub für iOS, iPadOS, macOS und Apple TV
 
-Native SwiftUI-App für iPhone, iPad und Mac – ein Target, drei Plattformen.
+Native SwiftUI-App für iPhone, iPad, Mac und Apple TV – ein Target, vier
+Plattformen. Apple TV nutzt dieselbe Bundle-ID und damit Universal Purchase:
+ein Abo gilt auf allen Geräten, und die Serverprüfung bleibt dieselbe.
 Funktionaler Zwilling der Android-App (`../android`) und der Vega-App
 (`../vega`): Playlist-Import, Live/Filme/Serien, Kategorien, Suche, Favoriten,
 Wiedergabe mit Fortsetzungspunkt, XMLTV-Programmführer mit echten
@@ -17,7 +19,7 @@ sowie optional die vom Kunden freigegebene M3U-Quell-URL (`../docs/API.md`).
 Package.swift              SwiftPM-Paket „StreamingHubCore" (Foundation, ohne UI)
 Sources/StreamingHubCore/  Modell, M3U-/XMLTV-Parser, API-Client, Regeln, Demo
 Tests/StreamingHubCoreTests/ XCTest für Parser, Regeln und Demo-Bibliothek
-StreamingHub/              SwiftUI-App (iOS, iPadOS, macOS)
+StreamingHub/              SwiftUI-App (iOS, iPadOS, macOS, tvOS)
   App/                     AppModel, lokale Ablage, Schlüsselbund, Erinnerungen, StoreKit
   UI/                      Ansichten und Bausteine
 project.yml                XcodeGen-Spezifikation
@@ -33,11 +35,15 @@ brew install xcodegen
 cd apple
 xcodegen generate            # erzeugt StreamingHub.xcodeproj (nicht eingecheckt)
 open StreamingHub.xcodeproj  # oder:
-xcodebuild -scheme StreamingHub -destination 'platform=iOS Simulator,name=iPhone 16' build
+xcodebuild -scheme StreamingHub_iOS -destination 'platform=iOS Simulator,name=iPhone 16' build
+xcodebuild -scheme StreamingHub_tvOS -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' build
 swift test                   # Prüfungen der Core-Bibliothek
 ```
 
-Voraussetzungen: Xcode 15+, Swift 5.9, Deployment-Ziele iOS 17 / macOS 14.
+XcodeGen legt für die Plattformliste je ein Target an (`StreamingHub_iOS`,
+`StreamingHub_macOS`, `StreamingHub_tvOS`), alle mit `PRODUCT_NAME`
+`StreamingHub` und derselben Bundle-ID. Voraussetzungen: Xcode 15+, Swift 5.9,
+Deployment-Ziele iOS 17 / macOS 14 / tvOS 17.
 Ein `.pbxproj` von Hand zu pflegen wäre unlesbar; `project.yml` beschreibt
 dasselbe Ziel in wenigen Zeilen.
 
@@ -51,6 +57,7 @@ weder Xcode noch einen Swift-Compiler. Das heißt:
 | Core-Bibliothek kompiliert und XCTest-Suite läuft | CI-Job `Apple core tests` mit offizieller Swift-Toolchain; **14 Prüfungen, alle grün** |
 | Parser, Regeln, Demo gegen die Kotlin- und TypeScript-Fassung | dieselben Fälle wie dort, zusätzlich hier als Test festgeschrieben |
 | SwiftUI-Oberfläche, Build im Simulator, Gerät, VoiceOver, StoreKit | **nicht geprüft** – dafür braucht es Xcode |
+| tvOS-Target (Projektdatei, Fokusführung, Wiedergabe auf dem Fernseher) | **nicht geprüft** – weder tvOS-SDK noch Simulator vorhanden |
 
 Der erste CI-Lauf hat zwei echte Fehler gefunden, die ohne Compiler niemand
 gesehen hätte: `URLSession.data(for:)` gibt es nur in Apples Foundation (jetzt
@@ -89,11 +96,36 @@ die App zeigt den Grund, statt einen Kauf anzunehmen und nichts freizuschalten.
 Ein App-Store-Build darf außerdem nicht auf einen externen Checkout verweisen;
 die App enthält deshalb keinen Link zur Web-Bezahlung.
 
+## Apple TV (tvOS)
+
+Dasselbe Target läuft auf dem Apple TV; die Oberfläche bleibt geteilt, nur wo
+sich Fernsehen anders bedient, gibt es einen eigenen Zweig:
+
+- **Kopplung statt Anmeldung:** Der Code aus der App wird auf
+  `streaminghub.org/activate` eingetragen – auf dem Fernseher über die
+  Bildschirmtastatur, die Remote-App oder eine Bluetooth-Tastatur. Damit gibt es
+  auf dem TV kein Passwortfeld.
+- **Fokus statt Zeiger:** Kacheln nutzen auf tvOS den Fokus-Stil `.card`, damit
+  sichtbar ist, was die Fernbedienung gerade ausgewählt hat. Die Navigation
+  liegt in der Tableiste am oberen Rand, nicht in einer Seitenleiste.
+- **Hintergründe:** tvOS kennt die gruppierten Systemfarben nicht; die Karten-
+  und Seitenfarben sind dort fest und dunkel (`Theme`).
+- **Erinnerungen:** Plant weiterhin `UNUserNotificationCenter`. Apple TV zeigt
+  sie als Hinweis am App-Symbol, nicht als eingeblendeten Text; die Sendung
+  selbst steht jederzeit im Programmführer unter „Vorgemerkt“.
+- **Premium:** StoreKit 2 ist auf tvOS verfügbar; der Kauf läuft über denselben
+  Serverendpunkt. Ein Kauf gilt dank gleicher Bundle-ID auch auf iPhone, iPad
+  und Mac.
+
+Nicht gebaut: In dieser Umgebung gibt es weder Xcode noch ein tvOS-SDK. Die
+tvOS-Zweige sind deshalb nur gelesen, nicht kompiliert.
+
 ## Kleinere Einschränkungen
 
 - `docs/API.md` kennt die Plattformwerte `firetv`, `androidtv`, `android`, `ios`
-  und `web` – keinen für macOS. Der Mac meldet sich deshalb als `ios`
-  (`AppModel.platform`). Sauber wäre ein zusätzlicher Wert in der API.
+  und `web` – weder macOS noch tvOS haben einen eigenen Wert. Beide melden sich
+  deshalb als `ios` (`AppModel.platform`). Sauber wäre ein zusätzlicher Wert in
+  der API.
 - Verlängerungen und Erstattungen kommen auch ohne App-Start an: Apple schickt
   sie als App Store Server Notifications an `/api/v1/apple/notifications`.
   Meldet die App zusätzlich eine Transaktion, gilt derselbe Zustand –
@@ -108,10 +140,9 @@ die App enthält deshalb keinen Link zur Web-Bezahlung.
 
 ## Nächste Schritte
 
-1. `xcodegen generate`, Build im Simulator, `swift test` laufen lassen.
+1. `xcodegen generate`, Build in den Simulatoren für iOS und tvOS, `swift test`
+   laufen lassen.
 2. Fehler aus dem ersten echten Build beheben (erwartbar: Kleinigkeiten an
-   `AVKit`/`StoreKit`-Verfügbarkeiten pro Plattform).
-3. Serverendpunkt für die App-Store-Prüfung festlegen, dann
-   `premium.configure(verifier:)` anschließen.
-4. Prüfprotokoll nach `../docs/PRUEFPROTOKOLL-VORLAGE.md` auf iPhone, iPad und
-   Mac – inklusive VoiceOver und Dynamic Type.
+   `AVKit`/`StoreKit`-Verfügbarkeiten und an tvOS-Fokus).
+3. Prüfprotokoll nach `../docs/PRUEFPROTOKOLL-VORLAGE.md` auf iPhone, iPad, Mac
+   und Apple TV – inklusive VoiceOver und Dynamic Type.

@@ -130,7 +130,7 @@ struct ChannelTile: View {
                     .stroke(isFavorite ? Theme.accent : Theme.border, lineWidth: isFavorite ? 2 : 1)
             )
         }
-        .buttonStyle(.plain)
+        .modifier(ChannelTileButtonStyle())
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Öffnet die Wiedergabe")
         .contextMenu {
@@ -143,6 +143,20 @@ struct ChannelTile: View {
         if isFavorite { parts.append("Favorit") }
         if let resumeText { parts.append(resumeText) }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// Auf dem Apple TV braucht eine Kachel den Fokus-Rahmen von `.card`; `.plain`
+/// bliebe dort ohne jede Rückmeldung, weil es keinen Zeiger gibt.
+private struct ChannelTileButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        // Die Zweige werden vor der Typprüfung ausgewählt; `return` ist nötig,
+        // weil ein `#if` im Rumpf kein einzelner Ausdruck mehr ist.
+        #if os(tvOS)
+        return content.buttonStyle(.card)
+        #else
+        return content.buttonStyle(.plain)
+        #endif
     }
 }
 

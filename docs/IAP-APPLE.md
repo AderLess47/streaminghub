@@ -75,7 +75,9 @@ landen im Audit-Log.
 | `APPLE_IAP_ALLOW_SANDBOX` | `1`, wenn Testkäufe aus dem Sandbox-/TestFlight-Konto akzeptiert werden sollen. In Produktion aus lassen. |
 
 Keine Secrets: Der private Schlüssel der App liegt nicht auf dem Server. Für die
-Prüfung genügt Apples öffentliche Zertifikatskette.
+Prüfung genügt Apples öffentliche Zertifikatskette. iPhone, iPad, Mac und Apple
+TV teilen sich dieselbe Bundle-ID (Universal Purchase); `APPLE_IAP_BUNDLE_ID`
+gilt deshalb für alle vier Plattformen, und ein Kauf wirkt überall.
 
 ## Konflikte
 

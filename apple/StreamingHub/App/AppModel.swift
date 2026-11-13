@@ -379,14 +379,16 @@ final class AppModel {
     var deviceName: String {
         #if os(macOS)
         return Host.current().localizedName ?? "Mac"
+        #elseif os(tvOS)
+        return "Apple TV"
         #else
         return "iPhone oder iPad"
         #endif
     }
 
     /// `docs/API.md` kennt die Plattformwerte `firetv`, `androidtv`, `android`,
-    /// `ios` und `web`. Einen macOS-Wert gibt es noch nicht, deshalb meldet sich
-    /// der Mac als `ios` – eine Erweiterung der API wäre der saubere Weg.
+    /// `ios` und `web`. Weder macOS noch tvOS haben einen eigenen Wert, deshalb
+    /// melden sich beide als `ios` – eine Erweiterung der API wäre der saubere Weg.
     var platform: String { "ios" }
 
     // MARK: - Hilfen
