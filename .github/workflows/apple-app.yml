@@ -46,8 +46,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd-ios" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build > "$RUNNER_TEMP/ios.log" 2>&1 || { tail -120 "$RUNNER_TEMP/ios.log"; exit 1; }
-          tail -3 "$RUNNER_TEMP/ios.log"
+            -quiet build
 
       - name: Build tvOS
         working-directory: apple
@@ -58,8 +57,7 @@ jobs:
             -destination 'generic/platform=tvOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd-tvos" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build > "$RUNNER_TEMP/tvos.log" 2>&1 || { tail -120 "$RUNNER_TEMP/tvos.log"; exit 1; }
-          tail -3 "$RUNNER_TEMP/tvos.log"
+            -quiet build
 
       - name: Build macOS
         working-directory: apple
@@ -70,5 +68,4 @@ jobs:
             -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/dd-macos" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            build > "$RUNNER_TEMP/macos.log" 2>&1 || { tail -120 "$RUNNER_TEMP/macos.log"; exit 1; }
-          tail -3 "$RUNNER_TEMP/macos.log"
+            -quiet build
