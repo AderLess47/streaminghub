@@ -47,6 +47,11 @@ struct ReminderScheduler {
     }
 
     func schedule(_ reminder: Reminder) async throws {
+        #if os(tvOS)
+        // tvOS hat keine Inhaltsfelder für lokale Benachrichtigungen (`title`,
+        // `body` fehlen im SDK) und zeigt sie auch nicht an.
+        throw SchedulingError.failed("Erinnerungen sind auf Apple TV nicht verfügbar.")
+        #else
         guard ReminderRules.nextFireDate(for: reminder) != nil else { return }
         guard await requestAuthorization() else { throw SchedulingError.denied }
 
@@ -68,6 +73,7 @@ struct ReminderScheduler {
         } catch {
             throw SchedulingError.failed("Die Erinnerung konnte nicht geplant werden: \(error.localizedDescription)")
         }
+        #endif
     }
 
     func cancel(_ reminder: Reminder) {
