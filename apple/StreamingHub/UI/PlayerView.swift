@@ -61,6 +61,7 @@ struct PlayerView: View {
     private func prepare() async {
         guard let url = channel.playbackURL else {
             failure = "Die Adresse dieses Eintrags ist keine abspielbare URL."
+            DiagnosticsLog.shared.record("Eintrag ohne abspielbare URL.", level: .warn, area: "player")
             return
         }
 

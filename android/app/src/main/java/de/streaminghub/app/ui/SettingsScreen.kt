@@ -68,6 +68,11 @@ import de.streaminghub.app.ui.theme.Rose
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.Intent
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import de.streaminghub.app.data.AppLog
 
 @Composable
 fun SettingsScreen(
@@ -573,6 +578,72 @@ fun SettingsScreen(
                             text = "Der gespeicherte Wiedergabefortschritt wurde gelöscht.",
                             color = Cyan,
                             style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+
+            item {
+                val context = LocalContext.current
+                var logVisible by remember { mutableStateOf(false) }
+                var logChars by remember { mutableStateOf(AppLog.sizeChars()) }
+                SettingsCard(
+                    title = "Diagnose",
+                    subtitle = "Fehler und Gerätedaten – bleibt auf diesem Gerät",
+                ) {
+                    Text(
+                        text = "Protokoll: ${logChars} Zeichen. Aufgezeichnet werden Zeitpunkt, Stufe, Bereich, Meldung sowie Modell, Systemstand, Bildschirm und Sprache. Keine Tokens, keine E-Mail-Adressen, Playlist-Adressen ohne Zugangsdaten und ohne Query.",
+                        color = Muted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SecondaryAction(
+                            text = "Protokoll teilen",
+                            icon = Icons.Rounded.Share,
+                            onClick = {
+                                val body = AppLog.read().ifBlank { "Noch keine Einträge." }
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, "StreamingHub Diagnose")
+                                    putExtra(Intent.EXTRA_TEXT, body)
+                                }
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(share, "Protokoll teilen"))
+                                }
+                            },
+                        )
+                        SecondaryAction(
+                            text = if (logVisible) "Protokoll ausblenden" else "Protokoll anzeigen",
+                            onClick = {
+                                logVisible = !logVisible
+                                logChars = AppLog.sizeChars()
+                            },
+                        )
+                        SecondaryAction(
+                            text = "Protokoll löschen",
+                            icon = Icons.Rounded.Delete,
+                            danger = true,
+                            onClick = {
+                                AppLog.clear()
+                                logVisible = false
+                                logChars = AppLog.sizeChars()
+                            },
+                        )
+                    }
+                    if (logVisible) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = AppLog.read().takeLast(4000).ifBlank { "Noch keine Einträge." },
+                            color = Muted,
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            fontFamily = FontFamily.Monospace,
                         )
                     }
                 }

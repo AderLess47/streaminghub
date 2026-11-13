@@ -5,7 +5,8 @@ Android-App in [`../android`](../android). Umfang der ersten Fassung: Playlist-
 Import, Einordnung in Live/Filme/Serien, Suche, Kategorien, Favoriten,
 Wiedergabe mit Fortsetzungspunkt, XMLTV-Programmführer mit Erinnerungen,
 Gerätekopplung über `streaminghub.org/activate`, Kontostatus, Premium-Anzeige,
-Demo-Modus und Low-Spec-Modus.
+Demo-Modus, Low-Spec-Modus, Diagnose-Protokoll sowie Datenschutz-, Impressum- und
+Kontolöschungs-Links.
 
 Die App ist **kein** Inhaltsangebot: Sie liest ausschließlich die vom Nutzer
 importierten Quellen. Übertragen werden nur Konto-, Geräte- und Abo-Metadaten
@@ -28,6 +29,19 @@ Quellen: vier eindeutige Einträge aus fünf M3U-Blöcken (Dublette entfernt),
 `#EXTGRP`-Fallback, Film-/Serien-Erkennung, Live als Standard, XMLTV-Zeit mit
 und ohne Zone, Entitäten (`&amp;`), verworfene Sendungen mit Ende vor Start,
 Fallback auf die Kanal-ID, Sortierung nach Startzeit.
+
+## Diagnose
+
+Die App schreibt ein Protokoll für Fehler und Hardware in AsyncStorage
+(`streaminghub.diagnostics`). Es beginnt je Start mit einem Geräte-Kopf (System,
+Modell, Bildschirm, Sprache, App-Version) und hält Fehler aus Playlist-, EPG-,
+Konto-, Kopplungs- und Wiedergabepfaden fest. Die Einstellungen zeigen die
+Einträge, löschen sie auf Wunsch; übertragen wird nichts automatisch. Tokens,
+E-Mail-Adressen und URL-Query-Parameter werden nicht geschrieben. Format und
+Grenzen: `../docs/APP-PARITAET.md`.
+
+Der Stand gegenüber Android und Apple steht in `../docs/APP-PARITAET.md`: kein
+Datei-Import (Vega OS hat keinen Dateidialog) und kein Kauf in der App.
 
 ## Bauen und starten
 

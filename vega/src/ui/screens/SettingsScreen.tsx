@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Linking, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { AccountInfo, Settings } from "../../model/types";
 import type { PremiumBillingState } from "../../billing/premium";
+import { clearLog, logError, logSummary, readLogText, type LogSummary } from "../../data/diagnostics";
 import { formatDateTime } from "../../data/epg";
 import { Badge, Button, Card, Notice, SectionTitle } from "../components";
 import { colors, radius, space, text as sizes } from "../theme";
@@ -34,7 +35,13 @@ export function SettingsScreen(props: Props) {
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [epgUrl, setEpgUrl] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [logInfo, setLogInfo] = useState<LogSummary | null>(null);
+  const [logText, setLogText] = useState<string | null>(null);
   const { busy } = props;
+
+  useEffect(() => {
+    void logSummary().then(setLogInfo);
+  }, []);
 
   async function run(action: () => Promise<void>) {
     setLocalError(null);
@@ -42,6 +49,16 @@ export function SettingsScreen(props: Props) {
       await action();
     } catch (reason) {
       setLocalError(reason instanceof Error ? reason.message : "Der Vorgang ist fehlgeschlagen.");
+      void logError("settings", reason);
+    }
+  }
+
+  async function openSite(path: string) {
+    const url = `https://streaminghub.org${path}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setLocalError(`Der Browser konnte nicht geöffnet werden. Die Adresse lautet ${url}`);
     }
   }
 
@@ -190,6 +207,62 @@ export function SettingsScreen(props: Props) {
         </View>
       </Card>
 
+      <SectionTitle hint="Öffnet streaminghub.org">Rechtliches und Konto</SectionTitle>
+      <Card style={styles.card}>
+        <Text style={styles.muted}>
+          Datenschutz, Impressum und die öffentliche Kontolöschung liegen auf der Website und funktionieren auch
+          ohne Anmeldung in der App.
+        </Text>
+        <View style={styles.actions}>
+          <Button label="Datenschutz" variant="ghost" onPress={() => void openSite("/privacy")} />
+          <Button label="Impressum" variant="ghost" onPress={() => void openSite("/imprint")} />
+          <Button label="Konto löschen" variant="ghost" onPress={() => void openSite("/account-deletion")} />
+        </View>
+      </Card>
+
+      <SectionTitle hint="Bleibt auf diesem Gerät">Diagnose</SectionTitle>
+      <Card style={styles.card}>
+        <Text style={styles.row}>
+          {logInfo
+            ? `${logInfo.entries} Einträge, ${Math.max(1, Math.round(logInfo.chars / 1024))} KB`
+            : "Protokoll wird gelesen …"}
+        </Text>
+        <Text style={styles.muted}>
+          Fehler und Gerätedaten für die Fehlersuche: Zeitpunkt, Stufe, Bereich, Meldung, Modell, Systemstand,
+          Bildschirm und Sprache. Keine Tokens, keine E-Mail-Adressen, Playlist-Adressen ohne Zugangsdaten und
+          ohne Query. Nichts wird automatisch übertragen.
+        </Text>
+        <View style={styles.actions}>
+          <Button
+            label={logText ? "Protokoll ausblenden" : "Protokoll anzeigen"}
+            variant="ghost"
+            onPress={() => {
+              if (logText) {
+                setLogText(null);
+                return;
+              }
+              void readLogText().then((text) => setLogText(text.length > 0 ? text : "Noch keine Einträge."));
+            }}
+          />
+          <Button
+            label="Protokoll löschen"
+            variant="danger"
+            onPress={() =>
+              void run(async () => {
+                await clearLog();
+                setLogText(null);
+                setLogInfo(await logSummary());
+              })
+            }
+          />
+        </View>
+        {logText ? (
+          <Text style={styles.log} selectable>
+            {logText}
+          </Text>
+        ) : null}
+      </Card>
+
       <SectionTitle hint="Unwiderruflich">Daten auf diesem Gerät</SectionTitle>
       <Card style={styles.card}>
         <Text style={styles.muted}>
@@ -231,6 +304,15 @@ const styles = StyleSheet.create({
   row: { color: colors.text, fontSize: sizes.body },
   muted: { color: colors.muted, fontSize: sizes.small, lineHeight: 20 },
   actions: { flexDirection: "row", gap: space.sm, flexWrap: "wrap", marginTop: space.xs },
+  log: {
+    color: colors.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "monospace",
+    backgroundColor: colors.background,
+    borderRadius: radius.control,
+    padding: space.sm,
+  },
   input: {
     backgroundColor: colors.background,
     borderWidth: 1,

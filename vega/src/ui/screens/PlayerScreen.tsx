@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { KeplerVideoView, VideoPlayer } from "@amazon-devices/react-native-w3cmedia";
 import type { Channel } from "../../model/types";
+import { logError, logEvent, redactUrl } from "../../data/diagnostics";
 import { createHlsAdapter, hasHlsAdapter, isAdaptiveSource } from "../../player/hls";
 import { Button, Notice } from "../components";
 import { colors, radius, space, text as sizes } from "../theme";
@@ -73,7 +74,10 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
       setStatus("Beendet");
       onProgress(Math.round((video.duration || 0) * 1000), Math.round((video.duration || 0) * 1000));
     };
-    const onError = () => setError("Die Quelle konnte nicht wiedergegeben werden.");
+    const onError = () => {
+      setError("Die Quelle konnte nicht wiedergegeben werden.");
+      void logError("player", "Die Quelle konnte nicht wiedergegeben werden.", redactUrl(channel.url));
+    };
 
     video.addEventListener("loadedmetadata", onLoaded);
     video.addEventListener("playing", onPlaying);
@@ -84,8 +88,10 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
 
     if (adaptive) {
       const adapter = createHlsAdapter(video);
-      void adapter?.load(channel.url).catch(() => {
-        if (!disposed) setError("Der HLS-Player konnte die Quelle nicht laden.");
+      void adapter?.load(channel.url).catch((reason: unknown) => {
+        if (disposed) return;
+        setError("Der HLS-Player konnte die Quelle nicht laden.");
+        void logError("player", reason, redactUrl(channel.url));
       });
     } else {
       video
@@ -97,9 +103,11 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
         .catch((reason: unknown) => {
           if (disposed) return;
           setError(`Der Player konnte nicht starten: ${String(reason)}`);
+          void logError("player", reason, redactUrl(channel.url));
         });
     }
 
+    void logEvent("player", "Wiedergabe vorbereitet.", "info", redactUrl(channel.url));
     setPlayer(video);
 
     return () => {
