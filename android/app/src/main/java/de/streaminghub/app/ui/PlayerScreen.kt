@@ -68,6 +68,7 @@ import de.streaminghub.app.ui.theme.Line
 import de.streaminghub.app.ui.theme.Muted
 import de.streaminghub.app.ui.theme.Panel
 import kotlinx.coroutines.delay
+import de.streaminghub.app.data.AppLog
 
 @Composable
 fun PlayerScreen(
@@ -108,6 +109,7 @@ fun PlayerScreen(
     val listener = remember(exoPlayer) {
         object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
+                AppLog.error("player", error, AppLog.redactUrl(channel.url))
                 errorMessage = buildString {
                     append("Die Quelle konnte nicht abgespielt werden.")
                     error.localizedMessage?.takeIf { it.isNotBlank() }?.let {

@@ -21,6 +21,7 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Lokale Sendungserinnerungen per Benachrichtigung
 - Low-Spec-Modus mit kürzeren Listen, ohne Logo-Vorladen und kleineren Wiedergabepuffern
 - Dauerhafter Playlist-Cache: letzter Stand beim Start sofort verfügbar, Hintergrundaktualisierung nach 15 Minuten
+- Diagnose-Protokoll für Fehler und Hardware: ansehen, teilen, löschen (Einstellungen → Diagnose)
 
 ## Demo-Modus
 
@@ -40,6 +41,16 @@ Wiedergabedaten bleiben lokal. Eine vom Admin hinterlegte M3U-URL wird beim
 Kontoabruf empfangen und die Playlist anschließend lokal geladen. Zahlungen,
 VPN/Proxy, Profile und weitere Sprachpakete sind noch nicht Teil dieser
 Version.
+
+## Diagnose
+
+Unter *Einstellungen → Diagnose* liegt ein Protokoll für Fehler und Hardware. Es
+schreibt einmal je Start einen Kopf mit Modell, Android-Version, Bildschirm,
+Sprache und App-Version und danach jeden Fehler aus Playlist-, EPG-, Konto-,
+Kopplungs- und Wiedergabepfaden. Die Datei bleibt im privaten App-Verzeichnis
+(`files/diagnostics/diagnostics.log`), ist auf 64 000 Zeichen begrenzt und wird
+nie automatisch übertragen. Tokens, E-Mail-Adressen und URL-Query-Parameter
+stehen nicht darin. Format und Grenzen: `docs/APP-PARITAET.md`.
 
 ## Voraussetzungen
 

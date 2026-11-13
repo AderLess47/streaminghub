@@ -6,6 +6,7 @@ import { StreamingHubApi, StreamingHubApiError } from "./data/api";
 import { demoPlaylist, demoProgrammes, DEMO_SOURCE_LABEL } from "./data/demo-library";
 import { loadEpgFromUrl } from "./data/epg";
 import { parseM3u } from "./data/m3u";
+import { logError, logEvent, recordDeviceInfo } from "./data/diagnostics";
 import { limitFor, loadPlaylistFromUrl, shouldApplyManaged } from "./data/playlist";
 import {
   clearActivationToken,
@@ -40,6 +41,9 @@ import { SearchScreen } from "./ui/screens/SearchScreen";
 import { SettingsScreen } from "./ui/screens/SettingsScreen";
 
 const APP_VERSION = "1.0.0";
+
+/** Wie in der Android-App: Cache nach 15 Minuten im Hintergrund auffrischen. */
+const STALE_PLAYLIST_MS = 15 * 60_000;
 const TABS = [
   { id: "start", label: "Start" },
   { id: "live", label: "Live" },
@@ -102,6 +106,7 @@ export function App() {
   /* --------------------------------- Start --------------------------------- */
 
   useEffect(() => {
+    void recordDeviceInfo();
     let cancelled = false;
     void (async () => {
       const [storedPlaylist, storedEpg, storedFavorites, storedProgress, storedSettings, storedToken, storedName] =
@@ -144,6 +149,31 @@ export function App() {
     };
   }, [reminders]);
 
+  // Wie in der Android-App: Ist der lokale Stand älter als 15 Minuten, wird die
+  // hinterlegte URL im Hintergrund neu geladen. Fehler bleiben still – der
+  // gespeicherte Stand ist weiter nutzbar –, landen aber im Protokoll.
+  useEffect(() => {
+    if (!booted || !sourceUrl || settings.demoMode) return;
+    if (Date.now() - (playlistUpdatedAt ?? 0) < STALE_PLAYLIST_MS) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const loaded = await loadPlaylistFromUrl(sourceUrl, sourceLabel || "Playlist-URL");
+        if (cancelled) return;
+        setChannels(limitFor(loaded.channels, settings.lowSpec));
+        setSourceLabel(loaded.sourceLabel);
+        setPlaylistUpdatedAt(loaded.updatedAt);
+        await savePlaylist(loaded);
+        void logEvent("playlist", "Cache im Hintergrund aufgefrischt.");
+      } catch (reason) {
+        void logEvent("playlist", "Hintergrund-Aktualisierung fehlgeschlagen.", "warn", String(reason));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [booted, playlistUpdatedAt, settings.demoMode, settings.lowSpec, sourceLabel, sourceUrl]);
+
   useEffect(() => premium.subscribe(setPremiumState), [premium]);
 
   // Der Programmführer soll mitlaufen, ohne die Wiedergabe zu stören.
@@ -161,6 +191,11 @@ export function App() {
   }, [booted, reminders]);
 
   /* -------------------------------- Konto ---------------------------------- */
+
+  const reportError = useCallback((area: string, message: string, reason?: unknown) => {
+    setError(message);
+    void logError(area, reason ?? message);
+  }, []);
 
   const refreshAccount = useCallback(
     async (activeToken: string | null = token) => {
@@ -188,7 +223,11 @@ export function App() {
             await savePlaylist(loaded);
             setNotice("Die im Konto hinterlegte Playlist wurde geladen.");
           } catch (reason) {
-            setError(reason instanceof Error ? reason.message : "Die hinterlegte Playlist konnte nicht geladen werden.");
+            reportError(
+              "playlist",
+              reason instanceof Error ? reason.message : "Die hinterlegte Playlist konnte nicht geladen werden.",
+              reason,
+            );
           } finally {
             setBusy(null);
           }
@@ -198,13 +237,17 @@ export function App() {
           await clearActivationToken();
           setToken(null);
           setAccount(null);
-          setError(reason.message);
+          reportError("account", reason.message, reason);
           return;
         }
-        setError(reason instanceof Error ? reason.message : "Der Kontostatus konnte nicht geladen werden.");
+        reportError(
+          "account",
+          reason instanceof Error ? reason.message : "Der Kontostatus konnte nicht geladen werden.",
+          reason,
+        );
       }
     },
-    [api, channels, playlistUpdatedAt, settings.lowSpec, sourceLabel, sourceUrl, token],
+    [api, channels, playlistUpdatedAt, reportError, settings.lowSpec, sourceLabel, sourceUrl, token],
   );
 
   useEffect(() => {
@@ -259,6 +302,10 @@ export function App() {
         await saveSettings({ ...settings, demoMode: false });
         appliedManagedUrl.current = null;
         setNotice(`${loaded.channels.length} Einträge geladen.`);
+        void logEvent("playlist", `${loaded.channels.length} Einträge aus der URL geladen.`);
+      } catch (reason) {
+        void logError("playlist", reason, "Import per URL");
+        throw reason;
       } finally {
         setBusy(null);
       }
@@ -301,6 +348,10 @@ export function App() {
       setEpgUpdatedAt(loaded.updatedAt);
       await saveEpg(loaded);
       setNotice(`${loaded.programmes.length} Sendungen geladen.`);
+      void logEvent("epg", `${loaded.programmes.length} Sendungen aus der URL geladen.`);
+    } catch (reason) {
+      void logError("epg", reason, "Import per URL");
+      throw reason;
     } finally {
       setBusy(null);
     }

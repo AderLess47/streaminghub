@@ -66,6 +66,7 @@ final class AppModel {
     // MARK: - Start
 
     func bootstrap() async {
+        DiagnosticsLog.shared.recordDeviceInfo()
         let cachedPlaylist = store.loadPlaylist()
         let cachedProgrammes = store.loadProgrammes()
         favorites = store.loadFavorites()
@@ -87,6 +88,15 @@ final class AppModel {
             sourceURL = cachedPlaylist.sourceURL
             playlistUpdatedAt = cachedPlaylist.updatedAt
             epgUpdatedAt = cachedProgrammes.updatedAt
+        }
+
+        // Wie in der Android-App: Ist der lokale Stand älter als 15 Minuten,
+        // wird die hinterlegte Quelle im Hintergrund neu geladen. Ein Fehler
+        // bleibt still – der gespeicherte Stand ist weiter nutzbar.
+        if !settings.demoMode,
+           let cachedSource = sourceURL,
+           Date().timeIntervalSince(playlistUpdatedAt ?? .distantPast) > 15 * 60 {
+            Task { await self.refreshCachedPlaylist(cachedSource) }
         }
 
         reminderScheduler.cancelOutdated(reminders)
@@ -138,6 +148,7 @@ final class AppModel {
             notice = "\(parsed.count) Einträge geladen."
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "playlist", meta: DiagnosticsLog.redact(url.absoluteString))
         }
     }
 
@@ -190,6 +201,7 @@ final class AppModel {
             notice = "\(parsed.count) Sendungen geladen."
         } catch {
             errorMessage = "Die Programmdaten konnten nicht geladen werden: \(error.localizedDescription)"
+            DiagnosticsLog.shared.record(error: error, area: "epg", meta: DiagnosticsLog.redact(url.absoluteString))
         }
     }
 
@@ -277,6 +289,7 @@ final class AppModel {
             notice = "Erinnerung für „\(programme.title)“ vorgemerkt."
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "reminder")
         }
     }
 
@@ -299,8 +312,10 @@ final class AppModel {
         } catch let error as StreamingHubAPI.APIError where error.status == 401 || error.status == 403 {
             await unpair(silently: true)
             errorMessage = error.message
+            DiagnosticsLog.shared.record("Kopplung abgelehnt (HTTP \(error.status)).", level: .warn, area: "account")
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "account")
         }
     }
 
@@ -324,6 +339,40 @@ final class AppModel {
             notice = "Die im Konto hinterlegte Playlist wurde geladen."
         } catch {
             errorMessage = "Die im Konto hinterlegte Playlist konnte nicht geladen werden: \(error.localizedDescription)"
+            DiagnosticsLog.shared.record(error: error, area: "playlist", meta: DiagnosticsLog.redact(address))
+        }
+    }
+
+    /// Lädt den zwischengespeicherten Stand neu, ohne die Oberfläche zu stören.
+    private func refreshCachedPlaylist(_ address: String) async {
+        guard let url = Self.normalizedURL(address) else { return }
+        do {
+            let text = try await download(url)
+            let parsed = M3UParser.parse(text)
+            guard !parsed.isEmpty else {
+                DiagnosticsLog.shared.record(
+                    "Leere Antwort beim Auffrischen.",
+                    level: .warn,
+                    area: "playlist",
+                    meta: DiagnosticsLog.redact(address)
+                )
+                return
+            }
+            let cache = PlaylistCache(
+                channels: parsed,
+                sourceURL: url.absoluteString,
+                sourceLabel: sourceLabel.isEmpty ? (url.host ?? url.absoluteString) : sourceLabel,
+                updatedAt: Date()
+            )
+            try store.savePlaylist(cache)
+            // Der Nutzer kann während des Ladens die Quelle gewechselt haben.
+            guard !settings.demoMode, sourceURL == url.absoluteString else { return }
+            channels = parsed
+            sourceLabel = cache.sourceLabel
+            playlistUpdatedAt = cache.updatedAt
+            DiagnosticsLog.shared.record("Cache im Hintergrund aufgefrischt.", area: "playlist")
+        } catch {
+            DiagnosticsLog.shared.record(error: error, area: "playlist", meta: DiagnosticsLog.redact(address))
         }
     }
 

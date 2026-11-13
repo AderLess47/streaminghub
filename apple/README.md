@@ -7,7 +7,8 @@ Funktionaler Zwilling der Android-App (`../android`) und der Vega-App
 (`../vega`): Playlist-Import, Live/Filme/Serien, Kategorien, Suche, Favoriten,
 Wiedergabe mit Fortsetzungspunkt, XMLTV-Programmführer mit echten
 Benachrichtigungen, Gerätekopplung, Kontostatus, Premium-Anbindung über
-StoreKit 2, Demo-Modus und Low-Spec-Modus.
+StoreKit 2, Demo-Modus, Low-Spec-Modus, Diagnose-Protokoll sowie Datenschutz-,
+Impressum- und Kontolöschungs-Links.
 
 Die App ist kein Inhaltsangebot: Sie liest ausschließlich die vom Nutzer
 importierten Quellen. Übertragen werden nur Konto-, Geräte- und Abo-Metadaten
@@ -80,6 +81,20 @@ abgebrochen. Die Core-Prüfungen laufen deshalb im Linux-Container
   in einer unverschlüsselten Ablage.
 - **EPG:** `XMLParser` statt regulärer Ausdrücke – Entities und CDATA sind damit
   kein Sonderfall.
+
+## Diagnose
+
+Die App schreibt ein Protokoll für Fehler und Hardware nach
+`Application Support/StreamingHub/diagnostics.log`: einmal je Start ein Kopf mit
+Systemstand, Modell, Bildschirm, Sprache und App-Version, danach Fehler aus
+Playlist-, EPG-, Konto-, Erinnerungs- und Wiedergabepfaden. Die Einstellungen
+zeigen die Einträge und löschen sie; übertragen wird nichts automatisch. Tokens,
+E-Mail-Adressen und URL-Query-Parameter werden nicht geschrieben. Format und
+Grenzen: `../docs/APP-PARITAET.md`.
+
+Unter *Rechtliches und Konto* stehen Datenschutz, Impressum und die öffentliche
+Kontolöschung. Auf dem Apple TV werden die Adressen angezeigt statt geöffnet,
+weil tvOS keinen Browser mitbringt.
 
 ## Premium und App-Store-Regeln
 

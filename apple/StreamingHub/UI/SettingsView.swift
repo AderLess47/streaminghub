@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var playlistAddress = ""
     @State private var epgAddress = ""
     @State private var localError: String?
+    @State private var showingLog = false
 
     var body: some View {
         Form {
@@ -17,6 +18,8 @@ struct SettingsView: View {
             programmeSection
             presentationSection
             dataSection
+            legalSection
+            diagnosticsSection
             aboutSection
         }
         #if !os(tvOS)
@@ -228,6 +231,58 @@ struct SettingsView: View {
             Text("Daten auf diesem Gerät")
         } footer: {
             Text("Playlist, Programmdaten, Favoriten und Wiedergabestände liegen lokal. Das Löschen des Fortschritts entfernt keine Playlist.")
+        }
+    }
+
+    // MARK: - Rechtliches
+
+    private var legalSection: some View {
+        Section {
+            #if os(tvOS)
+            LabeledContent("Datenschutz", value: "streaminghub.org/privacy")
+            LabeledContent("Impressum", value: "streaminghub.org/imprint")
+            LabeledContent("Konto löschen", value: "streaminghub.org/account-deletion")
+            #else
+            Link("Datenschutz", destination: URL(string: "https://streaminghub.org/privacy")!)
+            Link("Impressum", destination: URL(string: "https://streaminghub.org/imprint")!)
+            Link("Konto löschen", destination: URL(string: "https://streaminghub.org/account-deletion")!)
+            #endif
+        } header: {
+            Text("Rechtliches und Konto")
+        } footer: {
+            Text("Die Kontolöschung ist öffentlich und funktioniert auch ohne Anmeldung in der App. Auf dem Apple TV stehen die Adressen zum Abtippen, weil dort kein Browser geöffnet wird.")
+        }
+    }
+
+    // MARK: - Diagnose
+
+    private var diagnosticsSection: some View {
+        Section {
+            LabeledContent(
+                "Protokoll",
+                value: "\(DiagnosticsLog.shared.entryCount) Einträge · \(max(1, DiagnosticsLog.shared.sizeBytes / 1024)) KB"
+            )
+            Button("Protokoll anzeigen") { showingLog = true }
+            Button("Protokoll löschen", role: .destructive) { DiagnosticsLog.shared.clear() }
+        } header: {
+            Text("Diagnose")
+        } footer: {
+            Text("Fehler und Gerätedaten für die Fehlersuche: Zeitpunkt, Stufe, Bereich, Meldung, Modell, Systemstand, Bildschirm und Sprache. Keine Tokens, keine E-Mail-Adressen, Playlist-Adressen ohne Zugangsdaten und ohne Query. Nichts wird automatisch übertragen.")
+        }
+        .sheet(isPresented: $showingLog) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(DiagnosticsLog.shared.text().isEmpty ? "Noch keine Einträge." : DiagnosticsLog.shared.text())
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Fertig") { showingLog = false }
+                            .buttonStyle(.bordered)
+                    }
+                    .padding()
+                }
+                .navigationTitle("Protokoll")
+            }
         }
     }
 

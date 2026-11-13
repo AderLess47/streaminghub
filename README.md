@@ -218,6 +218,7 @@ production server those two checks are skipped, since dev links are withheld.
 - `docs/BFSG-ANWENDUNGSBEREICH.md` – whether the accessibility act applies, with the operator's figures and the recorded decision
 - `docs/BFSG-PFLICHTEN-CHECKLISTE.md` – what to do if the micro-enterprise threshold is exceeded
 - `docs/PRUEFPROTOKOLL-VORLAGE.md` – template for accessibility test records kept as evidence
+- `docs/APP-PARITAET.md` – Android, Vega OS and Apple side by side, including the diagnostics log
 - `/docs/api` – rendered API documentation + OpenAPI 3.1 JSON
 
 ## Legal content disclaimer

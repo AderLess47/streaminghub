@@ -40,6 +40,7 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import de.streaminghub.app.data.AppLog
 
 private const val MANAGED_PLAYLIST_LABEL = "Admin-Playlist"
 
@@ -165,6 +166,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
             val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -184,6 +186,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
             val content = runCatching { readUri(uri) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, "Datei-Import")
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -322,6 +325,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         epgState = epgState.copy(loading = true, error = null)
         viewModelScope.launch {
             val content = runCatching { fetchEpg(url) }.getOrElse { throwable ->
+                AppLog.error("epg", throwable, AppLog.redactUrl(url))
                 epgState = epgState.copy(loading = false, error = throwable.epgMessage())
                 return@launch
             }
@@ -333,6 +337,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         epgState = epgState.copy(loading = true, error = null)
         viewModelScope.launch {
             val content = runCatching { readEpgUri(uri) }.getOrElse { throwable ->
+                AppLog.error("epg", throwable, "Datei-Import")
                 epgState = epgState.copy(loading = false, error = throwable.epgMessage())
                 return@launch
             }
@@ -516,6 +521,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     api.pollPairing(session.requestId, session.pollToken)
                 }
 
+                result.exceptionOrNull()?.let { AppLog.error("pairing", it) }
+
                 if (result.isFailure) {
                     accountState = accountState.copy(
                         pairingBusy = false,
@@ -593,6 +600,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
             val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -608,6 +616,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun handleAccountFailure(throwable: Throwable) {
+        AppLog.error("account", throwable)
         val apiError = throwable as? StreamingHubApiException
         if (apiError?.httpStatus == 401 || apiError?.httpStatus == 403) {
             secureStore.clearToken()
