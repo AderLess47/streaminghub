@@ -9,7 +9,7 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Automatische Einordnung in Live-TV, Filme und Serien
 - Suche, Kategorien, Favoriten
 - Fokusführung für Fernbedienungen und adaptive Karten für Touch-Geräte
-- Wiedergabe von HLS- und VOD-Quellen über Media3/ExoPlayer, mit acht statt drei Wiederholungen bei kurzen Netzaussetzern (rund 20 Sekunden Fenster, bevor der Fehlerbildschirm kommt)
+- Wiedergabe von HLS- und VOD-Quellen über Media3/ExoPlayer, mit acht statt drei Wiederholungen bei kurzen Netzaussetzern (rund 20 Sekunden Fenster, bevor der Fehlerbildschirm kommt); nach einem Netzfehler startet die Wiedergabe automatisch neu, sobald die Verbindung zurück ist
 - DRM aus `#KODIPROP` (Widevine, PlayReady) inklusive Lizenz-URL und Lizenz-Headern; verständliche DRM-Fehlermeldungen im Player (Gerätetest: `../docs/ANDROID-DRM.md`)
 - Lokaler Wiedergabefortschritt für Filme und Serien
 - Playlist aktualisieren und lokal entfernen

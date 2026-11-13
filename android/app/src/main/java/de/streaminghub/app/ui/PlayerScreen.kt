@@ -71,6 +71,7 @@ import de.streaminghub.app.ui.theme.Panel
 import kotlinx.coroutines.delay
 import de.streaminghub.app.data.AppLog
 import de.streaminghub.app.data.PlaybackErrors
+import de.streaminghub.app.data.PlaybackRetry
 import de.streaminghub.app.data.ResilientLoadErrorPolicy
 
 @Composable
@@ -82,6 +83,9 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Zählt die automatischen Neustarts und stößt den nächsten Versuch an.
+    var autoRetries by remember { mutableStateOf(0) }
+    var retrySignal by remember { mutableStateOf(0) }
     val startPosition = remember(channel.url) { viewModel.progressFor(channel) }
 
     val mediaItem = remember(channel.url, channel.drm) {
@@ -131,18 +135,26 @@ fun PlayerScreen(
 
     val listener = remember(exoPlayer) {
         object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // Läuft wieder: Der nächste Fehler darf erneut automatisch starten.
+                if (playbackState == Player.STATE_READY) autoRetries = 0
+            }
+
             override fun onPlayerError(error: PlaybackException) {
                 AppLog.error(
                     "player",
                     error,
                     "${AppLog.redactUrl(channel.url)} drm=${channel.drm?.scheme?.label ?: "keins"}",
                 )
+                val retryable = PlaybackRetry.isNetworkError(error.errorCode) &&
+                    PlaybackRetry.canRetryAutomatically(autoRetries)
                 errorMessage = PlaybackErrors.describe(
                     errorCode = error.errorCode,
                     detail = error.localizedMessage,
                     hasDrm = channel.drm != null,
                     insecure = channel.url.startsWith("http://", ignoreCase = true),
-                )
+                ) + if (retryable) "\n" + PlaybackRetry.HINT else ""
+                if (retryable) retrySignal += 1
             }
         }
     }
@@ -170,6 +182,22 @@ fun PlayerScreen(
             viewModel.syncWatchProgress(channel, exoPlayer.currentPosition, exoPlayer.duration)
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+        }
+    }
+
+    // Während eines Netzausfalls bleibt der Fehlerbildschirm stehen, die App
+    // versucht es aber selbst weiter: erst wenn wieder ein Netz gemeldet wird,
+    // kostet der nächste Versuch keine sinnlose Anfrage.
+    LaunchedEffect(retrySignal) {
+        if (retrySignal == 0) return@LaunchedEffect
+        delay(PlaybackRetry.POLL_MS)
+        if (PlaybackRetry.isOnline(context)) {
+            autoRetries += 1
+            errorMessage = null
+            exoPlayer.prepare()
+            exoPlayer.play()
+        } else {
+            retrySignal += 1
         }
     }
 
@@ -299,6 +327,7 @@ fun PlayerScreen(
                             text = "Erneut versuchen",
                             icon = Icons.Rounded.Replay,
                             onClick = {
+                                autoRetries = 0
                                 errorMessage = null
                                 exoPlayer.prepare()
                                 exoPlayer.play()
