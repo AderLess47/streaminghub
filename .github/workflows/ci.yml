@@ -39,6 +39,12 @@ jobs:
         working-directory: vega
         run: npm ci && npx tsc --noEmit
 
+      # Parser und HLS-Nahtstelle der Vega-App unter Node; ein Virtual Device
+      # braucht es dafuer nicht.
+      - name: Vega logic tests
+        working-directory: vega
+        run: npm run test:headless
+
       - name: Download page test
         run: npm run test:download-page
 
