@@ -48,6 +48,7 @@ import memoryStorage from "./mocks/async-storage";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { secureBaseUrl, StreamingHubApi, StreamingHubApiError } from "../src/data/api";
 import { insecureTransportHint } from "../src/data/transport";
+import { drmContentFields } from "../src/player/drm";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -451,6 +452,79 @@ await check("Erinnerungen: ungültige Einträge werden verworfen", async () => {
   );
   await saveReminders([{ id: "r4", channelId: "b", channelName: "B", title: "Neu", startMs: 6_000 }]);
   assert.equal((await loadReminders())[0].id, "r4");
+});
+
+/* ---------------------------------- DRM ---------------------------------- */
+
+await check("DRM: KODIPROP-Angaben landen am richtigen Sender", () => {
+  const channels = parseM3u(
+    [
+      "#EXTM3U",
+      '#EXTINF:-1 tvg-id="drm1" group-title="Verschlüsselt",Widevine Sender',
+      "#KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha",
+      "#KODIPROP:inputstream.adaptive.license_key=https://license.example/wv|Authorization=Bearer%20abc&X-Test=1",
+      "https://example.test/drm/master.m3u8",
+      '#EXTINF:-1 group-title="Offen",Offener Sender',
+      "https://example.test/open/master.m3u8",
+    ].join("\n"),
+  );
+
+  assert.equal(channels.length, 2);
+  assert.deepEqual(channels[0].drm, {
+    scheme: "com.widevine.alpha",
+    licenseUrl: "https://license.example/wv",
+    headers: [
+      ["Authorization", "Bearer abc"],
+      ["X-Test", "1"],
+    ],
+  });
+  assert.equal(channels[1].drm, undefined, "DRM darf nicht auf den nächsten Sender überlaufen");
+});
+
+await check("DRM: Angaben vor #EXTINF gelten, PlayReady wird erkannt, Unbekanntes verworfen", () => {
+  const channels = parseM3u(
+    [
+      "#EXTM3U",
+      "#KODIPROP:inputstream.adaptive.license_type=com.microsoft.playready",
+      "#KODIPROP:inputstream.adaptive.license_key=https://license.example/pr",
+      '#EXTINF:-1,PlayReady Sender',
+      "https://example.test/pr/master.m3u8",
+      "#KODIPROP:inputstream.adaptive.license_type=org.w3.clearkey",
+      "#KODIPROP:inputstream.adaptive.license_key=https://license.example/ck",
+      '#EXTINF:-1,ClearKey Sender',
+      "https://example.test/ck/master.m3u8",
+      "#KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha",
+      '#EXTINF:-1,Ohne Lizenz-URL',
+      "https://example.test/ohne/master.m3u8",
+    ].join("\n"),
+  );
+
+  assert.deepEqual(channels[0].drm, {
+    scheme: "com.microsoft.playready",
+    licenseUrl: "https://license.example/pr",
+  });
+  assert.equal(channels[1].drm, undefined, "ClearKey kann Vega nicht spielen");
+  assert.equal(channels[2].drm, undefined, "ohne Lizenz-URL kein DRM");
+});
+
+await check("DRM: Shaka-Felder werden nur bei DRM gesetzt", () => {
+  assert.deepEqual(drmContentFields(undefined), { drm_scheme: "", drm_license_uri: "" });
+  assert.deepEqual(
+    drmContentFields({ scheme: "com.widevine.alpha", licenseUrl: "https://license.example/wv" }),
+    { drm_scheme: "com.widevine.alpha", drm_license_uri: "https://license.example/wv" },
+  );
+  assert.deepEqual(
+    drmContentFields({
+      scheme: "com.widevine.alpha",
+      licenseUrl: "https://license.example/wv",
+      headers: [["Authorization", "Bearer abc"]],
+    }),
+    {
+      drm_scheme: "com.widevine.alpha",
+      drm_license_uri: "https://license.example/wv",
+      drm_license_header: [["Authorization", "Bearer abc"]],
+    },
+  );
 });
 
 /* -------------------------------- Transport ------------------------------ */

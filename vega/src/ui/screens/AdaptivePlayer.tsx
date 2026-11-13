@@ -67,7 +67,7 @@ export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress }: Props
     const adapter = adapterRef.current;
     if (!adapter || startedRef.current) return;
     startedRef.current = true;
-    void adapter.start(surfaceHandle, channel.url, resumeMs);
+    void adapter.start(surfaceHandle, channel.url, resumeMs, channel.drm);
   }
 
   if (!available) {
