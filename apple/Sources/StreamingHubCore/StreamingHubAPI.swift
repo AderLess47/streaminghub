@@ -167,16 +167,34 @@ public struct StreamingHubAPI {
             request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         }
 
-        let (data, response) = try await session.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let (data, response) = try await perform(request)
+        let status = response?.statusCode ?? 0
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
 
         guard (200..<300).contains(status) else {
-            let error = json["error"] as? [String: Any]
-            let message = nonEmpty(error?["message"] as? String) ?? fallbackMessage(for: status)
-            throw APIError(status: status, code: nonEmpty(error?["code"] as? String), message: message)
+            let errorObject = json["error"] as? [String: Any]
+            let apiMessage: String? = errorObject?["message"] as? String
+            let apiCode: String? = errorObject?["code"] as? String
+            let message: String = nonEmpty(apiMessage) ?? fallbackMessage(for: status)
+            throw APIError(status: status, code: nonEmpty(apiCode), message: message)
         }
         return json
+    }
+
+    /// `URLSession.data(for:)` gibt es nur in Apples Foundation; für die
+    /// Prüfläufe auf Linux (siehe CI) läuft der Aufruf über die klassische
+    /// `dataTask`-API, die überall verfügbar ist.
+    private func perform(_ request: URLRequest) async throws -> (Data, HTTPURLResponse?) {
+        try await withCheckedThrowingContinuation { continuation in
+            let task = session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: (data ?? Data(), response as? HTTPURLResponse))
+            }
+            task.resume()
+        }
     }
 
     private func fallbackMessage(for status: Int) -> String {
