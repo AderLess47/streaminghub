@@ -105,8 +105,9 @@ final class ParserTests: XCTestCase {
 
     func testRunningAndNext() {
         let programmes = XMLTVParser.parse(xml)
-        // 19:33 UTC liegt in der Sendung von 19:30 bis 20:00 UTC.
-        let during = Date(timeIntervalSince1970: 1_794_512_000)
+        // Die Sendung läuft 20:00–20:30 (+0100), also 19:00–19:30 UTC;
+        // 19:10 UTC liegt mittendrin.
+        let during = Date(timeIntervalSince1970: 1_794_510_600)
         XCTAssertEqual(EPG.running(programmes, channelID: "ard.de", at: during)?.title, "Tagesschau & Wetter")
         XCTAssertEqual(EPG.next(programmes, channelID: "unbekannt", after: during)?.title, "Ohne Kanalnamen")
     }

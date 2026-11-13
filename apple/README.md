@@ -48,14 +48,19 @@ weder Xcode noch einen Swift-Compiler. Das heißt:
 
 | Geprüft | Wie |
 | --- | --- |
-| Aufbau, Verträge, Verhalten der Parser und Regeln | durchgelesen und gegen die Kotlin- und TypeScript-Fassung abgeglichen |
-| XCTest-Suite (Parser, Regeln, Demo) | **geschrieben, aber nicht ausgeführt** – ohne Toolchain nicht startbar |
-| Kompilierung, Build, Simulator, Gerät, VoiceOver, StoreKit | **nicht geprüft** |
+| Core-Bibliothek kompiliert und XCTest-Suite läuft | CI-Job `Apple core tests` mit offizieller Swift-Toolchain; **14 Prüfungen, alle grün** |
+| Parser, Regeln, Demo gegen die Kotlin- und TypeScript-Fassung | dieselben Fälle wie dort, zusätzlich hier als Test festgeschrieben |
+| SwiftUI-Oberfläche, Build im Simulator, Gerät, VoiceOver, StoreKit | **nicht geprüft** – dafür braucht es Xcode |
 
-Die Prüfungen sind so geschrieben, dass `swift test` sie auf jedem Mac sofort
-ausführt; die Erwartungswerte (etwa `20261112203000 +0100` = `1794511800000`)
-wurden von Hand gegen die UTC-Rechnung kontrolliert. Bis zum ersten echten Lauf
-gilt der Apple-Teil als ungebaut.
+Der erste CI-Lauf hat zwei echte Fehler gefunden, die ohne Compiler niemand
+gesehen hätte: `URLSession.data(for:)` gibt es nur in Apples Foundation (jetzt
+über `dataTask` und eine Continuation gelöst), und ein Erwartungswert im Test
+rechnete die Zeitzone falsch (`20:00 +0100` ist 19:00 UTC, nicht 19:30). Genau
+deshalb läuft die Suite in CI und nicht nur auf dem Papier.
+
+Warum kein macOS-Runner: In diesem Repository werden macOS-Jobs sofort
+abgebrochen. Die Core-Prüfungen laufen deshalb im Linux-Container
+(`swift:5.10`); die Oberfläche bleibt bis zum ersten Mac-Build ungeprüft.
 
 ## Was auf Apple-Plattformen besser ist als auf Vega
 
