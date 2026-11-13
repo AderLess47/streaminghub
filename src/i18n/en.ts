@@ -656,6 +656,7 @@ export const en: Dictionary = {
       name: "Name",
       role: "Role",
       verified: "Verified",
+      notVerified: "Not verified",
       created: "Registered",
       devices: "Devices",
       subscription: "Subscription",

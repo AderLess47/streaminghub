@@ -659,6 +659,7 @@ export const de = {
       name: "Name",
       role: "Rolle",
       verified: "Verifiziert",
+      notVerified: "Nicht verifiziert",
       created: "Registriert",
       devices: "Geräte",
       subscription: "Abonnement",

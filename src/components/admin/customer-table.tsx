@@ -165,11 +165,16 @@ export function CustomerTable({
                       {row.displayName || "—"}
                       {row.disabled ? " · deaktiviert" : ""}
                     </span>
-                    {row.verified ? (
-                      <Badge tone="ok">✓</Badge>
-                    ) : (
-                      <Badge tone="warn">—</Badge>
-                    )}
+                    <span
+                      title={row.verified ? t.admin.customers.verified : t.admin.customers.notVerified}
+                    >
+                      <Badge tone={row.verified ? "ok" : "warn"}>
+                        <span aria-hidden="true">{row.verified ? "✓" : "—"}</span>
+                        <span className="sr-only">
+                          {row.verified ? t.admin.customers.verified : t.admin.customers.notVerified}
+                        </span>
+                      </Badge>
+                    </span>
                   </p>
                 </td>
                 <td>
