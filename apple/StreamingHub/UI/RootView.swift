@@ -70,9 +70,18 @@ struct RootView: View {
                     }
             }
         }
+        #if os(macOS)
+        // macOS kennt `fullScreenCover` nicht; ein eigenes Fenster ist dort
+        // ohnehin die passende Darstellung.
+        .sheet(item: $model.player) { channel in
+            PlayerView(channel: channel)
+                .frame(minWidth: 720, minHeight: 480)
+        }
+        #else
         .fullScreenCover(item: $model.player) { channel in
             PlayerView(channel: channel)
         }
+        #endif
         .sheet(isPresented: $model.showingPairing) {
             PairingView()
         }
