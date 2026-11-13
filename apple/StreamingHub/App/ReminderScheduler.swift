@@ -29,14 +29,21 @@ struct ReminderScheduler {
     /// nicht beim App-Start.
     func requestAuthorization() async -> Bool {
         let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
+        let status = settings.authorizationStatus
+        if status == .authorized || status == .provisional {
             return true
-        case .denied:
-            return false
-        default:
-            return (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
         }
+        #if !os(tvOS)
+        // `ephemeral` gibt es nur auf iOS und visionOS (App Clips); auf tvOS
+        // existiert der Fall nicht und würde den Build brechen.
+        if status == .ephemeral {
+            return true
+        }
+        #endif
+        if status == .denied {
+            return false
+        }
+        return (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
     }
 
     func schedule(_ reminder: Reminder) async throws {
