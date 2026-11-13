@@ -30,6 +30,8 @@ try {
       "--bundle",
       "--platform=node",
       "--format=esm",
+      // AsyncStorage gibt es unter Node nicht; die Tests nutzen die Map aus dem Mock.
+      `--alias:@react-native-async-storage/async-storage=${path.join(appRoot, "scripts", "mocks", "async-storage.ts")}`,
       "--target=node20",
       `--outfile=${bundle}`,
       "--log-level=warning",
