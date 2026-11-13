@@ -62,15 +62,25 @@ export default async function AdminSubscriptionsPage() {
                   <form action={setSubscriptionStatusAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="userId" value={row.user_id} />
                     <input type="hidden" name="returnTo" value="/admin/subscriptions" />
-                    <select name="status" defaultValue={row.status} className="field !w-auto !py-1 !text-xs">
+                    <select
+                      name="status"
+                      defaultValue={row.status}
+                      className="field !w-auto !py-1 !text-xs"
+                      aria-label={`${t.admin.subscriptions.setStatus}: ${row.email}`}
+                    >
                       {["none", "pending", "active", "past_due", "canceled", "incomplete"].map((status) => (
                         <option key={status} value={status}>
                           {status}
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
-                      ✓
+                    <button
+                      type="submit"
+                      className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                      title={t.ui.save}
+                      aria-label={t.ui.save}
+                    >
+                      <span aria-hidden="true">✓</span>
                     </button>
                   </form>
                 </td>
@@ -135,8 +145,13 @@ export default async function AdminSubscriptionsPage() {
                   </option>
                 ))}
               </select>
-              <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
-                ✓
+              <button
+                type="submit"
+                className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                title={t.ui.save}
+                aria-label={t.ui.save}
+              >
+                <span aria-hidden="true">✓</span>
               </button>
             </form>
           </li>
