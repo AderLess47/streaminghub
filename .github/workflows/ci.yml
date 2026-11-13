@@ -51,30 +51,21 @@ jobs:
       - name: Test cross-device resume rules
         run: npm run test:progress
 
-  # Der Apple-Teil braucht Xcode; die Core-Bibliothek laesst sich ohne UI testen,
-  # die App selbst wird gegen das iOS-Simulator-SDK gebaut.
-  apple:
-    name: Apple app
-    runs-on: macos-14
+  # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
+  # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
+  # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
+  apple-core:
+    name: Apple core tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Test StreamingHubCore
-        working-directory: apple
-        run: swift test
-
-      - name: Generate Xcode project
-        working-directory: apple
         run: |
-          brew install xcodegen
-          xcodegen generate
-
-      - name: Build iOS app
-        working-directory: apple
-        run: |
-          xcodebuild -project StreamingHub.xcodeproj -scheme StreamingHub \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+          docker run --rm \
+            -v "$PWD/apple":/src \
+            -w /src \
+            swift:5.10 \
+            swift test
