@@ -97,7 +97,7 @@ struct PlayerView: View {
         #endif
 
         let resume = model.resumePosition(for: channel)
-        if resume > ProgressRules.minimumPositionMs / 1000 {
+        if resume > Double(ProgressRules.minimumPositionMs) / 1000 {
             await player.seek(to: CMTime(seconds: resume, preferredTimescale: 600))
         }
         player.play()
