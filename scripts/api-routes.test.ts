@@ -524,13 +524,92 @@ await check("Aktivierung: Gerätelimit des kostenlosen Kontos greift", async () 
   assert.equal(all("SELECT * FROM devices").length, 2, "kein drittes Gerät");
 });
 
+/* ========================== Geräte-Lebenszyklus ========================== */
+
+/**
+ * Entspricht `removeDeviceAction` in `src/lib/actions/dashboard.ts`: Das Gerät
+ * wird weich gelöscht, die Nutzerbindung gelöst und seine Tokens widerrufen.
+ */
+function removeDeviceLikeDashboard(deviceId: string): void {
+  const now = nowIso();
+  run(
+    `UPDATE devices SET status = 'revoked', revoked_at = ?, user_id = NULL WHERE id = ?`,
+    now,
+    deviceId,
+  );
+  run(`UPDATE device_tokens SET revoked_at = ? WHERE device_id = ?`, now, deviceId);
+}
+
+await check("Lebenszyklus: entferntes Gerät verliert seinen Token sofort", async () => {
+  resetDb();
+  seedDevice("dev-a", "user-a");
+  __setPremium("user-a", true);
+  const token = tokenFor("user-a", "dev-a");
+
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token }))).status, 200);
+
+  removeDeviceLikeDashboard("dev-a");
+
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token }))).status, 403);
+  assert.equal((await getProgress(call("GET", "/api/v1/progress", { token }))).status, 403);
+
+  // Weich gelöscht: Zeile bleibt für den Audit-Trail, aber ohne Nutzerbindung.
+  const row = all<{ status: string; user_id: string | null }>(
+    "SELECT status, user_id FROM devices WHERE id = 'dev-a'",
+  );
+  assert.equal(row[0].status, "revoked");
+  assert.equal(row[0].user_id, null);
+});
+
+await check("Lebenszyklus: Entfernen gibt das Limit frei, neu aktiviertes Gerät bekommt neue ID", async () => {
+  resetDb();
+  seedUser("user-a");
+  seedDevice("dev-1", "user-a");
+  seedDevice("dev-2", "user-a");
+  __setSessionUser({ id: "user-a", email: "a@example.test" });
+  const oldToken = tokenFor("user-a", "dev-1");
+
+  // Ohne Premium ist bei zwei aktiven Geräten Schluss.
+  const pair = await newPairing();
+  const blocked = await activateDevice(
+    call("POST", "/api/devices/activate", { body: { code: pair.code } }),
+  );
+  assert.equal(blocked.status, 409);
+
+  // Ein Gerät entfernen – der Code bleibt gültig, weil er nicht verbraucht wurde.
+  removeDeviceLikeDashboard("dev-1");
+  const activated = await activateDevice(
+    call("POST", "/api/devices/activate", { body: { code: pair.code } }),
+  );
+  assert.equal(activated.status, 200);
+  const newDeviceId = (await bodyOf(activated)).device.id as string;
+  assert.notEqual(newDeviceId, "dev-1", "Neuaktivierung erzeugt eine neue Geräte-ID");
+
+  const active = all<{ id: string }>(
+    "SELECT id FROM devices WHERE user_id = 'user-a' AND status = 'active' ORDER BY id",
+  );
+  assert.deepEqual(
+    active.map((device) => device.id).sort(),
+    ["dev-2", newDeviceId].sort(),
+    "das entfernte Gerät zählt nicht mehr",
+  );
+
+  // Der alte Token bleibt tot, der neue funktioniert.
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token: oldToken }))).status, 403);
+  const me = await getMe(call("GET", "/api/v1/me", { token: tokenFor("user-a", newDeviceId) }));
+  assert.equal(me.status, 200);
+  assert.equal((await bodyOf(me)).device.id, newDeviceId);
+});
+
 /* ============================== Kopplung ================================= */
 
 const PAIRING_BODY = { deviceName: "Wohnzimmer", platform: "firetv", appVersion: "1.4.0" };
 
 async function newPairing(): Promise<{ requestId: string; code: string; pollToken: string }> {
   const response = await requestPairingCode(
-    call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }),
+    call("POST", "/api/v1/pairing/request", {
+      body: { deviceName: "Wohnzimmer", platform: "firetv", appVersion: "1.4.0" },
+    }),
   );
   assert.equal(response.status, 201);
   const data = await bodyOf(response);
