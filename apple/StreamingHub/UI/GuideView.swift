@@ -102,7 +102,7 @@ struct GuideView: View {
                     Button(scheduled ? "Erinnerung löschen" : "Erinnern") {
                         Task { await model.toggleReminder(target) }
                     }
-                    .buttonStyle(scheduled ? .bordered : .borderedProminent)
+                    .buttonStyle(scheduled ? BorderedButtonStyle() : BorderedProminentButtonStyle())
                     .frame(minHeight: Theme.minimumTarget)
                     .disabled(target.start < now)
                     .accessibilityHint(scheduled
