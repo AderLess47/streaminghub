@@ -85,9 +85,11 @@ export type Settings = {
   /** Weniger Einträge pro Liste, keine Logo-Vorladung, kleinere Puffer. */
   lowSpec: boolean;
   demoMode: boolean;
+  /** Secure Buffers (Widevine L1) für DRM-Sender; standardmäßig aus. */
+  securePlayback: boolean;
 };
 
-export const DEFAULT_SETTINGS: Settings = { lowSpec: false, demoMode: false };
+export const DEFAULT_SETTINGS: Settings = { lowSpec: false, demoMode: false, securePlayback: false };
 
 export type StoredPlaylist = {
   channels: Channel[];

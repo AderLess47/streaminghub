@@ -24,9 +24,10 @@ type Props = {
   resumeMs: number;
   onClose: () => void;
   onProgress: (positionMs: number, durationMs: number) => void;
+  securePlayback: boolean;
 };
 
-export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress }: Props) {
+export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress, securePlayback }: Props) {
   const adapterRef = useRef<HlsAdapter | null>(null);
   const startedRef = useRef(false);
   const progressRef = useRef(onProgress);
@@ -67,7 +68,9 @@ export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress }: Props
     const adapter = adapterRef.current;
     if (!adapter || startedRef.current) return;
     startedRef.current = true;
-    void adapter.start(surfaceHandle, channel.url, resumeMs, channel.drm);
+    void adapter.start(surfaceHandle, channel.url, resumeMs, channel.drm, {
+      secureBuffers: securePlayback,
+    });
   }
 
   if (!available) {

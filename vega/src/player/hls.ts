@@ -33,6 +33,7 @@ export type HlsAdapter = {
     url: string,
     startPositionMs: number,
     drm?: ChannelDrm,
+    options?: { secureBuffers?: boolean },
   ): Promise<void>;
   togglePlayback(): void;
   seekBy(seconds: number): void;

@@ -151,3 +151,43 @@ Ruckeln oder Ton geht.
 | VVD startet nicht | kein `/dev/kvm`, kein `--no-gui` auf headless, zu wenig Speicher |
 | `avdmanager`/Emulator-Fehler | VVD-Abbild fehlt nach SDK-Update: `vega update` und `vega virtual-device start` erneut |
 | Lauf bleibt in der Warteschlange | kein Runner mit Label `vega` verbunden |
+
+## 8. Secure Buffers (DRM) prüfen
+
+Die App kann Sender mit DRM-Angaben aus der Playlist über den geschützten Pfad
+abspielen. Der Schalter **Einstellungen → Wiedergabe → Secure Buffers** ist
+standardmäßig **aus** und wirkt nur auf Sender mit `#KODIPROP`-Lizenzangaben;
+unverschlüsselte Sender bleiben unverändert. Ist er an, setzt der Adapter
+`secure: "true"` im Content und in den Player-Settings, worauf Amazons Wrapper
+`HW_SECURE_ALL` (Widevine) beziehungsweise `SL3000` (PlayReady) verlangt.
+
+Das lässt sich hier nicht automatisch prüfen: Die Virtual Device kann auf Linux
+kein DRM (`DRM.FAILED_TO_CREATE_CDM`), L3 gibt es nur auf Macs mit M-Serie, und
+L1 nur auf echten Fire-TV-Sticks. Ein Gerätetest muss deshalb mindestens
+abdecken:
+
+1. **Unverschlüsselter Sender** mit Schalter aus und an: Wiedergabe, Ton und
+   Fortschritt unverändert – der Schalter darf klare Quellen nicht beeinflussen.
+2. **DRM-Sender mit Schalter aus:** Wiedergabe startet über den Standardpfad,
+   oder es kommt eine verständliche Lizenzmeldung statt eines schwarzen Bildes.
+3. **DRM-Sender mit Schalter an:** Lizenz wird geholt, Bild erscheint, im Log
+   steht kein `Shaka Error DRM.FAILED_TO_CREATE_CDM`.
+4. **Fehlerfall:** ungültige oder abgelaufene Lizenz, Lizenzserver nicht
+   erreichbar, HTTP-Fehler – die Oberfläche zeigt eine Meldung und bleibt
+   bedienbar (`Zurück` funktioniert).
+5. **Bedienung unter DRM:** Pause, ±10 s, Resume aus dem Fortschritt und die
+   Fortschrittsmeldung an die API funktionieren weiterhin.
+6. **Gerät ohne L1** (älterer Stick oder VVD): Schalter an führt zu einer
+   klaren Fehlermeldung, Schalter aus stellt die Wiedergabe wieder her.
+7. **Lange Wiedergabe:** Lizenz-Renewal beziehungsweise Ablauf, falls der
+   Anbieter kurze Lizenzen ausstellt; HDCP-Anforderungen der Lizenz.
+8. **Ton:** Vega unterstützt Widevine L1 nur für Video, Audio bleibt bei
+   `SW_SECURE_CRYPTO` – prüfen, dass Ton läuft und lippensynchron bleibt.
+
+Beim Testen **Fast Refresh deaktivieren**; Amazon nennt das als Known Issue für
+DRM-Wiedergabe.
+
+Nicht im Log prüfbar und deshalb bewusst zurückhaltend: Lizenz-URLs und
+Lizenz-Header werden nicht protokolliert, weil sie Tokens enthalten können. Für
+Fehlersuche zählt deshalb die Fehlermeldung der Oberfläche, nicht der
+Lizenzinhalt.

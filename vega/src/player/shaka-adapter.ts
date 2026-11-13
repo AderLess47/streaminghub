@@ -109,7 +109,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
   }
 
   return {
-    async start(handle, url, startPositionMs, drm?: ChannelDrm) {
+    async start(handle, url, startPositionMs, drm?: ChannelDrm, options?: { secureBuffers?: boolean }) {
       if (!playerConstructor) {
         smokeMarker("fehler: shaka fehlt");
         callbacks.onError("Der Shaka-Player ist nicht eingebunden.");
@@ -144,8 +144,9 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
           void logError("player", "VideoPlayer meldet error", redactUrl(url));
         });
 
+        const secureBuffers = Boolean(drm && options?.secureBuffers);
         const settings: ShakaPlayerSettings = {
-          secure: false,
+          secure: secureBuffers,
           abrEnabled: true,
           abrMaxWidth: 3840,
           abrMaxHeight: 2160,
@@ -157,8 +158,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
         await shaka.load(
           {
             uri: url,
-            secure: "false",
-            ...drmContentFields(drm),
+            ...drmContentFields(drm, options?.secureBuffers),
             type: dash ? "DASH" : "HLS",
             container: dash ? "MP4" : "MPEG2TS",
             start_position: startPositionMs > 5_000 ? startPositionMs / 1000 : 0,

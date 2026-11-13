@@ -23,6 +23,8 @@ type Props = {
   resumeMs: number;
   onClose: () => void;
   onProgress: (positionMs: number, durationMs: number) => void;
+  /** Secure Buffers sind eine Einstellung und standardmäßig aus. */
+  securePlayback: boolean;
 };
 
 function formatClock(seconds: number): string {
@@ -33,7 +35,7 @@ function formatClock(seconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
-export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) {
+export function PlayerScreen({ channel, resumeMs, onClose, onProgress, securePlayback }: Props) {
   const playerRef = useRef<VideoPlayer | null>(null);
   const [player, setPlayer] = useState<VideoPlayer | null>(null);
   const [status, setStatus] = useState("Player wird vorbereitet …");
@@ -152,6 +154,7 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
         resumeMs={resumeMs}
         onClose={onClose}
         onProgress={onProgress}
+        securePlayback={securePlayback}
       />
     );
   }

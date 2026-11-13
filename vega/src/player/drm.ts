@@ -10,17 +10,24 @@ import type { ChannelDrm } from "../model/types";
  * Manifest-Berechtigung `com.amazon.privilege.security.file-sharing` und einen
  * Gerätetest, beides ist noch nicht eingerichtet.
  */
-export function drmContentFields(drm?: ChannelDrm): {
+export type DrmContentFields = {
+  secure: "true" | "false";
   drm_scheme: string;
   drm_license_uri: string;
   drm_license_header?: [string, string][];
-} {
-  if (!drm) return { drm_scheme: "", drm_license_uri: "" };
-  const fields: {
-    drm_scheme: string;
-    drm_license_uri: string;
-    drm_license_header?: [string, string][];
-  } = { drm_scheme: drm.scheme, drm_license_uri: drm.licenseUrl };
+};
+
+export function drmContentFields(drm?: ChannelDrm, secureBuffers = false): DrmContentFields {
+  // Secure Buffers nur zusammen mit DRM: ohne Lizenzschlüssel gibt es nichts,
+  // was in den geschützten Pfad müsste, und der Wrapper verlangt dann auch die
+  // HW-Robustness (L1) ohne Nutzen.
+  const secure = Boolean(drm && secureBuffers);
+  if (!drm) return { secure: "false", drm_scheme: "", drm_license_uri: "" };
+  const fields: DrmContentFields = {
+    secure: secure ? "true" : "false",
+    drm_scheme: drm.scheme,
+    drm_license_uri: drm.licenseUrl,
+  };
   if (drm.headers && drm.headers.length > 0) fields.drm_license_header = drm.headers;
   return fields;
 }

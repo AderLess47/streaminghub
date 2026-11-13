@@ -232,27 +232,56 @@ function callbacks(): HlsCallbacks {
 
 await check("Einstellungen: leerer Speicher liefert die Standardwerte", async () => {
   memoryStorage.__reset();
-  assert.deepEqual(await loadSettings(), { lowSpec: false, demoMode: false });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: false,
+    demoMode: false,
+    securePlayback: false,
+  });
 });
 
-await check("Einstellungen: Speichern und Laden erhält beide Schalter", async () => {
+await check("Einstellungen: Speichern und Laden erhält alle Schalter", async () => {
   memoryStorage.__reset();
-  await saveSettings({ lowSpec: true, demoMode: true });
-  assert.deepEqual(await loadSettings(), { lowSpec: true, demoMode: true });
-  await saveSettings({ lowSpec: false, demoMode: true });
-  assert.deepEqual(await loadSettings(), { lowSpec: false, demoMode: true });
+  await saveSettings({ lowSpec: true, demoMode: true, securePlayback: true });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: true,
+    demoMode: true,
+    securePlayback: true,
+  });
+  await saveSettings({ lowSpec: false, demoMode: true, securePlayback: false });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: false,
+    demoMode: true,
+    securePlayback: false,
+  });
+});
+
+await check("Einstellungen: Secure Buffers sind ohne gespeichertes Ja aus", async () => {
+  memoryStorage.__reset();
+  // Bestand aus einer älteren Version: Feld existiert noch nicht.
+  await memoryStorage.setItem(KEY.settings, JSON.stringify({ lowSpec: false, demoMode: false }));
+  assert.equal((await loadSettings()).securePlayback, false);
+  await memoryStorage.setItem(KEY.settings, JSON.stringify({ securePlayback: "true" }));
+  assert.equal((await loadSettings()).securePlayback, false);
 });
 
 await check("Einstellungen: unbekannte Felder und falsche Typen fallen auf Standard zurück", async () => {
   memoryStorage.__reset();
   await memoryStorage.setItem(KEY.settings, JSON.stringify({ lowSpec: "ja", demoMode: 1, theme: "dark" }));
-  assert.deepEqual(await loadSettings(), { lowSpec: false, demoMode: false });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: false,
+    demoMode: false,
+    securePlayback: false,
+  });
 });
 
 await check("Einstellungen: kaputtes JSON wird still ignoriert", async () => {
   memoryStorage.__reset();
   await memoryStorage.setItem(KEY.settings, "{kein json");
-  assert.deepEqual(await loadSettings(), { lowSpec: false, demoMode: false });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: false,
+    demoMode: false,
+    securePlayback: false,
+  });
 });
 
 /* -------------------------------- Playlist ------------------------------- */
@@ -378,7 +407,7 @@ await check("clearPlaylist: löscht Liste, Favoriten und Fortschritt, aber nicht
   });
   await saveFavorites(["https://a"]);
   await saveProgress("https://a", 30_000, 600_000);
-  await saveSettings({ lowSpec: true, demoMode: false });
+  await saveSettings({ lowSpec: true, demoMode: false, securePlayback: true });
   await saveActivationToken("token-123");
 
   await clearPlaylist();
@@ -386,7 +415,11 @@ await check("clearPlaylist: löscht Liste, Favoriten und Fortschritt, aber nicht
   assert.deepEqual((await loadPlaylist()).channels, []);
   assert.deepEqual(await loadFavorites(), []);
   assert.deepEqual(await loadProgress(), {});
-  assert.deepEqual(await loadSettings(), { lowSpec: true, demoMode: false });
+  assert.deepEqual(await loadSettings(), {
+    lowSpec: true,
+    demoMode: false,
+    securePlayback: true,
+  });
   assert.equal(await loadActivationToken(), "token-123");
 });
 
@@ -508,10 +541,18 @@ await check("DRM: Angaben vor #EXTINF gelten, PlayReady wird erkannt, Unbekannte
 });
 
 await check("DRM: Shaka-Felder werden nur bei DRM gesetzt", () => {
-  assert.deepEqual(drmContentFields(undefined), { drm_scheme: "", drm_license_uri: "" });
+  assert.deepEqual(drmContentFields(undefined), {
+    secure: "false",
+    drm_scheme: "",
+    drm_license_uri: "",
+  });
   assert.deepEqual(
     drmContentFields({ scheme: "com.widevine.alpha", licenseUrl: "https://license.example/wv" }),
-    { drm_scheme: "com.widevine.alpha", drm_license_uri: "https://license.example/wv" },
+    {
+      secure: "false",
+      drm_scheme: "com.widevine.alpha",
+      drm_license_uri: "https://license.example/wv",
+    },
   );
   assert.deepEqual(
     drmContentFields({
@@ -520,11 +561,22 @@ await check("DRM: Shaka-Felder werden nur bei DRM gesetzt", () => {
       headers: [["Authorization", "Bearer abc"]],
     }),
     {
+      secure: "false",
       drm_scheme: "com.widevine.alpha",
       drm_license_uri: "https://license.example/wv",
       drm_license_header: [["Authorization", "Bearer abc"]],
     },
   );
+});
+
+await check("DRM: Secure Buffers nur mit DRM und nur auf Wunsch", () => {
+  const widevine = { scheme: "com.widevine.alpha" as const, licenseUrl: "https://license.example/wv" };
+
+  assert.equal(drmContentFields(widevine, false).secure, "false");
+  assert.equal(drmContentFields(widevine, true).secure, "true");
+  // Ohne DRM bleibt der geschützte Pfad aus, auch wenn die Einstellung an ist.
+  assert.equal(drmContentFields(undefined, true).secure, "false");
+  assert.equal(drmContentFields(undefined, true).drm_scheme, "");
 });
 
 /* -------------------------------- Transport ------------------------------ */
