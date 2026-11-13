@@ -73,7 +73,8 @@ rechnete die Zeitzone falsch (`20:00 +0100` ist 19:00 UTC, nicht 19:30). Genau
 deshalb läuft die Suite in CI und nicht nur auf dem Papier.
 
 Die Core-Prüfungen laufen im Linux-Container (`swift:5.10`), weil das schneller
-und billiger ist. Für die App-Ziele gibt es zusätzlich `apple-app.yml` auf einem
+und billiger ist; die App-Builds nutzen einen Derived-Data-Cache zwischen
+Läufen. Für die App-Ziele gibt es zusätzlich `apple-app.yml` auf einem
 `macos-15`-Runner; das Repository ist öffentlich, damit sind macOS-Runner
 kostenfrei. Der erste Lauf hat sofort vier echte Fehler gefunden, die vorher
 niemand sehen konnte: `positions = {}` statt `[:]`, einen Button-Style, der sich
