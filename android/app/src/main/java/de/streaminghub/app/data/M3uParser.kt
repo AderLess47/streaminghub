@@ -26,6 +26,8 @@ object M3uParser {
         val channels = LinkedHashMap<String, Channel>()
         var pending: PendingInfo? = null
         var extGroup = ""
+        // `#KODIPROP` gilt für den nächsten Eintrag und wird danach geleert.
+        val properties = LinkedHashMap<String, String>()
 
         content.lineSequence().forEach { rawLine ->
             val line = rawLine.trim().removePrefix("\uFEFF")
@@ -52,6 +54,15 @@ object M3uParser {
                     extGroup = line.substringAfter(":").trim()
                 }
 
+                line.startsWith("#KODIPROP:", ignoreCase = true) -> {
+                    val payload = line.substringAfter(":").trim()
+                    val separator = payload.indexOf('=')
+                    if (separator > 0) {
+                        properties[payload.substring(0, separator).trim()] =
+                            payload.substring(separator + 1).trim()
+                    }
+                }
+
                 line.startsWith("#") -> Unit
 
                 line.contains("://") || line.startsWith("/") -> {
@@ -70,9 +81,11 @@ object M3uParser {
                         group = group,
                         tvgId = info?.tvgId,
                         kind = inferKind(title, group, line),
+                        drm = DrmProperties.drmFrom(properties),
                     )
                     channels.putIfAbsent(channel.url, channel)
                     pending = null
+                    properties.clear()
                 }
             }
         }
