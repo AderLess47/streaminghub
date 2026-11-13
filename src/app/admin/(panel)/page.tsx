@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, PageHeader, StatusPill } from "@/components/ui";
 import { getI18n } from "@/i18n";
+import { contractRequestStats } from "@/lib/contract-requests";
 import { all, get } from "@/lib/db";
 import { env, isBillingConfigured, isEmailConfigured } from "@/lib/env";
 import { requireStaff } from "@/lib/session";
@@ -10,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 const count = (sql: string, ...params: (string | number)[]) =>
   get<{ c: number }>(sql, ...params)?.c ?? 0;
+
+/** „1 Widerruf“, aber „2 Widerrufe“ – die Kachel soll nicht wie ein Zähler klingen. */
+const plural = (value: number, one: string, many: string) => `${value} ${value === 1 ? one : many}`;
 
 export default async function AdminOverviewPage({
   searchParams,
@@ -24,6 +28,7 @@ export default async function AdminOverviewPage({
   const devices = count(`SELECT COUNT(*) AS c FROM devices WHERE status = 'active'`);
   const subscriptions = count(`SELECT COUNT(*) AS c FROM subscriptions WHERE status = 'active'`);
   const tickets = count(`SELECT COUNT(*) AS c FROM support_tickets WHERE status != 'closed'`);
+  const contracts = contractRequestStats();
 
   const recentAudit = all<{ id: string; action: string; actor_email: string | null; created_at: string; target_type: string | null }>(
     `SELECT id, action, actor_email, created_at, target_type FROM audit_log ORDER BY created_at DESC LIMIT 8`,
@@ -42,6 +47,20 @@ export default async function AdminOverviewPage({
     { label: t.admin.overview.devices, value: devices, href: "/admin/devices", icon: "devices" as const },
     { label: t.admin.overview.subscriptions, value: subscriptions, href: "/admin/subscriptions", icon: "card" as const },
     { label: t.admin.overview.tickets, value: tickets, href: "/admin/tickets", icon: "mail" as const },
+    {
+      label: t.admin.overview.contractsOpen,
+      value: contracts.open,
+      href: "/admin/contracts?state=open",
+      icon: "check" as const,
+      warn: contracts.open > 0,
+      hint:
+        contracts.open > 0
+          ? [
+              plural(contracts.openWithdrawals, t.admin.contracts.withdrawal, t.admin.contracts.withdrawals),
+              plural(contracts.openCancellations, t.admin.contracts.cancellation, t.admin.contracts.cancellations),
+            ].join(" · ")
+          : t.admin.overview.contractsNone,
+    },
   ];
 
   return (
@@ -63,14 +82,21 @@ export default async function AdminOverviewPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {kpis.map((kpi) => (
-          <Link key={kpi.label} href={kpi.href} className="card card-hover p-4">
+          <Link
+            key={kpi.label}
+            href={kpi.href}
+            className={`card card-hover p-4${kpi.warn ? " ring-1 ring-amber-500/40" : ""}`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[0.68rem] uppercase tracking-[0.1em] text-muted">{kpi.label}</span>
-              <Icon name={kpi.icon} size={16} className="text-cyan" />
+              <Icon name={kpi.icon} size={16} className={kpi.warn ? "text-amber-300" : "text-cyan"} />
             </div>
             <p className="mt-2 text-2xl font-semibold">{kpi.value}</p>
+            {kpi.hint ? (
+              <p className="mt-1 text-[0.66rem] leading-relaxed text-muted">{kpi.hint}</p>
+            ) : null}
           </Link>
         ))}
       </div>

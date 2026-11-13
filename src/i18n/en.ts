@@ -641,6 +641,8 @@ export const en: Dictionary = {
       devices: "Active devices",
       subscriptions: "Active subscriptions",
       tickets: "Open requests",
+      contractsOpen: "Open declarations",
+      contractsNone: "No open withdrawals or cancellations.",
       recentAudit: "Latest security-relevant events",
       recentSignups: "Newest registrations",
       systemTitle: "System status",

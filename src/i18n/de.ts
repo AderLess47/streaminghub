@@ -644,6 +644,8 @@ export const de = {
       devices: "Aktive Geräte",
       subscriptions: "Aktive Abonnements",
       tickets: "Offene Anfragen",
+      contractsOpen: "Offene Erklärungen",
+      contractsNone: "Keine offenen Widerrufe oder Kündigungen.",
       recentAudit: "Letzte sicherheitsrelevante Ereignisse",
       recentSignups: "Neueste Registrierungen",
       systemTitle: "Systemstatus",
