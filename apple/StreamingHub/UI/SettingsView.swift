@@ -19,7 +19,9 @@ struct SettingsView: View {
             dataSection
             aboutSection
         }
+        #if !os(tvOS)
         .formStyle(.grouped)
+        #endif
         .navigationTitle("Einstellungen")
         .alert("Nicht ausgeführt", isPresented: Binding(
             get: { localError != nil },

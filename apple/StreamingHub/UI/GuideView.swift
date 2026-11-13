@@ -33,7 +33,11 @@ struct GuideView: View {
                     } header: {
                         Text("Sender")
                     } footer: {
+                        #if os(tvOS)
+                        Text("Apple TV zeigt Erinnerungen nur als Hinweis am App-Symbol; die Sendung selbst steht jederzeit hier unter „Vorgemerkt“.")
+                        #else
                         Text("Erinnerungen erscheinen als Benachrichtigung, auch wenn die App geschlossen ist.")
+                        #endif
                     }
 
                     if !model.reminders.isEmpty {

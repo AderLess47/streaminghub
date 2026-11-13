@@ -10,6 +10,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
+    tvOS: "17.0"
   createIntermediateGroups: true
 
 packages:
@@ -19,7 +20,9 @@ packages:
 targets:
   StreamingHub:
     type: application
-    platform: [iOS, macOS]
+    # Apple TV ist dieselbe App auf derselben Bundle-ID (Universal Purchase):
+    # ein Kauf gilt damit auf iPhone, iPad, Mac und Apple TV.
+    platform: [iOS, macOS, tvOS]
     sources:
       - path: StreamingHub
     dependencies:
@@ -40,7 +43,6 @@ targets:
         CODE_SIGN_STYLE: Automatic
         SUPPORTS_MACCATALYST: NO
         SWIFT_STRICT_CONCURRENCY: minimal
-        TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks"
       configs:
         Release:

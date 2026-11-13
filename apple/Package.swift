@@ -4,10 +4,10 @@ import PackageDescription
 // Die Core-Bibliothek enthält alles, was ohne Apple-Oberflächen auskommt:
 // Datenmodell, Parser, API-Client und die Regeln für Fortschritt und
 // Erinnerungen. Dadurch lässt sie sich unabhängig von der App prüfen und von
-// iOS, iPadOS und macOS gemeinsam nutzen.
+// iOS, iPadOS, macOS und Apple TV gemeinsam nutzen.
 let package = Package(
     name: "StreamingHubCore",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14), .tvOS(.v17)],
     products: [
         .library(name: "StreamingHubCore", targets: ["StreamingHubCore"])
     ],

@@ -51,15 +51,23 @@ struct PairingView: View {
                 Button("Neuen Code anfordern") { attempt += 1 }
                     .buttonStyle(.borderedProminent)
 
+                #if os(tvOS)
+                // Auf dem Fernseher gibt es keine Navigationsleiste mit
+                // „Schließen“; der Knopf gehört in die Liste der fokussierbaren Ziele.
+                Button("Schließen") { dismiss() }
+                #endif
+
                 Spacer()
             }
             .padding(20)
             .background(Theme.page)
+            #if !os(tvOS)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Schließen") { dismiss() }
                 }
             }
+            #endif
             .task(id: attempt) {
                 await requestCode()
             }

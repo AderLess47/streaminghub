@@ -212,7 +212,7 @@ production server those two checks are skipped, since dev links are withheld.
 
 - `android/README.md` – Android/Fire-OS-App (Kotlin, Compose)
 - `vega/README.md` – Vega-OS-App (React Native 0.83, Fire TV mit Vega)
-- `apple/README.md` – iOS/iPadOS/macOS-App (SwiftUI, ein Multiplatform-Target)
+- `apple/README.md` – iOS/iPadOS/macOS/Apple-TV-App (SwiftUI, ein Multiplatform-Target)
 - `docs/DEPLOYMENT.md` – hosting, HTTPS, DNS, environment, provider setup, backups
 - `docs/API.md` – app integration contract
 - `docs/BFSG-ANWENDUNGSBEREICH.md` – whether the accessibility act applies, with the operator's figures and the recorded decision

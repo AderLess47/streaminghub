@@ -10,6 +10,12 @@ enum Theme {
     static let card = Color(nsColor: .controlBackgroundColor)
     static let page = Color(nsColor: .windowBackgroundColor)
     static let border = Color(nsColor: .separatorColor)
+    #elseif os(tvOS)
+    // Die gruppierten Hintergrundfarben sind auf dem Fernseher nicht definiert,
+    // und die Oberfläche ist dort ohnehin dunkel.
+    static let card = Color(white: 0.14)
+    static let page = Color(white: 0.06)
+    static let border = Color(white: 0.3)
     #else
     static let card = Color(uiColor: .secondarySystemGroupedBackground)
     static let page = Color(uiColor: .systemGroupedBackground)
