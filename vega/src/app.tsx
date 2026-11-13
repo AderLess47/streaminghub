@@ -7,6 +7,8 @@ import { demoPlaylist, demoProgrammes, DEMO_SOURCE_LABEL } from "./data/demo-lib
 import { loadEpgFromUrl } from "./data/epg";
 import { parseM3u } from "./data/m3u";
 import { logError, logEvent, recordDeviceInfo } from "./data/diagnostics";
+// Trägt Amazons Shaka-Player ein, sofern er im Projekt liegt (siehe README).
+import "./player/shaka-registration";
 import { limitFor, loadPlaylistFromUrl, shouldApplyManaged } from "./data/playlist";
 import {
   clearActivationToken,

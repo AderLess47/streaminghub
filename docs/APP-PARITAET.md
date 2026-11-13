@@ -27,7 +27,7 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
 | Wiedergabestand löschen | ja | ja | ja |
 | Datenschutz, Impressum, Kontolöschung in der App | ja | ja (ergänzt) | ja (ergänzt; auf tvOS als Adresse) |
 | Erinnerungen an Sendungen | Systembenachrichtigung (`AlarmManager`) | nur in der laufenden App (Vega OS bietet Apps keinen Alarm) | echte lokale Benachrichtigung (`UNUserNotificationCenter`) |
-| HLS-Wiedergabe | Media3/ExoPlayer | **offen** – braucht Amazons gepatchten Shaka-Player im MSE-Modus; progressive Dateien laufen | AVPlayer, ohne Zusatzpaket |
+| HLS-Wiedergabe | Media3/ExoPlayer | MSE über Amazons Shaka-Player; Paket wird per `npm run setup:shaka` eingesetzt (proprietär, nicht im Repo). Ohne Paket baut die App, zeigt für HLS aber einen Hinweis | AVPlayer, ohne Zusatzpaket |
 | Diagnose-Protokoll für Fehler und Hardware | ja (neu) | ja (neu) | ja (neu) |
 | Geräteklassen-Layout | vier Profile (TV, Phone, Tablet, Desktop) | TV-Fokus, Karten und Abstände über Layout-Helfer | adaptive Größenklassen, TV-Fokus-Stil |
 
@@ -46,7 +46,9 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
   ersetzen die URL als Quelle; die 15-Minuten-Auffrischung entfällt dann, weil
   es keine Adresse zum Nachladen gibt. Gelesen wird über den Security-Scope der
   gewählten Datei, mit 50-MB-Grenze und UTF-8-/ISO-8859-1-Fallback.
-- **HLS auf Vega.** Siehe `vega/README.md`, Abschnitt „HLS und DASH“.
+- **HLS auf Vega.** Der Adapter und die Surface-Wiedergabe sind eingebaut; der
+  Shaka-Player selbst muss wegen Amazons Lizenzhinweis einmalig lokal ergänzt
+  werden (`npm run setup:shaka`). Siehe `vega/README.md`, Abschnitt „HLS und DASH“.
 
 ## Diagnose-Protokoll
 

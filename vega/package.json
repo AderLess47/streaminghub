@@ -8,7 +8,8 @@
     "build": "react-native build-vega --build-type Release",
     "build:debug": "react-native build-vega",
     "typecheck": "tsc --noEmit",
-    "doctor": "vega project doctor"
+    "doctor": "vega project doctor",
+    "setup:shaka": "node scripts/setup-shaka.mjs"
   },
   "dependencies": {
     "@amazon-devices/react-native-kepler": "4.0.2",
