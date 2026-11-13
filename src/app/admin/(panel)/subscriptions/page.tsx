@@ -48,7 +48,9 @@ export default async function AdminSubscriptionsPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.user_id}>
-                <td className="text-xs">{row.email}</td>
+                <td className="max-w-[13rem] truncate text-xs" title={row.email}>
+                  {row.email}
+                </td>
                 <td>
                   <Badge tone={row.status === "active" ? "ok" : row.status === "pending" ? "warn" : "neutral"}>{row.status}</Badge>
                 </td>

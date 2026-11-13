@@ -56,8 +56,10 @@ export default async function AdminAuditPage() {
                   {entry.target_type ?? "—"}
                   {entry.target_id ? <span className="text-muted"> · {entry.target_id.slice(0, 10)}</span> : null}
                 </td>
-                <td className="text-[0.68rem]">{entry.ip ?? "—"}</td>
-                <td className="max-w-[16rem] truncate text-[0.65rem] text-muted" title={entry.meta ?? ""}>
+                <td className="max-w-[11rem] truncate text-[0.68rem]" title={entry.ip ?? ""}>
+                  {entry.ip ?? "—"}
+                </td>
+                <td className="max-w-[8rem] truncate text-[0.65rem] text-muted" title={entry.meta ?? ""}>
                   {entry.meta ?? "—"}
                 </td>
               </tr>
