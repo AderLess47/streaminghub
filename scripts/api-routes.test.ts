@@ -12,6 +12,7 @@
  */
 
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { all, nowIso, run } from "@/lib/db";
 import {
   normalizePairingCode,
@@ -321,6 +322,100 @@ await check("Fortschritt: fremdes Gerät überschreibt nichts, Rate-Limit greift
   assert.equal(blocked.status, 429);
   assert.equal(Number(blocked.headers.get("retry-after")) > 0, true);
   assert.equal(all("SELECT * FROM watch_progress WHERE media_url = ?", "https://x.example/zu-viel.mp4").length, 0);
+});
+
+/* ============================= Geräte-Tokens ============================= */
+
+function payloadOf(token: string): { deviceId: string; userId: string; exp: number } {
+  return JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8"));
+}
+
+/** Signiert ein beliebiges Payload – so entstehen gefälschte Tokens im Test. */
+function signWithSecret(payload: unknown, secret: string): string {
+  const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = createHmac("sha256", secret).update(body).digest("base64url");
+  return `${body}.${signature}`;
+}
+
+await check("Token: abgelaufene Tokens werden auf beiden Routen abgelehnt", async () => {
+  resetDb();
+  seedDevice("dev-a", "user-a");
+  __setPremium("user-a", true);
+
+  const expired = signDeviceToken({
+    deviceId: "dev-a",
+    userId: "user-a",
+    exp: Math.floor(Date.now() / 1000) - 10,
+  });
+  assert.equal((await getProgress(call("GET", "/api/v1/progress", { token: expired }))).status, 401);
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token: expired }))).status, 401);
+
+  // Eine Sekunde vor Ablauf gilt der Token noch – die Grenze liegt bei `exp`.
+  const soon = signDeviceToken({
+    deviceId: "dev-a",
+    userId: "user-a",
+    exp: Math.floor(Date.now() / 1000) + 5,
+  });
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token: soon }))).status, 200);
+});
+
+await check("Token: gesperrtes Gerät verliert den Zugang sofort", async () => {
+  resetDb();
+  seedDevice("dev-a", "user-a");
+  __setPremium("user-a", true);
+  const token = tokenFor("user-a", "dev-a");
+
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token }))).status, 200);
+
+  run("UPDATE devices SET status = 'revoked' WHERE id = 'dev-a'");
+  assert.equal((await getProgress(call("GET", "/api/v1/progress", { token }))).status, 403);
+  assert.equal((await getMe(call("GET", "/api/v1/me", { token }))).status, 403);
+
+  // Auch gesperrte Geräte dürfen keinen Fortschritt mehr schreiben.
+  const write = await putProgress(
+    call("PUT", "/api/v1/progress", { token, body: { url: "https://x.example/a.mp4", positionMs: 1_000, durationMs: 600_000 } }),
+  );
+  assert.equal(write.status, 403);
+  assert.equal(all("SELECT * FROM watch_progress").length, 0);
+});
+
+await check("Token: manipulierte, fremd signierte und fremde Geräte werden abgewiesen", async () => {
+  resetDb();
+  seedDevice("dev-a", "user-a");
+  seedDevice("dev-b", "user-b");
+  __setPremium("user-a", true);
+  __setPremium("user-b", true);
+  const valid = tokenFor("user-a", "dev-a");
+  assert.equal((await getProgress(call("GET", "/api/v1/progress", { token: valid }))).status, 200);
+
+  const rejects = async (token: string, status: number, label: string) => {
+    assert.equal((await getProgress(call("GET", "/api/v1/progress", { token }))).status, status, label);
+    assert.equal((await getMe(call("GET", "/api/v1/me", { token }))).status, status, label);
+  };
+
+  await rejects("kein-token-mit-punkt", 401, "kein Punkt");
+  await rejects(`${valid.split(".")[0]}.`, 401, "Signatur fehlt");
+  await rejects("a.b.c", 401, "zu viele Teile");
+
+  // Nutzer im Payload ausgetauscht, Signatur des Originals behalten.
+  const tampered = signWithSecret(
+    { ...payloadOf(valid), userId: "user-b" },
+    "egal",
+  ).replace(/\.[^.]+$/, `.${valid.split(".")[1]}`);
+  assert.equal(payloadOf(tampered).userId, "user-b");
+  await rejects(tampered, 401, "Signatur passt nicht mehr");
+
+  // Mit falschem Schlüssel signiert sieht formal gültig aus, ist aber wertlos.
+  await rejects(
+    signWithSecret({ deviceId: "dev-a", userId: "user-a", exp: Math.floor(Date.now() / 1000) + 600 }, "falscher-schluessel"),
+    401,
+    "fremder Schlüssel",
+  );
+
+  // Echt signiert, aber Nutzer und Gerät gehören nicht zusammen.
+  await rejects(tokenFor("user-a", "dev-b"), 403, "Gerät gehört user-b");
+  await rejects(tokenFor("user-b", "dev-a"), 403, "Gerät gehört user-a");
+  await rejects(tokenFor("user-a", "dev-erfunden"), 403, "Gerät existiert nicht");
 });
 
 /* =========================== Geräte-Aktivierung ========================== */
