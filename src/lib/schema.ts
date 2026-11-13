@@ -164,6 +164,25 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TEXT NOT NULL
 );
 
+-- Widerruf (§ 356a BGB) und Kündigung (§ 312k BGB) über die Website.
+-- Die Zeile ist der Beleg: wann welche Erklärung zu welchem Vertrag einging.
+CREATE TABLE IF NOT EXISTS contract_requests (
+  id TEXT PRIMARY KEY,
+  reference TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL,                 -- withdrawal | cancellation
+  email TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  contract TEXT NOT NULL DEFAULT '',
+  note TEXT,
+  status TEXT NOT NULL,               -- received | canceled_web | store_channel | no_subscription | no_account | failed
+  channel TEXT,
+  effective_at TEXT,
+  ip TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_contract_requests_created ON contract_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_contract_requests_email ON contract_requests(email);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id TEXT PRIMARY KEY,
   actor_id TEXT,

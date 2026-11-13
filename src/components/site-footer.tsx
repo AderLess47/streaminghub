@@ -46,6 +46,8 @@ export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | nu
             <FooterLink href="/terms">{t.footer.terms}</FooterLink>
             <FooterLink href="/subscription-terms">{t.footer.subscriptionTerms}</FooterLink>
             <FooterLink href="/withdrawal">{t.footer.withdrawal}</FooterLink>
+            <FooterLink href="/widerruf">{t.footer.withdrawContract}</FooterLink>
+            <FooterLink href="/kuendigung">{t.footer.cancelSubscription}</FooterLink>
             <FooterLink href="/barrierefreiheit">{t.footer.accessibility}</FooterLink>
           </FooterColumn>
         </div>
