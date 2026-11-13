@@ -62,6 +62,17 @@ function migrate(db: DatabaseSync) {
     db.exec("ALTER TABLE customer_playlists ADD COLUMN device_id TEXT REFERENCES devices(id) ON DELETE CASCADE");
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_customer_playlists_device ON customer_playlists(device_id)");
+
+  // Widerrufe und Kündigungen: „erledigt“ kam später dazu, alte Datenbanken
+  // kennen die Spalten noch nicht.
+  const contractColumns = db.prepare("PRAGMA table_info(contract_requests)").all() as { name: string }[];
+  const contractExisting = new Set(contractColumns.map((column) => column.name));
+  if (!contractExisting.has("handled_at")) {
+    db.exec("ALTER TABLE contract_requests ADD COLUMN handled_at TEXT");
+  }
+  if (!contractExisting.has("handled_by")) {
+    db.exec("ALTER TABLE contract_requests ADD COLUMN handled_by TEXT");
+  }
 }
 
 function prepare(sql: string): Statement {

@@ -177,6 +177,8 @@ CREATE TABLE IF NOT EXISTS contract_requests (
   status TEXT NOT NULL,               -- received | canceled_web | store_channel | no_subscription | no_account | failed
   channel TEXT,
   effective_at TEXT,
+  handled_at TEXT,                    -- NULL = noch offen für den Support
+  handled_by TEXT,
   ip TEXT,
   created_at TEXT NOT NULL
 );
