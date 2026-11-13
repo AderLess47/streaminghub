@@ -26,7 +26,6 @@
  *   --smoke-url <url>   HLS-Quelle für den Wiedergabetest
  *   --timeout <sek>     Wartezeit auf die Wiedergabe (Standard 120)
  *   --start-vvd         Vega Virtual Device vorher starten
- *   --vvd-no-gui        VVD ohne Fenster starten (für headless Runner)
  *   --fresh-install     `npm ci` erzwingen
  *   --force-setup       Shaka auch neu einsetzen, wenn es schon daliegt
  *   --skip-install      `npm ci`/`npm install` überspringen
@@ -79,7 +78,6 @@ Optionen:
   --smoke-url <url>   HLS-Quelle für den Wiedergabetest
   --timeout <sek>     Wartezeit auf die Wiedergabe (Standard 120)
   --start-vvd         Vega Virtual Device vorher starten
-  --vvd-no-gui        VVD ohne Fenster starten (für headless Runner)
   --fresh-install     npm ci erzwingen
   --force-setup       Shaka auch neu einsetzen, wenn es schon daliegt
   --skip-install      npm ci/npm install überspringen
@@ -96,7 +94,6 @@ const options = {
   smokeUrl: "",
   timeout: 120,
   startVvd: false,
-  vvdNoGui: false,
   freshInstall: false,
   forceSetup: false,
   skipInstall: false,
@@ -134,9 +131,6 @@ function parseArguments() {
       }
       case "--start-vvd":
         options.startVvd = true;
-        break;
-      case "--vvd-no-gui":
-        options.vvdNoGui = true;
         break;
       case "--fresh-install":
         options.freshInstall = true;
@@ -441,9 +435,7 @@ async function playback(vpkg, appId) {
   }
 
   if (options.startVvd) {
-    const vvdArgs = ["virtual-device", "start"];
-    if (options.vvdNoGui) vvdArgs.push("--no-gui");
-    const vvd = run("vega", vvdArgs);
+    const vvd = run("vega", ["virtual-device", "start"]);
     if (vvd.status !== 0) fail("Virtuelles Gerät ließ sich nicht starten.");
   }
 

@@ -23,10 +23,6 @@ on:
         description: "Vega Virtual Device vorher starten"
         type: boolean
         default: true
-      vvd_no_gui:
-        description: "VVD ohne Fenster starten (headless Runner)"
-        type: boolean
-        default: true
       skip_build:
         description: "Build überspringen und vorhandenes .vpkg testen"
         type: boolean
@@ -75,7 +71,6 @@ jobs:
         run: |
           args=(--device "$DEVICE" --smoke-url "$SMOKE_URL" --skip-install --require-device)
           if [ "${{ inputs.start_vvd }}" = "true" ]; then args+=(--start-vvd); fi
-          if [ "${{ inputs.vvd_no_gui }}" = "true" ]; then args+=(--vvd-no-gui); fi
           if [ "${{ inputs.skip_build }}" = "true" ]; then args+=(--skip-build); fi
           npm run verify:shaka -- "${args[@]}"
 
