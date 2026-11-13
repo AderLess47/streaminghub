@@ -194,8 +194,13 @@ function verifyApkMetadata(apk, version, versionCode, env) {
 function verifySignature(apk, env) {
   const apksigner = findApksigner(env);
   if (!apksigner) {
-    console.warn("! apksigner not found - signature could not be verified");
-    return;
+    // Ein ungeprüfter APK darf nicht veröffentlicht werden: Die Downloadseite
+    // verspricht Größe und SHA-256 der signierten Datei, und Nutzer installieren
+    // sie per Sideload. Deshalb hier abbrechen statt nur zu warnen.
+    fail(
+      "apksigner not found - refusing to publish an APK without a verified signature. " +
+        "Install Android build-tools or set ANDROID_HOME/ANDROID_SDK_ROOT.",
+    );
   }
   const result = spawnSync(apksigner, ["verify", "--print-certs", apk], {
     env,
