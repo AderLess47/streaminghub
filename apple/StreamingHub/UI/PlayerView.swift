@@ -1,5 +1,6 @@
 import AVKit
 import Combine
+import Network
 import SwiftUI
 import StreamingHubCore
 
@@ -17,6 +18,9 @@ struct PlayerView: View {
     @State private var failure: String?
     @State private var timeObserver: Any?
     @State private var observations: Set<AnyCancellable> = []
+    @State private var sourceURL: URL?
+    @State private var retryAttempts = 0
+    @State private var retryTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,8 +34,13 @@ struct PlayerView: View {
                         .font(.callout)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
-                    Button("Zurück zur Senderliste") { close() }
-                        .buttonStyle(.borderedProminent)
+                    HStack(spacing: 12) {
+                        Button("Erneut versuchen") { retryNow() }
+                            .buttonStyle(.borderedProminent)
+                        Button("Zurück zur Senderliste") { close() }
+                            .buttonStyle(.bordered)
+                    }
+                    .frame(minHeight: Theme.minimumTarget)
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -67,6 +76,19 @@ struct PlayerView: View {
             return
         }
 
+        sourceURL = url
+        await start(url: url)
+    }
+
+    /// Baut das Item neu auf. Wird auch benutzt, wenn nach einem Netzfehler
+    /// automatisch oder per Knopf erneut gestartet wird.
+    private func start(url: URL) async {
+        observations.removeAll()
+        if let timeObserver {
+            player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
+
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
         watch(item, url: url)
@@ -98,8 +120,15 @@ struct PlayerView: View {
         item.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { status in
-                guard status == .failed else { return }
-                presentFailure(item.error as NSError?, url: url, context: "status")
+                switch status {
+                case .readyToPlay:
+                    // Läuft wieder: Der nächste Fehler darf erneut automatisch starten.
+                    retryAttempts = 0
+                case .failed:
+                    presentFailure(item.error as NSError?, url: url, context: "status")
+                default:
+                    break
+                }
             }
             .store(in: &observations)
 
@@ -119,10 +148,47 @@ struct PlayerView: View {
             level: .warn,
             area: "player"
         )
-        failure = PlaybackFailureText.message(
+
+        let message = PlaybackFailureText.message(
             for: error,
             insecure: PlaybackFailureText.isInsecure(url)
         )
+        let retryable = PlaybackRetry.isNetworkError(error) &&
+            PlaybackRetry.canRetryAutomatically(attempts: retryAttempts)
+        failure = retryable ? "\(message)\n\(PlaybackRetry.hint)" : message
+        if retryable {
+            scheduleAutoRetry(for: url)
+        }
+    }
+
+    /// Wartet, bis ein Netz gemeldet wird, und startet die Wiedergabe dann ohne
+    /// Zutun des Nutzers neu. Die Abfrage ist billig und endet mit der Ansicht.
+    private func scheduleAutoRetry(for url: URL) {
+        retryTask?.cancel()
+        retryTask = Task { @MainActor in
+            let monitor = NWPathMonitor()
+            monitor.start(queue: DispatchQueue(label: "de.streaminghub.player.network"))
+            defer { monitor.cancel() }
+
+            while !Task.isCancelled, monitor.currentPath.status != .satisfied {
+                try? await Task.sleep(nanoseconds: UInt64(PlaybackRetry.pollSeconds * 1_000_000_000))
+            }
+
+            guard !Task.isCancelled, failure != nil else { return }
+            guard PlaybackRetry.canRetryAutomatically(attempts: retryAttempts) else { return }
+
+            retryAttempts += 1
+            failure = nil
+            await start(url: url)
+        }
+    }
+
+    private func retryNow() {
+        guard let url = sourceURL else { return }
+        retryTask?.cancel()
+        retryAttempts = 0
+        failure = nil
+        Task { await start(url: url) }
     }
 
     private func close() {
@@ -131,6 +197,8 @@ struct PlayerView: View {
     }
 
     private func teardown() {
+        retryTask?.cancel()
+        retryTask = nil
         observations.removeAll()
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
