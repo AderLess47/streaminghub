@@ -102,6 +102,9 @@ jobs:
       - name: Build tvOS
         working-directory: apple
         run: |
+          # Der Simulator hat seine Arbeit getan und würde den Builds nur CPU
+          # wegnehmen.
+          xcrun simctl shutdown "$SIMULATOR_UDID" 2>/dev/null || true
           set -o pipefail
           xcodebuild \
             -scheme StreamingHub_tvOS \
