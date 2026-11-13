@@ -32,9 +32,31 @@ final class LaunchSmokeTests: XCTestCase {
             app.tabBars.buttons["Start"].tap()
         }
 
+        let channel = app.staticTexts["Demo Live Eins"]
+        XCTAssertTrue(channel.waitForExistence(timeout: 15), "Die Senderliste zeigt keine Einträge.")
+
+        if !channel.isHittable {
+            app.swipeUp()
+        }
+        channel.tap()
+
+        // Der Player ist geöffnet, sobald seine untere Leiste da ist.
+        let close = app.buttons["Schließen"]
+        XCTAssertTrue(close.waitForExistence(timeout: 20), "Der Player wurde nicht geöffnet.")
+
+        // Bei einem Wiedergabefehler führt der Knopf im Fehlerbild zurück,
+        // sonst die untere Leiste. Beide Wege müssen funktionieren.
+        let backFromError = app.buttons["Zurück zur Senderliste"]
+        if backFromError.waitForExistence(timeout: 3) {
+            backFromError.tap()
+        } else {
+            close.tap()
+        }
+
         XCTAssertTrue(
-            app.staticTexts["Demo Live Eins"].waitForExistence(timeout: 15),
-            "Die Senderliste zeigt keine Einträge."
+            app.staticTexts["Demo Live Eins"].waitForExistence(timeout: 10),
+            "Der Rückweg zur Senderliste hat nicht funktioniert."
         )
+        XCTAssertFalse(close.exists, "Der Player ist nach dem Zurück noch offen.")
     }
 }
