@@ -45,6 +45,9 @@ import {
 } from "../src/player/hls";
 import memoryStorage from "./mocks/async-storage";
 
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { secureBaseUrl, StreamingHubApi, StreamingHubApiError } from "../src/data/api";
+
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
 async function check(name: string, run: () => void | Promise<void>): Promise<void> {
@@ -447,6 +450,79 @@ await check("Erinnerungen: ungültige Einträge werden verworfen", async () => {
   );
   await saveReminders([{ id: "r4", channelId: "b", channelName: "B", title: "Neu", startMs: 6_000 }]);
   assert.equal((await loadReminders())[0].id, "r4");
+});
+
+/* -------------------------------- Transport ------------------------------ */
+
+async function withServer(
+  handler: (request: IncomingMessage, response: ServerResponse) => void,
+  run: (baseUrl: string) => Promise<void>,
+): Promise<void> {
+  const server = createServer(handler);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+  try {
+    await run(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+}
+
+await check("API-Adresse: nur HTTPS, Klartext nur für Loopback", () => {
+  assert.throws(() => secureBaseUrl("http://streaminghub.org"), /HTTPS/);
+  assert.throws(() => new StreamingHubApi("http://streaminghub.org"), /HTTPS/);
+  assert.throws(() => secureBaseUrl("ftp://streaminghub.org"), /HTTPS/);
+  assert.throws(() => secureBaseUrl("keine-adresse"), /Ungültige API-Adresse/);
+
+  assert.equal(secureBaseUrl("https://streaminghub.org/"), "https://streaminghub.org");
+  assert.equal(secureBaseUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787");
+  assert.equal(secureBaseUrl("http://localhost:8787"), "http://localhost:8787");
+});
+
+await check("API: Weiterleitung wird abgelehnt, Token geht nur an den ersten Host", async () => {
+  let authorization = "";
+  await withServer(
+    (request, response) => {
+      authorization = String(request.headers.authorization ?? "");
+      response.writeHead(302, { location: "http://insecure.example/steal" });
+      response.end();
+    },
+    async (baseUrl) => {
+      const api = new StreamingHubApi(baseUrl);
+      await assert.rejects(
+        () => api.me("geheimer-token"),
+        (error: unknown) =>
+          error instanceof StreamingHubApiError &&
+          error.code === "redirect_rejected" &&
+          error.status === 302,
+      );
+    },
+  );
+
+  assert.equal(authorization, "Bearer geheimer-token");
+});
+
+await check("API: normale Antworten werden weiterhin gelesen", async () => {
+  await withServer(
+    (_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          account: { email: "kunde@example.com", displayName: "Kunde" },
+          device: { name: "Wohnzimmer", platform: "vega" },
+          subscription: { plan: "premium", status: "none" },
+          playlist: null,
+        }),
+      );
+    },
+    async (baseUrl) => {
+      const account = await new StreamingHubApi(baseUrl).me("token");
+      assert.equal(account.email, "kunde@example.com");
+      assert.equal(account.deviceName, "Wohnzimmer");
+      assert.equal(account.playlist, undefined);
+    },
+  );
 });
 
 /* -------------------------------- Ergebnis ------------------------------- */

@@ -10,6 +10,33 @@ import type { AccountInfo, PairingCode, PairingPoll, WatchProgressItem } from ".
 
 export const DEFAULT_BASE_URL = "https://streaminghub.org";
 
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
+/**
+ * Konto-, Geräte- und Abo-Daten gehen nur über TLS. Klartext ist ausschließlich
+ * für die Loopback-Adresse der Tests erlaubt, damit eine vertippte oder
+ * umgebogene Konfiguration nicht still unverschlüsselt sendet.
+ */
+export function secureBaseUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new StreamingHubApiError(0, "invalid_base_url", `Ungültige API-Adresse: ${value}`);
+  }
+  const secure = url.protocol === "https:";
+  const loopback = url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
+  if (!secure && !loopback) {
+    throw new StreamingHubApiError(
+      0,
+      "insecure_base_url",
+      `Die API-Adresse muss HTTPS verwenden: ${value}`,
+    );
+  }
+  return trimmed;
+}
+
 export class StreamingHubApiError extends Error {
   readonly status: number;
   readonly code?: string;
@@ -47,7 +74,7 @@ export class StreamingHubApi {
   private readonly baseUrl: string;
 
   constructor(baseUrl: string = DEFAULT_BASE_URL) {
-    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.baseUrl = secureBaseUrl(baseUrl);
   }
 
   private async call(path: string, options: CallOptions): Promise<Json> {
@@ -57,6 +84,11 @@ export class StreamingHubApi {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: options.method,
         signal: controller.signal,
+        // Ein 3xx auf http:// würde den Bearer-Token im Klartext erneut senden.
+        // Wo `manual` unterstützt wird, kommt die Weiterleitung als Antwort an
+        // und wird unten abgelehnt; React Native folgt ihr, was der HTTPS-
+        // Zwang der Basis-URL und HSTS abfangen.
+        redirect: "manual",
         headers: {
           Accept: "application/json",
           "User-Agent": "StreamingHub/1.0 (Vega)",
@@ -65,6 +97,14 @@ export class StreamingHubApi {
         },
         ...(options.body ? { body: JSON.stringify(options.body) } : {}),
       });
+
+      if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+        throw new StreamingHubApiError(
+          response.status,
+          "redirect_rejected",
+          "Der Server hat eine Weiterleitung verlangt. Aus Sicherheitsgründen wird sie nicht verfolgt.",
+        );
+      }
 
       const raw = await response.text();
       let json: Json = {};
