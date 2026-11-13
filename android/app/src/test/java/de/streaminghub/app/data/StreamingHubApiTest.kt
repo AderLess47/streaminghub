@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.net.InetAddress
@@ -89,6 +90,35 @@ class StreamingHubApiTest {
 
         assertEquals("https://provider.example/managed.m3u", account.playlist?.url)
         assertEquals("2026-11-10T12:00:00.000Z", account.playlist?.updatedAt)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsPlainHttpApiBaseUrl() {
+        StreamingHubApi("http://streaminghub.org")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsUnsupportedScheme() {
+        StreamingHubApi("ftp://streaminghub.org")
+    }
+
+    @Test
+    fun acceptsHttpsAndLoopbackHttp() {
+        StreamingHubApi("https://streaminghub.org")
+        StreamingHubApi("http://127.0.0.1:8787")
+        StreamingHubApi("http://localhost:8787")
+    }
+
+    @Test
+    fun doesNotFollowRedirects() = runBlocking {
+        responseStatus = 302
+
+        val error = runCatching { api().me("test-token") }.exceptionOrNull()
+
+        assertTrue("Weiterleitung muss als Fehler ankommen", error is StreamingHubApiException)
+        val apiError = error as StreamingHubApiException
+        assertEquals(302, apiError.httpStatus)
+        assertEquals("redirect_rejected", apiError.apiCode)
     }
 
     private fun api() = StreamingHubApi("http://127.0.0.1:${serverSocket.localPort}")

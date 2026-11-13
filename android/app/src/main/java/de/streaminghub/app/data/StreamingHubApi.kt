@@ -66,9 +66,34 @@ data class AccountInfo(
  * source URL are exchanged with StreamingHub. Playlist content, EPG documents
  * and stream URLs stay on the device.
  */
-class StreamingHubApi(
-    private val baseUrl: String = "https://streaminghub.org",
-) {
+class StreamingHubApi(baseUrl: String = DEFAULT_BASE_URL) {
+
+    private val baseUrl: String = secureBaseUrl(baseUrl)
+
+    companion object {
+        const val DEFAULT_BASE_URL = "https://streaminghub.org"
+
+        private val LOOPBACK_HOSTS = setOf("127.0.0.1", "localhost", "::1", "[::1]")
+
+        /**
+         * Konto-, Geräte- und Abo-Daten gehen nur über TLS. Klartext ist
+         * ausschließlich für die Loopback-Adresse der Unit-Tests erlaubt; ein
+         * Tippfehler oder eine umgebogene Konfiguration fällt so beim Start auf
+         * statt still unverschlüsselt zu senden.
+         */
+        private fun secureBaseUrl(value: String): String {
+            val trimmed = value.trim().trimEnd('/')
+            val url = runCatching { URL(trimmed) }.getOrNull()
+                ?: throw IllegalArgumentException("Ungültige API-Adresse: $value")
+            val secure = url.protocol.equals("https", ignoreCase = true)
+            val loopback = url.protocol.equals("http", ignoreCase = true) &&
+                url.host.lowercase() in LOOPBACK_HOSTS
+            if (!secure && !loopback) {
+                throw IllegalArgumentException("Die API-Adresse muss HTTPS verwenden: $value")
+            }
+            return trimmed
+        }
+    }
 
     suspend fun requestPairing(
         deviceName: String,
@@ -252,7 +277,9 @@ class StreamingHubApi(
             requestMethod = method
             connectTimeout = 20_000
             readTimeout = 30_000
-            instanceFollowRedirects = true
+            // Ein 3xx auf http:// würde den Bearer-Token im Klartext erneut
+            // senden. Weiterleitungen werden deshalb nie automatisch verfolgt.
+            instanceFollowRedirects = false
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "StreamingHub/1.1 (Android)")
             if (bearerToken != null) {
@@ -273,6 +300,14 @@ class StreamingHubApi(
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val raw = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
             val json = runCatching { JSONObject(raw) }.getOrNull()
+
+            if (status in 300..399) {
+                throw StreamingHubApiException(
+                    httpStatus = status,
+                    apiCode = "redirect_rejected",
+                    message = "Der Server hat eine Weiterleitung verlangt. Aus Sicherheitsgründen wird sie nicht verfolgt.",
+                )
+            }
 
             if (status !in 200..299) {
                 val apiError = json?.optJSONObject("error")
