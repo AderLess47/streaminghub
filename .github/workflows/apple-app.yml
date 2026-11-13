@@ -1,8 +1,12 @@
 name: Apple app
 
-# Baut die SwiftUI-App für iOS, tvOS und macOS. Die Core-Tests laufen weiterhin in
-# `ci.yml` auf Linux; hier geht es nur um das, was ohne Xcode ungeprüft bleibt:
-# Compilerfehler in den App-Zielen.
+# Baut die SwiftUI-App für iOS, tvOS und macOS und startet den iOS-Smoke-Test.
+# Die Core-Tests laufen weiterhin in `ci.yml` auf Linux; hier geht es um das, was
+# ohne Xcode ungeprüft bleibt.
+#
+# Die drei Plattformen laufen als eigene Jobs: nacheinander brauchte der Lauf
+# rund acht Minuten, obwohl jeder Build unter zwei Minuten liegt. Jeder Job hat
+# einen eigenen Runner, deshalb kosten sie sich keine CPU weg.
 on:
   pull_request:
     branches: [main]
@@ -18,17 +22,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Apple app build
+  ios:
+    name: iOS build and smoke test
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - uses: actions/checkout@v4
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -37,17 +37,8 @@ jobs:
         working-directory: apple
         run: xcodegen generate
 
-      - name: Restore build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ runner.temp }}/dd-ios
-            ${{ runner.temp }}/dd-tvos
-            ${{ runner.temp }}/dd-macos
-          key: apple-dd-${{ hashFiles('apple/project.yml', 'apple/Package.swift', 'apple/Sources/**/*.swift', 'apple/StreamingHub/**/*.swift', 'apple/StreamingHubUITests/**/*.swift') }}
-
       # Der Simulator-Start dauert oft länger als der Build; er läuft deshalb
-      # schon während des iOS-Builds im Hintergrund.
+      # schon während des Builds im Hintergrund.
       - name: Boot simulator in the background
         run: |
           UDID=$(xcrun simctl list devices available --json | python3 -c '
@@ -58,14 +49,14 @@ jobs:
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$UDID" || true
 
-      - name: Build iOS and tests
+      - name: Build app and tests
         working-directory: apple
         run: |
           set -o pipefail
           xcodebuild \
             -scheme StreamingHub_iOS \
             -destination "id=$SIMULATOR_UDID" \
-            -derivedDataPath "$RUNNER_TEMP/dd-ios" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             ONLY_ACTIVE_ARCH=YES \
             -quiet build-for-testing
@@ -80,7 +71,7 @@ jobs:
           xcodebuild test-without-building \
             -scheme StreamingHub_iOS \
             -destination "id=$SIMULATOR_UDID" \
-            -derivedDataPath "$RUNNER_TEMP/dd-ios" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
             -only-testing:StreamingHubUITests \
             -resultBundlePath "$RUNNER_TEMP/smoke.xcresult" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
@@ -99,20 +90,47 @@ jobs:
               sys.exit("Smoke-Test fehlgeschlagen.")
           PY
 
+  tvos:
+    name: tvOS build
+    runs-on: macos-15
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: apple
+        run: xcodegen generate
+
       - name: Build tvOS
         working-directory: apple
         run: |
-          # Der Simulator hat seine Arbeit getan und würde den Builds nur CPU
-          # wegnehmen.
-          xcrun simctl shutdown "$SIMULATOR_UDID" 2>/dev/null || true
           set -o pipefail
           xcodebuild \
             -scheme StreamingHub_tvOS \
             -destination 'generic/platform=tvOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/dd-tvos" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             ONLY_ACTIVE_ARCH=YES \
             -quiet build
+
+  macos:
+    name: macOS build
+    runs-on: macos-15
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: apple
+        run: xcodegen generate
 
       - name: Build macOS
         working-directory: apple
@@ -121,6 +139,7 @@ jobs:
           xcodebuild \
             -scheme StreamingHub_macOS \
             -destination 'generic/platform=macOS' \
-            -derivedDataPath "$RUNNER_TEMP/dd-macos" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             -quiet build
