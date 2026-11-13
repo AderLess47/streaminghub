@@ -4,31 +4,28 @@
  *
  * Der Player ist von Amazon als „proprietary/confidential“ gekennzeichnet und
  * darf deshalb nicht im Repository liegen. Dieses Skript lädt ihn aus Amazons
- * Download, baut ihn (Java nötig), kopiert Wrapper, Polyfills und `dist` nach
- * `src/` und ersetzt `src/player/shaka-registration.ts`. Die kopierten Dateien
- * sind in `vega/.gitignore` ausgenommen.
+ * Download, baut ihn (Java 21+ und git nötig), kopiert Wrapper, Polyfills und
+ * `dist` nach `src/` und ersetzt `src/player/shaka-registration.ts`. Die
+ * kopierten Dateien sind in `vega/.gitignore` ausgenommen.
+ *
+ * Der Wrapper aus Amazons Tarball erbt von `../PlayerBase`, das im Paket fehlt.
+ * Deshalb setzt das Skript Amazons selbstständige Sample-Fassung ein
+ * (MIT-0-Repository `AmazonAppDev/vega-video-sample`).
  *
  * Aufruf:
  *   npm run setup:shaka
- *   npm run setup:shaka -- --tarball ~/Downloads/shaka-rel-v4.16.13-r1.2-devices_scope.tar.gz
+ *   npm run setup:shaka -- --release 4.16.13-r1.2
+ *   npm run setup:shaka -- --tarball ~/Downloads/shaka-rel-v4.8.5-r1.7-devices_scope.tar.gz
  *   npm run setup:shaka -- --skip-build        # nur kopieren, `dist` muss schon da sein
  */
 
 import { execFileSync } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { cpSync } from "node:fs";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-const VERSION = "4.16.13";
-const RELEASE = "4.16.13-r1.2";
-const ARCHIVE_URL = `https://amzndevresources.com/vega/media-player/shaka-rel-v${RELEASE}-devices_scope.tar.gz`;
-
-const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const workDir = path.join(appRoot, ".shaka-build");
-const archivePath = path.join(workDir, `shaka-rel-v${RELEASE}.tar.gz`);
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -36,6 +33,23 @@ const option = (name) => {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : undefined;
 };
+
+// 4.6.18 ist die letzte Auslieferung, deren ShakaPlayer.ts ohne Amazons
+// separates PlayerBase.ts auskommt. Die neueren Pakete importieren
+// `../PlayerBase`, liefern die Datei aber nicht mit – ohne sie bricht der
+// Vega-Build ab (siehe README).
+const DEFAULT_VERSION = "4.8.5";
+const DEFAULT_RELEASE = "4.8.5-r1.7";
+const VERSION = option("--release")?.split("-r")[0] ?? DEFAULT_VERSION;
+const RELEASE = option("--release") ?? DEFAULT_RELEASE;
+const ARCHIVE_URL = `https://amzndevresources.com/vega/media-player/shaka-rel-v${RELEASE}-devices_scope.tar.gz`;
+
+const SAMPLE_WRAPPER_URL =
+  "https://raw.githubusercontent.com/AmazonAppDev/vega-video-sample/main/src/w3cmedia/shakaplayer/ShakaPlayer.ts";
+
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const workDir = path.join(appRoot, ".shaka-build");
+const archivePath = path.join(workDir, `shaka-rel-v${RELEASE}.tar.gz`);
 
 const localArchive = option("--tarball");
 const skipBuild = flag("--skip-build");
@@ -99,28 +113,71 @@ async function main() {
     }
     if (!hasCommand("git")) fail("git fehlt. Amazons setup.sh klont das Shaka-Repository.");
     step("Baue Shaka (kann einige Minuten dauern)");
-    execFileSync("bash", ["setup.sh"], { cwd: path.join(releaseDir, "scripts"), stdio: "inherit" });
+    // Amazons setup.sh klont in dieses Verzeichnis; ein Rest aus einem früheren
+    // Lauf würde den Klon abbrechen.
+    rmSync(path.join(releaseDir, "scripts", "shaka-player"), { recursive: true, force: true });
+    execFileSync("bash", ["setup.sh"], {
+      cwd: path.join(releaseDir, "scripts"),
+      stdio: "inherit",
+      // `git am` braucht eine Identität; ohne sie bricht der Patch-Schritt ab.
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "StreamingHub Build",
+        GIT_AUTHOR_EMAIL: "build@localhost",
+        GIT_COMMITTER_NAME: "StreamingHub Build",
+        GIT_COMMITTER_EMAIL: "build@localhost",
+      },
+    });
   }
 
-  step("Kopiere Wrapper, Polyfills und PlayerBase nach src/");
-  const wrappers = ["shakaplayer", "polyfills"];
-  for (const folder of wrappers) {
-    if (!copyInto(path.join(releaseDir, "src", folder), path.join(appRoot, "src", folder))) {
+  step("Kopiere Wrapper, Polyfills und PlayerInterface nach src/");
+  for (const folder of ["shakaplayer", "polyfills"]) {
+    const target = path.join(appRoot, "src", folder);
+    rmSync(target, { recursive: true, force: true });
+    if (!copyInto(path.join(releaseDir, "src", folder), target)) {
       fail(`Amazons Paket enthält src/${folder} nicht.`);
     }
   }
-  const missing = [];
-  for (const file of ["PlayerInterface.ts", "PlayerBase.ts"]) {
-    if (!copyInto(path.join(releaseDir, "src", file), path.join(appRoot, "src", file))) {
-      missing.push(file);
-    }
+  rmSync(path.join(appRoot, "src", "PlayerBase.ts"), { force: true });
+  if (!copyInto(path.join(releaseDir, "src", "PlayerInterface.ts"), path.join(appRoot, "src", "PlayerInterface.ts"))) {
+    fail("Amazons Paket enthält src/PlayerInterface.ts nicht.");
   }
-  if (missing.length > 0) {
-    console.warn(
-      `\nWarnung: ${missing.join(", ")} fehlt im Amazon-Paket. Der Shaka-Wrapper importiert ${missing.join(" und ")}; ` +
-        "ohne diese Dateien bricht der Vega-Build ab. Bitte den Stand aus Amazons Shaka-Repository ergänzen " +
-        "(siehe README, Abschnitt „HLS und DASH“).\n",
+
+  // Amazons Tarball liefert für 4.8.5/4.16 ein ShakaPlayer.ts, das von einem
+  // `../PlayerBase` erbt – die Datei fehlt im Paket. Amazons eigenes Sample
+  // (MIT-0) nutzt stattdessen einen selbstständigen Wrapper; den holen wir hier.
+  const wrapperSource = path.join(appRoot, "src", "shakaplayer", "ShakaPlayer.ts");
+  step("Ersetze den Wrapper durch Amazons selbstständige Sample-Fassung");
+  try {
+    const response = await fetch(SAMPLE_WRAPPER_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const wrapperText = await response.text();
+    if (!wrapperText.includes("implements PlayerInterface")) {
+      throw new Error("Die Datei sieht nicht wie Amazons ShakaPlayer-Wrapper aus.");
+    }
+    writeFileSync(wrapperSource, wrapperText, "utf8");
+  } catch (error) {
+    fail(
+      `Der Sample-Wrapper konnte nicht geladen werden (${error instanceof Error ? error.message : error}). ` +
+        "Alternativ ShakaPlayer.ts aus github.com/AmazonAppDev/vega-video-sample nach src/shakaplayer/ kopieren.",
     );
+  }
+
+  // Die 4.8.5- und 4.16.x-Wrapper erben von `../PlayerBase`, das Amazon nicht
+  // mitliefert. Früher abbrechen als mitten im Vega-Build.
+
+  // Amazons Quellen sind nicht für unsere tsconfig geschrieben (`global`,
+  // DOM-Redeklarationen). `@ts-nocheck` hält `npm run typecheck` grün, ohne dass
+  // wir den Code ändern.
+  for (const folder of ["shakaplayer", "polyfills"]) {
+    for (const file of readdirSync(path.join(appRoot, "src", folder), { recursive: true })) {
+      const full = path.join(appRoot, "src", folder, String(file));
+      if (!full.endsWith(".ts") || !existsSync(full)) continue;
+      const content = readFileSync(full, "utf8");
+      if (!content.startsWith("// @ts-nocheck")) {
+        writeFileSync(full, `// @ts-nocheck\n// Amazon-Code, nicht Teil unserer Typprüfung.\n${content}`, "utf8");
+      }
+    }
   }
 
   const distSource = path.join(releaseDir, "scripts", "shaka-player", "dist");

@@ -81,13 +81,25 @@ cd vega
 npm run setup:shaka
 ```
 
-Das Skript [`scripts/setup-shaka.mjs`](scripts/setup-shaka.mjs) lädt Amazons
-Paket (`shaka-rel-v4.16.13-r1.2-devices_scope.tar.gz`), baut es mit Amazons
-`setup.sh` (braucht **Java 21+** und **git**), kopiert Wrapper, Polyfills,
-`PlayerBase` und `dist` nach `src/` und schreibt
-`src/player/shaka-registration.ts`. Die kopierten Dateien sind in
-[`.gitignore`](.gitignore) ausgenommen. Mit `--tarball <datei>` lässt sich ein
-bereits geladenes Archiv verwenden, mit `--skip-build` nur kopieren.
+Das Skript [`scripts/setup-shaka.mjs`](scripts/setup-shaka.mjs) erledigt:
+
+1. Amazons Paket `shaka-rel-v4.8.5-r1.7-devices_scope.tar.gz` laden
+   (`--release 4.16.13-r1.2` für eine andere Fassung, `--tarball <datei>` für ein
+   vorhandenes Archiv).
+2. Mit Amazons `setup.sh` bauen – braucht **Java 21+** und **git**.
+3. Wrapper, Polyfills und `PlayerInterface.ts` nach `src/` kopieren und `dist`
+   nach `src/shakaplayer/dist`.
+4. Den Wrapper durch Amazons selbstständige Fassung aus dem MIT-0-Sample
+   [`AmazonAppDev/vega-video-sample`](https://github.com/AmazonAppDev/vega-video-sample)
+   ersetzen. Amazons Tarball liefert für 4.8.5/4.16 ein `ShakaPlayer.ts`, das von
+   einem `../PlayerBase` erbt – diese Datei fehlt im Paket; der Sample-Wrapper
+   enthält dieselbe Logik ohne diese Abhängigkeit.
+5. `@xmldom/xmldom`, `base-64` und `fastestsmallesttextencoderdecoder`
+   installieren und `src/player/shaka-registration.ts` füllen.
+
+Die kopierten Dateien sind in [`.gitignore`](.gitignore) ausgenommen; `dist` ist
+rund 30 MB. `// @ts-nocheck` auf Amazons Quellen hält `npm run typecheck` grün,
+ohne den fremden Code zu ändern.
 
 Danach läuft HLS/DASH über [`src/player/hls.ts`](src/player/hls.ts) und
 [`src/ui/screens/AdaptivePlayer.tsx`](src/ui/screens/AdaptivePlayer.tsx): Der
@@ -99,12 +111,11 @@ MPEG-TS-HLS wird `manifest.hls.sequenceMode` aktiviert.
 Erklärung statt einer schwarzen Fläche, und im Diagnose-Protokoll steht, dass
 der Shaka-Player fehlt. Progressive Quellen laufen ohne diesen Schritt.
 
-Ehrlich zum Stand: Der Anschluss ist geschrieben und typgeprüft, aber **nicht
-auf einem Vega-Gerät gebaut oder abgespielt**. Amazons ausgeliefertes Paket
-enthält `src/ShakaPlayer.ts` und die Polyfills, aber kein `src/PlayerBase.ts`;
-das Skript weist darauf hin. Ohne diese Datei bricht der Vega-Build ab – sie muss
-aus Amazons Shaka-Repository ergänzt werden. Das Setup-Skript selbst wurde hier
-nicht ausgeführt (kein Java in dieser Umgebung, kein Vega SDK).
+Ehrlich zum Stand: Amazons `setup.sh` wurde hier mit Java 21 für 4.8.5 und
+4.16.13 vollständig ausgeführt, der zusammengesetzte Baum besteht
+`npx tsc --noEmit`. **Nicht geprüft** sind der Vega-Build und die Wiedergabe –
+dafür fehlen in dieser Umgebung das Vega SDK und ein Gerät. Der erste Build auf
+einer Maschine mit Vega SDK muss zeigen, ob Shaka dort lädt.
 
 ## Erinnerungen: was Vega OS (noch) nicht kann
 

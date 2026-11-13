@@ -27,7 +27,7 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
 | Wiedergabestand löschen | ja | ja | ja |
 | Datenschutz, Impressum, Kontolöschung in der App | ja | ja (ergänzt) | ja (ergänzt; auf tvOS als Adresse) |
 | Erinnerungen an Sendungen | Systembenachrichtigung (`AlarmManager`) | nur in der laufenden App (Vega OS bietet Apps keinen Alarm) | echte lokale Benachrichtigung (`UNUserNotificationCenter`) |
-| HLS-Wiedergabe | Media3/ExoPlayer | MSE über Amazons Shaka-Player; Paket wird per `npm run setup:shaka` eingesetzt (proprietär, nicht im Repo). Ohne Paket baut die App, zeigt für HLS aber einen Hinweis | AVPlayer, ohne Zusatzpaket |
+| HLS-Wiedergabe | Media3/ExoPlayer | MSE über Amazons Shaka-Player 4.8.5; Paket wird per `npm run setup:shaka` eingesetzt (proprietär, nicht im Repo). Ohne Paket baut die App, zeigt für HLS aber einen Hinweis | AVPlayer, ohne Zusatzpaket |
 | Diagnose-Protokoll für Fehler und Hardware | ja (neu) | ja (neu) | ja (neu) |
 | Geräteklassen-Layout | vier Profile (TV, Phone, Tablet, Desktop) | TV-Fokus, Karten und Abstände über Layout-Helfer | adaptive Größenklassen, TV-Fokus-Stil |
 

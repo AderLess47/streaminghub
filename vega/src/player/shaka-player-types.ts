@@ -37,7 +37,11 @@ export type ShakaPlayerInstance = {
   unload(): void | Promise<void>;
 };
 
+// `any` ist Absicht: Der Wrapper typisiert das Element als `HTMLMediaElement`,
+// bekommt von Amazon-Docs aber ein `VideoPlayer`-Objekt. Zur Laufzeit ist genau
+// das richtig; die Typen der beiden Pakete passen nur nicht zueinander.
 export type ShakaPlayerConstructor = new (
-  mediaElement: unknown,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mediaElement: any,
   settings: ShakaPlayerSettings,
 ) => ShakaPlayerInstance;
