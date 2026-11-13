@@ -143,7 +143,6 @@ export function CustomerTable({
             <tr>
               <th>{t.admin.customers.email}</th>
               <th>{t.admin.customers.role}</th>
-              <th>{t.admin.customers.verified}</th>
               <th>{t.admin.customers.devices}</th>
               <th>{t.admin.customers.subscription}</th>
               <th>{t.admin.customers.created}</th>
@@ -153,16 +152,24 @@ export function CustomerTable({
           <tbody>
             {visible.map((row) => (
               <tr key={row.id}>
-                <td>
+                <td className="max-w-[14rem]">
                   <Link
                     href={`/admin/customers/${row.id}`}
-                    className="link inline-flex min-h-9 items-center text-[0.82rem]"
+                    className="link inline-flex min-h-9 max-w-full items-center text-[0.82rem]"
+                    title={row.email}
                   >
-                    {row.email}
+                    <span className="truncate">{row.email}</span>
                   </Link>
-                  <p className="text-[0.68rem] text-muted">
-                    {row.displayName || "—"}
-                    {row.disabled ? " · deaktiviert" : ""}
+                  <p className="flex items-center gap-1.5 text-[0.68rem] text-muted">
+                    <span className="truncate">
+                      {row.displayName || "—"}
+                      {row.disabled ? " · deaktiviert" : ""}
+                    </span>
+                    {row.verified ? (
+                      <Badge tone="ok">✓</Badge>
+                    ) : (
+                      <Badge tone="warn">—</Badge>
+                    )}
                   </p>
                 </td>
                 <td>
@@ -184,7 +191,6 @@ export function CustomerTable({
                     </button>
                   </form>
                 </td>
-                <td>{row.verified ? <Badge tone="ok">✓</Badge> : <Badge tone="warn">—</Badge>}</td>
                 <td>{row.devices}</td>
                 <td>
                   <Badge tone={row.subscriptionStatus === "active" ? "ok" : "neutral"}>
@@ -230,7 +236,7 @@ export function CustomerTable({
             ))}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-6 text-center text-xs text-muted">
+                <td colSpan={6} className="py-6 text-center text-xs text-muted">
                   {t.ui.noResults}
                 </td>
               </tr>
