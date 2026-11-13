@@ -30,6 +30,11 @@ export const applePurchaseSchema = z.object({
   jws: z.string().trim().min(100, "Der Kaufbeleg fehlt.").max(20_000),
 });
 
+export const appleNotificationSchema = z.object({
+  // App Store Server Notifications V2 schicken genau ein signiertes Feld.
+  signedPayload: z.string().trim().min(100, "signedPayload fehlt.").max(20_000),
+});
+
 export const loginSchema = z.object({
   email,
   password: z.string().min(1).max(200),

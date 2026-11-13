@@ -376,9 +376,15 @@ needed** – Apple's certificates are public and the root ships in
 flyctl secrets set APPLE_IAP_BUNDLE_ID=org.streaminghub.app -a streaminghub-org
 ```
 
-These are not secrets; they can also live in `fly.toml` under `[env]`. See
-[`IAP-APPLE.md`](IAP-APPLE.md) for the verification rules, the conflict handling
-and the two known gaps (no App Store Server API, no notifications webhook).
+These are not secrets; they can also live in `fly.toml` under `[env]`.
+
+Then paste the endpoint into *App Store Connect → App Information → App Store
+Server Notifications*: `https://streaminghub.org/api/v1/apple/notifications`,
+for production and sandbox alike. Apple signs every delivery, so no shared
+secret is involved. Sandbox deliveries are only accepted with
+`APPLE_IAP_ALLOW_SANDBOX=1`. See [`IAP-APPLE.md`](IAP-APPLE.md) for the
+verification rules, the conflict handling and the remaining gap (no App Store
+Server API).
 
 ### 11.2 What the run does
 

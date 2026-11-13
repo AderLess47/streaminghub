@@ -181,6 +181,55 @@ const spec = {
         },
       },
     },
+    "/api/v1/apple/notifications": {
+      post: {
+        summary: "App Store Server Notifications V2",
+        description:
+          "Called by Apple without a bearer token. Verifies the outer notification, the signed transaction and the optional signed renewal info against Apple Root CA G3, then updates the stored subscription. Unknown transactions and duplicates are acknowledged without changes.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["signedPayload"],
+                properties: { signedPayload: { type: "string", maxLength: 20000 } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Processed or intentionally skipped",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    handled: { type: "boolean" },
+                    notificationType: { type: "string" },
+                    reason: {
+                      type: "string",
+                      enum: [
+                        "unknown_transaction",
+                        "other_channel",
+                        "duplicate",
+                        "stale",
+                        "no_state_change",
+                        "unknown_type",
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Payload failed verification" },
+          "503": { description: "App Store integration not configured" },
+        },
+      },
+    },
     "/api/v1/apple/refresh": {
       post: {
         summary: "Refresh the stored App Store subscription",

@@ -13,7 +13,8 @@ import {
   getSubscription,
   type SubscriptionStatus,
 } from "./payments";
-import type { AppleSubscriptionState, AppleTransaction } from "./apple-iap";
+import { transactionState } from "./apple-iap";
+import type { AppleNotification, AppleSubscriptionState, AppleTransaction } from "./apple-iap";
 import type { ReceiptRow } from "./amazon-subscriptions";
 
 export type AppleReceiptRow = ReceiptRow;
@@ -49,6 +50,32 @@ function recordEvent(userId: string, eventType: string, providerEventId: string,
     providerEventId,
     JSON.stringify(payload).slice(0, 4000),
     nowIso(),
+  );
+}
+
+/**
+ * Beleg und Abo-Zeile in einem Schritt – der gemeinsame Kern von Kaufmeldung
+ * und Store-Notification. Der Aufrufer sorgt für die Transaktion.
+ */
+function writeSubscriptionState(params: {
+  userId: string;
+  transaction: AppleTransaction;
+  state: AppleSubscriptionState;
+}) {
+  const { transaction: tx, state } = params;
+  ensureSubscription(params.userId);
+  saveReceipt(params);
+  run(
+    `UPDATE subscriptions SET plan = 'premium', status = ?, channel = 'apple', provider = 'apple',
+       provider_customer_id = ?, provider_subscription_id = ?, current_period_end = ?,
+       cancel_at_period_end = 0, updated_at = ?
+     WHERE user_id = ?`,
+    state.status,
+    tx.originalTransactionId,
+    tx.productId,
+    state.currentPeriodEnd,
+    nowIso(),
+    params.userId,
   );
 }
 
@@ -100,20 +127,7 @@ export function applyVerifiedTransaction(params: {
 }) {
   const { transaction: tx, state } = params;
   transaction(() => {
-    ensureSubscription(params.userId);
-    saveReceipt(params);
-    run(
-      `UPDATE subscriptions SET plan = 'premium', status = ?, channel = 'apple', provider = 'apple',
-         provider_customer_id = ?, provider_subscription_id = ?, current_period_end = ?,
-         cancel_at_period_end = 0, updated_at = ?
-       WHERE user_id = ?`,
-      state.status,
-      tx.originalTransactionId,
-      tx.productId,
-      state.currentPeriodEnd,
-      nowIso(),
-      params.userId,
-    );
+    writeSubscriptionState(params);
     recordEvent(
       params.userId,
       `apple.transaction.${state.status}`,
@@ -153,6 +167,83 @@ export function refreshStoredAppleReceipt(userId: string, now = Date.now()) {
     recordEvent(userId, "apple.subscription.expired", `apple:expired:${row.receipt_id}`, {
       currentPeriodEnd: row.renewal_date,
     });
+  });
+}
+
+export type AppleNotificationOutcome =
+  | { handled: true; notificationType: string; userId: string; status: AppleSubscriptionState["status"] }
+  | {
+      handled: false;
+      notificationType: string;
+      reason: "unknown_transaction" | "other_channel" | "duplicate" | "stale";
+    };
+
+/**
+ * Verarbeitet eine geprüfte App-Store-Notification.
+ *
+ * Die Zuordnung läuft über `originalTransactionId` des gespeicherten Belegs.
+ * Gibt es keinen, gibt es kein Konto, dem die Meldung gehört – sie wird
+ * quittiert, aber nicht angewendet; Apple würde sonst tagelang erneut zustellen,
+ * ohne dass sich etwas ändern kann (der Kauf kommt aus der App).
+ *
+ * Zwei Schutzwälle:
+ * - `notificationUUID` landet in `subscription_events`; Apple darf dieselbe
+ *   Meldung mehrfach schicken.
+ * - Eine Transaktion, deren Zeitraum vor dem gespeicherten endet, wird
+ *   verworfen. Sonst könnte eine verspätete `EXPIRED`-Meldung ein bereits
+ *   verlängertes Abo beenden.
+ */
+export function applyAppleNotification(
+  notification: AppleNotification,
+  now = Date.now(),
+): AppleNotificationOutcome {
+  const tx = notification.transaction;
+  const notificationType = notification.notificationType;
+
+  const receipt = getAppleReceipt(tx.originalTransactionId);
+  if (!receipt) return { handled: false, notificationType, reason: "unknown_transaction" };
+
+  const userId = receipt.user_id;
+  const subscription = getSubscription(userId);
+  if (!subscription || subscription.channel !== "apple") {
+    return { handled: false, notificationType, reason: "other_channel" };
+  }
+
+  const state = transactionState(tx, now);
+  const currentEnd = subscription.current_period_end
+    ? Date.parse(subscription.current_period_end)
+    : Number.NaN;
+  const stale =
+    Number.isFinite(currentEnd) && tx.expiresDate !== null && tx.expiresDate < currentEnd;
+
+  return transaction(() => {
+    const inserted = run(
+      `INSERT OR IGNORE INTO subscription_events
+         (id, user_id, provider, event_type, provider_event_id, payload, created_at)
+       VALUES (?, ?, 'apple', ?, ?, ?, ?)`,
+      randomUUID(),
+      userId,
+      `apple.notification.${notificationType.toLowerCase()}`,
+      `apple:note:${notification.notificationUUID}`,
+      JSON.stringify({
+        notificationType,
+        subtype: notification.notificationSubtype,
+        transactionId: tx.transactionId,
+        environment: notification.environment,
+        signedDate: notification.signedDate,
+      }).slice(0, 4000),
+      nowIso(),
+    ).changes;
+
+    if (Number(inserted) === 0) {
+      return { handled: false as const, notificationType, reason: "duplicate" as const };
+    }
+    if (stale) {
+      return { handled: false as const, notificationType, reason: "stale" as const };
+    }
+
+    writeSubscriptionState({ userId, transaction: tx, state });
+    return { handled: true as const, notificationType, userId, status: state.status };
   });
 }
 
