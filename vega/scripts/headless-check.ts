@@ -49,6 +49,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { secureBaseUrl, StreamingHubApi, StreamingHubApiError } from "../src/data/api";
 import { insecureTransportHint } from "../src/data/transport";
 import { drmContentFields } from "../src/player/drm";
+import { describePlaybackError } from "../src/player/player-errors";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -577,6 +578,48 @@ await check("DRM: Secure Buffers nur mit DRM und nur auf Wunsch", () => {
   // Ohne DRM bleibt der geschützte Pfad aus, auch wenn die Einstellung an ist.
   assert.equal(drmContentFields(undefined, true).secure, "false");
   assert.equal(drmContentFields(undefined, true).drm_scheme, "");
+});
+
+await check("DRM-Fehler: Lizenz, CDM, Schlüsselsystem und Netz werden erklärt", () => {
+  const license = describePlaybackError(
+    new Error("Shaka Error DRM.LICENSE_REQUEST_FAILED (6007)"),
+    { drm: true, secureBuffers: true },
+  );
+  assert.match(license, /Lizenzserver/);
+  assert.match(license, /Zurück/);
+
+  const cdm = describePlaybackError(
+    new Error("Shaka Error DRM.FAILED_TO_CREATE_CDM (6001)"),
+    { drm: true, secureBuffers: true },
+  );
+  assert.match(cdm, /geschützten Pfad/);
+  assert.match(cdm, /Secure Buffers/);
+
+  const missing = describePlaybackError(
+    "Shaka Error DRM.NO_LICENSE_SERVER_CONFIGURED",
+    { drm: true },
+  );
+  assert.match(missing, /Lizenzadresse/);
+
+  const keySystem = describePlaybackError("DRM.UNSUPPORTED_KEY_SYSTEM", { drm: true });
+  assert.match(keySystem, /Widevine und PlayReady/);
+
+  const network = describePlaybackError(new Error("Failed to fetch"), { drm: true });
+  assert.match(network, /nicht erreichbar/);
+});
+
+await check("DRM-Fehler: unbekannte und DRM-freie Fehler bleiben verständlich", () => {
+  const drmGeneric = describePlaybackError(new Error("irgendwas kaputt"), { drm: true });
+  assert.match(drmGeneric, /verschlüsselte Wiedergabe/);
+  assert.match(drmGeneric, /Zurück/);
+
+  const plain = describePlaybackError(new Error("kaputt"));
+  assert.match(plain, /Quelle konnte nicht wiedergegeben werden/);
+  assert.match(plain, /Zurück/);
+
+  // Auch ohne Fehlerobjekt muss ein Satz herauskommen, nie eine leere Meldung.
+  const empty = describePlaybackError(undefined);
+  assert.match(empty, /Quelle konnte nicht wiedergegeben werden/);
 });
 
 /* -------------------------------- Transport ------------------------------ */

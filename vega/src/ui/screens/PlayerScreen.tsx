@@ -200,6 +200,9 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress, securePla
           <Notice tone="error" title="Wiedergabe nicht möglich">
             {error}
           </Notice>
+          <View style={styles.controls}>
+            <Button label="Zurück zur Senderliste" onPress={onClose} hasTVPreferredFocus />
+          </View>
         </View>
       ) : null}
     </View>
