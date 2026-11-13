@@ -137,6 +137,9 @@ export function AdaptivePlayer({ channel, resumeMs, onClose, onProgress, secureP
           <Notice tone="error" title="Wiedergabe nicht möglich">
             {error}
           </Notice>
+          <View style={styles.controls}>
+            <Button label="Zurück zur Senderliste" onPress={onClose} hasTVPreferredFocus />
+          </View>
         </View>
       ) : null}
     </View>

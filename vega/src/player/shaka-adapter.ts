@@ -1,6 +1,7 @@
 import { VideoPlayer } from "@amazon-devices/react-native-w3cmedia";
 import { logError, logEvent, redactUrl } from "../data/diagnostics";
 import { drmContentFields } from "./drm";
+import { describePlaybackError } from "./player-errors";
 import { registerHlsAdapter, type HlsAdapter, type HlsCallbacks } from "./hls";
 import type { ChannelDrm } from "../model/types";
 import type {
@@ -184,7 +185,10 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
           `fehler: ${reason instanceof Error ? reason.message : "quelle nicht ladbar"}`,
         );
         callbacks.onError(
-          reason instanceof Error ? reason.message : "Der HLS-Player konnte die Quelle nicht laden.",
+          describePlaybackError(reason, {
+            drm: Boolean(drm),
+            secureBuffers: Boolean(drm && options?.secureBuffers),
+          }),
         );
         void logError("player", reason, redactUrl(url));
         await destroy();
