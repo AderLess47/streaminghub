@@ -116,9 +116,18 @@ function seedPairing(
 function call(
   method: string,
   path: string,
-  options: { token?: string | null; origin?: string | null; body?: unknown } = {},
+  options: {
+    token?: string | null;
+    origin?: string | null;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
 ): Request {
-  const headers: Record<string, string> = { "content-type": "application/json", host: "app.example" };
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    host: "app.example",
+    ...(options.headers ?? {}),
+  };
   if (options.token) headers.authorization = `Bearer ${options.token}`;
   if (options.origin !== null) headers.origin = options.origin ?? "https://app.example";
   return new Request(`https://app.example${path}`, {
@@ -743,6 +752,42 @@ await check("Kopplung: mehr als 15 Anfragen je Adresse werden gebremst", async (
   assert.equal(blocked.status, 429);
   assert.equal(Number(blocked.headers.get("retry-after")) > 0, true);
   assert.equal(all("SELECT * FROM pairing_requests").length, 15, "blockierte Anfrage legt nichts an");
+});
+
+await check("Rate-Limit: gefälschte X-Forwarded-For-Spitzen umgehen das Limit nicht", async () => {
+  resetDb();
+  const post = (forwardedFor: string) =>
+    requestPairingCode(
+      call("POST", "/api/v1/pairing/request", {
+        body: PAIRING_BODY,
+        headers: { "x-forwarded-for": forwardedFor },
+      }),
+    );
+
+  // Der Client schreibt wechselnde Adressen nach vorn, der Proxy hängt die
+  // echte Adresse hinten an. Ausgewertet wird nur der letzte Eintrag.
+  for (let index = 0; index < 15; index += 1) {
+    const response = await post(`198.51.100.${index}, 203.0.113.7`);
+    assert.equal(response.status, 201, `Anfrage ${index + 1} wurde blockiert`);
+  }
+  assert.equal((await post("192.0.2.99, 203.0.113.7")).status, 429);
+
+  // Ein anderer echter Client hat seinen eigenen Eimer.
+  assert.equal((await post("10.0.0.1, 203.0.113.8")).status, 201);
+
+  // Ohne Proxy-Header teilen sich alle Aufrufer einen Eimer (fail closed).
+  resetDb();
+  for (let index = 0; index < 15; index += 1) {
+    assert.equal(
+      (await requestPairingCode(call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY })))
+        .status,
+      201,
+    );
+  }
+  assert.equal(
+    (await requestPairingCode(call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }))).status,
+    429,
+  );
 });
 
 /* ============================ Playlist-Abruf ============================= */
