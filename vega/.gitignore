@@ -9,3 +9,6 @@ src/polyfills/
 src/PlayerInterface.ts
 src/PlayerBase.ts
 .shaka-build/
+
+# Vom Vega-Build erzeugt
+buildinfo.json
