@@ -89,24 +89,37 @@ jobs:
               sys.exit("Smoke-Test fehlgeschlagen.")
           PY
 
-      - name: Build tvOS
+      - name: Build tvOS and macOS
         working-directory: apple
         run: |
-          set -o pipefail
+          # Der Simulator hat seine Arbeit getan; ohne ihn haben die beiden
+          # Builds mehr CPU und laufen parallel.
+          xcrun simctl shutdown "$SIMULATOR_UDID" 2>/dev/null || true
+
+          set +e
           xcodebuild \
             -scheme StreamingHub_tvOS \
             -destination 'generic/platform=tvOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd-tvos" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            -quiet build
+            -quiet build > "$RUNNER_TEMP/tvos.log" 2>&1 &
+          TVOS_PID=$!
 
-      - name: Build macOS
-        working-directory: apple
-        run: |
-          set -o pipefail
           xcodebuild \
             -scheme StreamingHub_macOS \
             -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/dd-macos" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            -quiet build
+            -quiet build > "$RUNNER_TEMP/macos.log" 2>&1
+          MACOS_STATUS=$?
+
+          wait "$TVOS_PID"
+          TVOS_STATUS=$?
+
+          tail -40 "$RUNNER_TEMP/tvos.log"
+          tail -40 "$RUNNER_TEMP/macos.log"
+
+          if [ "$TVOS_STATUS" -ne 0 ] || [ "$MACOS_STATUS" -ne 0 ]; then
+            echo "tvOS: $TVOS_STATUS, macOS: $MACOS_STATUS"
+            exit 1
+          fi
