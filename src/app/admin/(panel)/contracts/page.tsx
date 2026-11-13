@@ -155,7 +155,7 @@ export default async function AdminContractsPage({
         })}
       </div>
 
-      <ScrollRegion label={t.admin.contracts.title} className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.contracts.title} className="card hidden overflow-x-auto md:block">
         <table className="data-table">
           <caption className="sr-only">{t.admin.contracts.title}</caption>
           <thead>
@@ -231,6 +231,71 @@ export default async function AdminContractsPage({
           </tbody>
         </table>
       </ScrollRegion>
+
+      <ul className="grid gap-3 md:hidden">
+        {rows.map((row) => {
+          const returnTo = href(filter, {});
+          return (
+            <li key={row.id} className="card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Badge tone={row.kind === "withdrawal" ? "brand" : "neutral"}>
+                    {kindLabel(row.kind)}
+                  </Badge>
+                  <p className="mt-2 truncate text-xs text-slate-200">{row.name || "–"}</p>
+                  <p className="truncate text-[0.68rem] text-muted">{row.email}</p>
+                </div>
+                <div className="shrink-0 text-right text-[0.68rem] text-muted">
+                  {dateFormat.format(new Date(row.createdAt))}
+                  <p className="font-mono">{row.reference}</p>
+                </div>
+              </div>
+
+              <dl className="mt-3 grid gap-1.5 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="shrink-0 text-muted">{t.admin.contracts.contract}</dt>
+                  <dd className="text-right">{row.contract}</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="shrink-0 text-muted">{t.admin.contracts.outcome}</dt>
+                  <dd className="text-right">{outcome(row)}</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="shrink-0 text-muted">{t.admin.contracts.processing}</dt>
+                  <dd className="text-right">
+                    {row.handledAt ? (
+                      <>
+                        <Badge tone="ok">{t.admin.contracts.handled}</Badge>
+                        <p className="mt-1 text-[0.68rem] text-muted">
+                          {dateFormat.format(new Date(row.handledAt))}
+                          {row.handledBy ? ` · ${row.handledBy}` : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <Badge tone="warn">{t.admin.contracts.open}</Badge>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+
+              {row.note ? <p className="mt-2 text-[0.68rem] text-muted">{row.note}</p> : null}
+
+              <form action={setContractRequestHandledAction} className="mt-3">
+                <input type="hidden" name="id" value={row.id} />
+                <input type="hidden" name="handled" value={row.handledAt ? "0" : "1"} />
+                <input type="hidden" name="returnTo" value={returnTo} />
+                <button type="submit" className="btn btn-outline btn-sm w-full">
+                  <Icon name={row.handledAt ? "refresh" : "check"} size={14} />
+                  {row.handledAt ? t.admin.contracts.reopen : t.admin.contracts.markHandled}
+                </button>
+              </form>
+            </li>
+          );
+        })}
+        {rows.length === 0 ? (
+          <li className="card p-6 text-center text-xs text-muted">{t.admin.contracts.empty}</li>
+        ) : null}
+      </ul>
     </div>
   );
 }
