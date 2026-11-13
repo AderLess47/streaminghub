@@ -19,6 +19,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
     { path: "/subscription-terms", priority: 0.3, changeFrequency: "yearly" },
     { path: "/withdrawal", priority: 0.3, changeFrequency: "yearly" },
+    { path: "/widerruf", priority: 0.4, changeFrequency: "yearly" },
+    { path: "/kuendigung", priority: 0.4, changeFrequency: "yearly" },
     { path: "/barrierefreiheit", priority: 0.3, changeFrequency: "yearly" },
   ];
 

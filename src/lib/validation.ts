@@ -98,6 +98,28 @@ export const contactSchema = z.object({
   renderedAt: z.coerce.number().optional(),
 });
 
+/** Widerruf über die Website (§ 356a BGB). */
+export const withdrawalSchema = z.object({
+  name: z.string().trim().min(2, "Bitte gib deinen Namen an.").max(80),
+  email,
+  contract: z.enum(["web", "apple", "amazon", "other"], {
+    errorMap: () => ({ message: "Bitte wähle den Vertrag aus." }),
+  }),
+  note: z.string().trim().max(1000).optional().default(""),
+  privacyAccepted: z.literal(true, {
+    errorMap: () => ({ message: "Bitte bestätige die Datenschutzhinweise." }),
+  }),
+  website: z.string().max(0).optional().or(z.literal("")),
+  renderedAt: z.coerce.number().optional(),
+});
+
+/** Kündigung über die Schaltfläche „Jetzt kündigen“ (§ 312k BGB). */
+export const cancellationSchema = z.object({
+  email,
+  website: z.string().max(0).optional().or(z.literal("")),
+  renderedAt: z.coerce.number().optional(),
+});
+
 export const ticketSchema = z.object({
   subject: z.string().trim().min(3, "Bitte gib einen Betreff an.").max(120),
   category: z.enum(["installation", "playlist", "activation", "billing", "playback", "account", "other"]),

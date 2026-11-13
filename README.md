@@ -123,7 +123,7 @@ starts building.
 
 **Public:** `/` · `/premium` · `/download` · `/activate` · `/help` · `/faq` ·
 `/contact` · `/status` · `/docs/api` · `/imprint` · `/privacy` · `/terms` ·
-`/subscription-terms` · `/withdrawal`
+`/subscription-terms` · `/withdrawal` · `/widerruf` · `/kuendigung`
 
 **Auth:** `/login` · `/register` · `/forgot-password` · `/reset-password?token=…`
 
@@ -154,6 +154,10 @@ starts building.
   announcement editing, email outbox, security log, status checks
 - Live system status page (real checks; no invented uptime figures)
 - Cookie consent banner; no optional trackers are loaded
+- Withdrawal function (§ 356a BGB) at `/widerruf` and cancellation button
+  (§ 312k BGB) at `/kuendigung`, both without sign-in, with stored record,
+  confirmation page and confirmation email; web subscriptions are cancelled at
+  the payment provider directly
 
 ### Prepared integration points (NOT active)
 
@@ -219,6 +223,7 @@ production server those two checks are skipped, since dev links are withheld.
 - `docs/BFSG-PFLICHTEN-CHECKLISTE.md` – what to do if the micro-enterprise threshold is exceeded
 - `docs/PRUEFPROTOKOLL-VORLAGE.md` – template for accessibility test records kept as evidence
 - `docs/APP-PARITAET.md` – Android, Vega OS and Apple side by side, including the diagnostics log
+- `docs/RECHT-PRUEFUNG.md` – withdrawal (§ 356a BGB), cancellation button (§ 312k BGB), premium claims, data processing, licences and store rules as checked in the code
 - `/docs/api` – rendered API documentation + OpenAPI 3.1 JSON
 
 ## Legal content disclaimer

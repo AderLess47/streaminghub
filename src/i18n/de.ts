@@ -248,7 +248,7 @@ export const de = {
     channelTitle: "Wo du Premium abschließen kannst",
     channels: {
       web: "Sideload-Version: Web-Checkout über Stripe",
-      amazon: "Amazon-Appstore-Version: Premium ist dort nicht erhältlich",
+      amazon: "Amazon-Appstore-Version: Kauf über Amazon In-App Purchasing",
     },
     billingNotice:
       "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Dein Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",
@@ -948,6 +948,8 @@ export const de = {
     terms: "Nutzungsbedingungen",
     subscriptionTerms: "Abonnementbedingungen",
     withdrawal: "Widerrufsinformationen",
+    withdrawContract: "Vertrag widerrufen",
+    cancelSubscription: "Abo kündigen",
     accountDeletion: "Konto löschen",
     accessibility: "Barrierefreiheit",
     cookies: "Cookie-Einstellungen",

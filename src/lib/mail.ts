@@ -7,6 +7,7 @@ export type MailKind =
   | "reset_password"
   | "contact_message"
   | "ticket_update"
+  | "contract_request"
   | "system";
 
 type QueuedMail = {
@@ -266,6 +267,84 @@ export function contactMail(input: {
   return {
     subject: `[Kontakt] ${input.subject}`.slice(0, 160),
     text: `Neue Kontaktanfrage über streaminghub.org\n\nName: ${input.name}\nE-Mail: ${input.email}\nBetreff: ${input.subject}\n\n${input.message}\n\nReferenz: ${input.reference}\nIP: ${input.ip}`,
+  };
+}
+
+/**
+ * Bestätigung eines Widerrufs in Textform (§ 356a Abs. 4 BGB): Datum, Inhalt
+ * der Erklärung und der weitere Ablauf.
+ */
+export function withdrawalMail(input: {
+  reference: string;
+  name: string;
+  contract: string;
+  receivedAt: string;
+  locale: string;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  return {
+    subject: de
+      ? `Bestätigung deines Widerrufs – ${input.reference}`
+      : `Confirmation of your withdrawal – ${input.reference}`,
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nwir bestätigen den Eingang deines Widerrufs.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\nDamit hast du den Vertrag widerrufen. Wir erstatten dir alle Zahlungen für diesen Vertrag unverzüglich und spätestens binnen 14 Tagen, gerechnet ab dem Eingang des Widerrufs, über das ursprünglich verwendete Zahlungsmittel. Entgelte für die Rückzahlung berechnen wir nicht.\n\nFalls du zusätzlich eine Kündigung erklären willst, kannst du sie jederzeit über https://streaminghub.org/kuendigung abgeben.${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nwe confirm that your withdrawal has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\nYou have withdrawn from the contract. We refund every payment for this contract without undue delay and within 14 days of receiving the withdrawal, using the original means of payment. No fees are charged for the refund.\n\nIf you also want to cancel, you can do so at any time via https://streaminghub.org/kuendigung.${signature(false)}`,
+  };
+}
+
+/**
+ * Bestätigung einer Kündigung in Textform (§ 312k Abs. 3 BGB): Datum, Inhalt
+ * und – wenn schon bekannt – der Zeitpunkt, zu dem der Vertrag endet.
+ */
+export function cancellationMail(input: {
+  reference: string;
+  contract: string;
+  receivedAt: string;
+  effectiveAt: string | null;
+  status: string;
+  channel: string | null;
+  locale: string;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const ends = input.effectiveAt
+    ? de
+      ? `Das Abo endet zum ${input.effectiveAt}.`
+      : `The subscription ends on ${input.effectiveAt}.`
+    : de
+      ? "Zum Zeitpunkt der Kündigung war kein laufendes Abo hinterlegt."
+      : "No running subscription was on record at the time of cancellation.";
+  const store = input.status === "store_channel"
+    ? de
+      ? input.channel === "apple"
+        ? "Dieses Abo wird über den App Store verwaltet. Bitte kündige es zusätzlich in deinen Apple-Konto-Einstellungen, damit es dort endet."
+        : "Dieses Abo wird über den Amazon Appstore verwaltet. Bitte kündige es zusätzlich in deinem Amazon-Konto, damit es dort endet."
+      : "This subscription is managed by the store. Please also cancel it in your store account settings so that it ends there."
+    : "";
+  return {
+    subject: de
+      ? `Bestätigung deiner Kündigung – ${input.reference}`
+      : `Confirmation of your cancellation – ${input.reference}`,
+    text: de
+      ? `Hallo,\n\nwir bestätigen den Eingang deiner Kündigung.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(true)}`
+      : `Hello,\n\nwe confirm that your cancellation has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(false)}`,
+  };
+}
+
+/** Interne Meldung an den Betreiber, damit die Erklärung nicht nur in der Datenbank liegt. */
+export function contractRequestNotice(input: {
+  kind: "withdrawal" | "cancellation";
+  reference: string;
+  email: string;
+  name: string;
+  contract: string;
+  status: string;
+  note: string | null;
+  ip: string;
+}): MailTemplate {
+  const title = input.kind === "withdrawal" ? "Widerruf" : "Kündigung";
+  return {
+    subject: `[${title}] ${input.reference}`.slice(0, 160),
+    text: `Neue Erklärung über streaminghub.org\n\nArt: ${title}\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nStatus: ${input.status}\nName: ${input.name || "-"}\nE-Mail: ${input.email}\nHinweis: ${input.note ?? "-"}\nIP: ${input.ip}`,
   };
 }
 

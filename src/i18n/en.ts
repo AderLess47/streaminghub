@@ -246,7 +246,7 @@ export const en: Dictionary = {
     channelTitle: "Where you can subscribe",
     channels: {
       web: "Sideload version: web checkout via Stripe",
-      amazon: "Amazon Appstore version: premium is not available in that build",
+      amazon: "Amazon Appstore version: purchase through Amazon In-App Purchasing",
     },
     billingNotice:
       "Note: no payment provider is connected yet. The web checkout is technically prepared but does not trigger a payment. Your subscription status stays “not active” until a real payment has been confirmed server-side.",
@@ -945,6 +945,8 @@ export const en: Dictionary = {
     terms: "Terms of use",
     subscriptionTerms: "Subscription terms",
     withdrawal: "Withdrawal information",
+    withdrawContract: "Withdraw contract",
+    cancelSubscription: "Cancel subscription",
     accountDeletion: "Delete account",
     accessibility: "Accessibility",
     cookies: "Cookie settings",
