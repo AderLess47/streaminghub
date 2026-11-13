@@ -524,3 +524,44 @@ Backup-Restore nötig – bei den bisherigen Änderungen ist das nicht der Fall.
 - Die Release-Metadaten (`src/content/release.ts`, `/api/release`) beschreiben
   nur, was dort veröffentlicht wurde – ein neuer App-Build braucht einen
   eigenen Upload, sonst zeigt `/download` weiter die alte Version.
+
+### 12.7 Admin-Bereich auf der Live-Seite prüfen
+
+Der Admin-Bereich ist nur nach Anmeldung mit Zwei-Faktor sichtbar. Damit sich
+das trotzdem nach jedem Deploy prüfen lässt, ohne Passwörter weiterzugeben,
+gibt es ein eigenes Prüf-Konto und zwei Wege:
+
+**Einmalig einrichten**
+
+1. Ein Konto für die Prüfung anlegen, zum Beispiel
+   `service+smoke@streaminghub.org`. Rolle im Admin unter „Kunden“ auf
+   `support` setzen – das genügt für Übersicht und Widerrufsliste, nicht für
+   Rollen- oder Secret-Änderungen.
+2. Mit diesem Konto `/admin` öffnen. Die Seite führt zur
+   Zwei-Faktor-Einrichtung und zeigt den Schlüssel im Klartext an
+   (`t.admin.mfa.secretLabel`). Diesen Schlüssel kopieren und in der
+   Authenticator-App bestätigen – ohne die Bestätigung bleibt der Zugang
+   gesperrt.
+3. In GitHub unter *Settings → Secrets and variables → Actions* drei Secrets
+   anlegen: `ADMIN_SMOKE_EMAIL`, `ADMIN_SMOKE_PASSWORD` und
+   `ADMIN_SMOKE_TOTP_SECRET` (der Schlüssel aus Schritt 2).
+
+**Prüfen**
+
+- In GitHub unter *Actions → Admin smoke → Run workflow*. Das Protokoll zeigt
+  jede Prüfung einzeln: Anmeldung mit Zwei-Faktor, `/admin`, Zähler „Offene
+  Erklärungen“, `/admin/contracts` mit Überschrift und Liste,
+  `/admin/audit`. Ergebnis ist grün, wenn alle Punkte bestehen.
+- Lokal dasselbe mit
+  `SMOKE_BASE_URL=https://streaminghub.org ADMIN_SMOKE_EMAIL=… ADMIN_SMOKE_PASSWORD=… ADMIN_SMOKE_TOTP_SECRET=… node scripts/admin-smoke.mjs`
+  oder `npm run admin:smoke`.
+
+Das Skript druckt weder Passwort noch Schlüssel noch Cookies, nur die
+Ergebniszeilen; die E-Mail erscheint gekürzt (`ad***@example.org`). Legt eine
+Prüfung los, gibt es die Ausgabe mit `exit 1` und der Liste der
+fehlgeschlagenen Punkte zurück – gut geeignet als Geplante Aufgabe oder als
+Schritt nach einem Deploy.
+
+Das Prüf-Konto sieht dieselben Daten wie ein Support-Mitarbeiter. Es sollte
+deshalb nicht für den Alltag genutzt und bei Personalwechsel gelöscht werden
+(Aktionen im Sicherheitsprotokoll bleiben erhalten).

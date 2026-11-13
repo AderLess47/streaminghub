@@ -1,0 +1,53 @@
+name: Admin smoke
+
+# Prüft die laufende Seite mit einem eigenen Prüf-Konto: Anmeldung mit
+# Zwei-Faktor, Zähler auf /admin, Widerrufsliste, Sicherheitsprotokoll.
+# Zugangsdaten liegen ausschließlich in den Repository-Secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Adresse der zu prüfenden Seite
+        required: false
+        default: https://streaminghub.org
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Admin-Bereich prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prüf-Konto anmelden und Seiten prüfen
+        env:
+          SMOKE_BASE_URL: ${{ inputs.base_url }}
+          ADMIN_SMOKE_EMAIL: ${{ secrets.ADMIN_SMOKE_EMAIL }}
+          ADMIN_SMOKE_PASSWORD: ${{ secrets.ADMIN_SMOKE_PASSWORD }}
+          ADMIN_SMOKE_TOTP_SECRET: ${{ secrets.ADMIN_SMOKE_TOTP_SECRET }}
+        run: node scripts/admin-smoke.mjs
+
+      - name: Ergebnis notieren
+        if: always()
+        run: |
+          {
+            echo "### Admin-Prüfung"
+            echo
+            echo "- Ziel: \`${{ inputs.base_url }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
