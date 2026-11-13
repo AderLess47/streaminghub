@@ -32,6 +32,7 @@ import {
 } from "./data/storage";
 import { PremiumPurchaseController, unavailableBilling } from "./billing/premium";
 import { ReminderService } from "./reminder/reminders";
+import { SMOKE_HLS_URL } from "./smoke";
 import { useLayoutProfile } from "./ui/layout";
 import { Badge, Button, Notice } from "./ui/components";
 import { colors, space, text as sizes } from "./ui/theme";
@@ -150,6 +151,15 @@ export function App() {
       cancelled = true;
     };
   }, [reminders]);
+
+  // Smoke-Test: `scripts/verify-shaka.mjs` schreibt vor dem Build eine HLS-URL
+  // in `src/smoke.ts`. Dann öffnet die App sie sofort und schreibt den Verlauf
+  // in die Geräte-Logs, damit ein Prüflauf ohne Fernbedienung auskommt.
+  useEffect(() => {
+    if (!booted || !SMOKE_HLS_URL) return;
+    console.log(`StreamingHub smoke: start ${SMOKE_HLS_URL}`);
+    setPlaying({ name: "HLS-Smoke-Test", url: SMOKE_HLS_URL, group: "Test", kind: "live" });
+  }, [booted]);
 
   // Wie in der Android-App: Ist der lokale Stand älter als 15 Minuten, wird die
   // hinterlegte URL im Hintergrund neu geladen. Fehler bleiben still – der
