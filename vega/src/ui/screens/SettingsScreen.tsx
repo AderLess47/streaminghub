@@ -4,6 +4,7 @@ import type { AccountInfo, Settings } from "../../model/types";
 import type { PremiumBillingState } from "../../billing/premium";
 import { clearLog, logError, logSummary, readLogText, type LogSummary } from "../../data/diagnostics";
 import { formatDateTime } from "../../data/epg";
+import { insecureTransportHint } from "../../data/transport";
 import { Badge, Button, Card, Notice, SectionTitle } from "../components";
 import { colors, radius, space, text as sizes } from "../theme";
 
@@ -13,6 +14,7 @@ type Props = {
   deviceName: string;
   settings: Settings;
   playlistLabel: string;
+  playlistSourceUrl: string | null;
   playlistCount: number;
   playlistUpdatedAt: number | null;
   epgCount: number;
@@ -38,6 +40,7 @@ export function SettingsScreen(props: Props) {
   const [logInfo, setLogInfo] = useState<LogSummary | null>(null);
   const [logText, setLogText] = useState<string | null>(null);
   const { busy } = props;
+  const playlistHint = insecureTransportHint(props.playlistSourceUrl);
 
   useEffect(() => {
     void logSummary().then(setLogInfo);
@@ -130,6 +133,11 @@ export function SettingsScreen(props: Props) {
         <Text style={styles.row}>
           {props.playlistLabel ? `Quelle: ${props.playlistLabel}` : "Keine eigene Playlist geladen"}
         </Text>
+        {playlistHint ? (
+          <Notice tone="warning" title="Unverschlüsselte Playlist">
+            {playlistHint}
+          </Notice>
+        ) : null}
         {props.playlistUpdatedAt ? (
           <Text style={styles.muted}>Zuletzt geladen: {new Date(props.playlistUpdatedAt).toLocaleString("de-DE")}</Text>
         ) : null}

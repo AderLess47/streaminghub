@@ -47,6 +47,7 @@ import memoryStorage from "./mocks/async-storage";
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { secureBaseUrl, StreamingHubApi, StreamingHubApiError } from "../src/data/api";
+import { insecureTransportHint } from "../src/data/transport";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -501,6 +502,21 @@ await check("API: Weiterleitung wird abgelehnt, Token geht nur an den ersten Hos
   );
 
   assert.equal(authorization, "Bearer geheimer-token");
+});
+
+await check("Transport-Hinweis: nur HTTP-Quellen werden markiert", () => {
+  assert.match(
+    insecureTransportHint("http://anbieter.example/liste.m3u") ?? "",
+    /Unverschlüsselt \(HTTP\)/,
+  );
+  assert.match(insecureTransportHint("http://anbieter.example/live.m3u8") ?? "", /mitgelesen/);
+
+  assert.equal(insecureTransportHint("https://anbieter.example/liste.m3u"), null);
+  assert.equal(insecureTransportHint("  https://x.example/a.m3u  "), null);
+  assert.equal(insecureTransportHint("rtsp://x.example/live"), null);
+  assert.equal(insecureTransportHint(""), null);
+  assert.equal(insecureTransportHint(null), null);
+  assert.equal(insecureTransportHint("keine-adresse"), null);
 });
 
 await check("API: normale Antworten werden weiterhin gelesen", async () => {

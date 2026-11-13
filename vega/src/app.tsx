@@ -564,6 +564,7 @@ export function App() {
             deviceName={account?.deviceName ?? deviceName}
             settings={settings}
             playlistLabel={sourceLabel}
+            playlistSourceUrl={sourceUrl}
             playlistCount={channels.length}
             playlistUpdatedAt={playlistUpdatedAt}
             epgCount={programmes.length}
