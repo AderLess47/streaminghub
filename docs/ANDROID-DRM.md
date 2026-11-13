@@ -33,6 +33,33 @@ Bekannte Grenze: PlayReady ist laut Media3-Tabelle nur auf Android TV
 (SL2000) verfügbar; auf Telefonen und Tablets endet ein PlayReady-Sender im
 Text „Dieses Gerät unterstützt das DRM-Verfahren des Senders nicht.“
 
+## Lizenzverhalten: eine Anfrage je Wiedergabesitzung
+
+Geprüft, ob DRM-Sender bei jedem Start oder bei jedem Neuzeichnen der Oberfläche
+eine Lizenz anfordern. Ergebnis: **kein Fehler gefunden, keine Änderung nötig.**
+
+- `setMediaItem` und `prepare()` laufen genau einmal beim Aufbau des Players
+  (`PlayerScreen`, `remember(mediaItem, lowSpecMode)`). Fortschrittsmeldungen,
+  Fehlermeldungen und Fortschritts-Sync lösen kein weiteres `prepare()` aus.
+- Sender und DRM-Angaben sind die Schlüssel dieses `remember`. Ein Playlist-
+  Refresh im Hintergrund tauscht zwar die Senderliste, `Screen.Player` hält aber
+  denselben Sender; die Wiedergabe wird nicht neu aufgebaut.
+- Drehen und Fenstergröße führen nicht zur Neuerstellung der Activity
+  (`configChanges` enthält `orientation` und `screenSize`), der Player und seine
+  Lizenzsitzung bleiben also erhalten.
+- „Erneut versuchen“ ruft `prepare()` auf demselben Player auf; eine neue Lizenz
+  wird nur fällig, wenn die vorherige Sitzung fehlgeschlagen ist.
+- Beim Verlassen der Wiedergabe wird der Player freigegeben. Der nächste Start
+  desselben Senders ist eine neue Sitzung und holt eine neue Lizenz – das ist
+  beabsichtigt, denn die App speichert keine Offline-Lizenzen.
+- Verlängert wird eine Lizenz nur, wenn der Anbieter eine kurze Laufzeit
+  ausstellt; das steuert die Lizenz, nicht die App.
+
+Für den Gerätetest heißt das: Beim ersten Start eines DRM-Senders ist genau eine
+Lizenzanfrage zu erwarten, beim bloßen Zuschauen keine weiteren. Mehrere
+Anfragen hintereinander sind nur bei erneutem Start, Senderwechsel oder
+„Erneut versuchen“ nach einem Fehler normal.
+
 ## Gerätetest-Checkliste für DRM-Sender
 
 Ausfüllbar als [ANDROID-DRM-PRUEFPROTOKOLL.md](ANDROID-DRM-PRUEFPROTOKOLL.md) –
