@@ -46,3 +46,14 @@ id = "com.amazon.media.server"
 
 [[wants.service]]
 id = "com.amazon.media.playersession.service"
+
+# DRM-Wiedergabe (Widevine/PlayReady). Amazon verlangt beide Dienste plus die
+# Berechtigung unten; ohne sie lehnt die Plattform verschlüsselte Inhalte ab.
+[[wants.service]]
+id = "com.amazon.drm.key"
+
+[[wants.service]]
+id = "com.amazon.drm.crypto"
+
+[[needs.privilege]]
+id = "com.amazon.privilege.security.file-sharing"
