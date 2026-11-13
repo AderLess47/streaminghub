@@ -73,9 +73,11 @@ rechnete die Zeitzone falsch (`20:00 +0100` ist 19:00 UTC, nicht 19:30). Genau
 deshalb läuft die Suite in CI und nicht nur auf dem Papier.
 
 Die Core-Prüfungen laufen im Linux-Container (`swift:5.10`), weil das schneller
-und billiger ist. Für die App-Ziele gibt es zusätzlich `apple-app.yml` auf einem
-`macos-15`-Runner; das Repository ist öffentlich, damit sind macOS-Runner
-kostenfrei. Der erste Lauf hat sofort vier echte Fehler gefunden, die vorher
+und billiger ist. Für die App-Ziele gibt es zusätzlich `apple-app.yml` auf
+`macos-15`-Runnern; iOS, tvOS und macOS laufen dort als eigene, parallele Jobs,
+damit die Laufzeit dem längsten Build entspricht statt der Summe aller. Der
+iOS-Job baut einmal `-for-testing` und führt danach nur noch den Smoke-Test aus.
+Das Repository ist öffentlich, damit sind macOS-Runner kostenfrei. Der erste Lauf hat sofort vier echte Fehler gefunden, die vorher
 niemand sehen konnte: `positions = {}` statt `[:]`, einen Button-Style, der sich
 im `?:` nicht auf einen Typ bringen ließ, einen `Int64`-Vergleich gegen Sekunden
 und tvOS-/macOS-only-APIs (`ephemeral`, `fullScreenCover`, Benachrichtigungs-
