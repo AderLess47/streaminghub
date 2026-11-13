@@ -166,7 +166,7 @@ starts building.
 | Transactional email | Provider adapter, outbox, retry, delivery webhook and bounce/complaint suppression implemented and stub-tested | `EMAIL_API_KEY`, verified sending domain, `EMAIL_WEBHOOK_SECRET` |
 | Appme account SSO | **Not integrated** | Appme issuer URL, client ID/secret, scopes, redirect URI and API documentation |
 | VPN / proxy premium feature | Labelled "in development" | Product implementation, privacy review, activation |
-| Cross-device resume | Labelled "in development" | Product implementation |
+| Cross-device resume | **Live for premium devices** | Positions sync through `/api/v1/progress`: Android resumes when a channel opens, Apple and Vega OS merge at app start; clearing the local history also removes it from the account |
 
 Payment UI never reports success without a server-side provider confirmation;
 without keys the checkout returns HTTP 503 and states that no payment occurred.

@@ -112,6 +112,7 @@ final class AppModel {
         })
         await premium.load()
         await refreshAccount()
+        await syncWatchProgress()
     }
 
     // MARK: - Playlist
@@ -542,10 +543,59 @@ final class AppModel {
         store.saveSettings(settings)
     }
 
+    /// Löscht den Stand lokal und – bei aktivem Premium – auch im Konto. Sonst
+    /// käme er beim nächsten Start über die Zusammenführung zurück.
     func clearProgress() {
+        let removed = positions
         positions = [:]
         store.savePositions([:])
         notice = "Wiedergabestand gelöscht."
+
+        guard let token, account?.premiumActive == true, !removed.isEmpty else { return }
+        let api = self.api
+        Task {
+            for url in removed.keys {
+                // positionMs 0 gilt dem Server als „nicht fortsetzbar“ und
+                // entfernt den Eintrag, statt ihn zu überschreiben.
+                try? await api.saveWatchProgress(token: token, url: url, positionMs: 0, durationMs: 0)
+            }
+        }
+    }
+
+    /// Holt die im Konto gespeicherten Stände (Premium) und behält je Eintrag
+    /// den weiter fortgeschrittenen. Ohne Kopplung, ohne Premium (Antwort 402)
+    /// oder ohne Netz bleibt der lokale Stand unangetastet.
+    private func syncWatchProgress() async {
+        guard let token, account?.premiumActive == true else { return }
+        do {
+            let remote = try await api.fetchWatchProgress(token: token)
+            let merged = WatchProgressMerge.merge(
+                positions,
+                remote: remote.map {
+                    WatchProgressMerge.RemoteEntry(
+                        url: $0.url,
+                        positionMs: $0.positionMs,
+                        durationMs: $0.durationMs,
+                        updatedAt: Self.parseTimestamp($0.updatedAt)
+                    )
+                }
+            )
+            guard merged != positions else { return }
+            positions = merged
+            store.savePositions(merged)
+            DiagnosticsLog.shared.record("Wiedergabestand aus dem Konto übernommen.", area: "progress")
+        } catch {
+            DiagnosticsLog.shared.record(error: error, area: "progress")
+        }
+    }
+
+    /// Der Server schickt ISO 8601 mit Millisekunden; ältere Einträge ohne
+    /// Bruchteile werden ebenfalls gelesen.
+    private static func parseTimestamp(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value) ?? ISO8601DateFormatter().date(from: value)
     }
 
     var deviceName: String {

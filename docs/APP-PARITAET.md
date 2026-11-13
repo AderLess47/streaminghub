@@ -23,7 +23,7 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
 | Gerätekopplung über `streaminghub.org/activate` | ja | ja | ja |
 | Kontostatus aktualisieren, Kopplung aufheben | ja | ja | ja |
 | Premium-Kauf | Amazon Appstore | **kein Kauf** – die App zeigt nur den bestätigten Status | StoreKit 2, Universal Purchase über eine Bundle-ID |
-| Fortsetzen auf anderen Geräten (nur Premium) | ja | ja | ja |
+| Fortsetzen auf anderen Geräten (nur Premium) | ja (Stand wird beim Öffnen des Senders geholt) | ja (beim App-Start) | ja (beim App-Start) |
 | Wiedergabestand löschen | ja | ja | ja |
 | Datenschutz, Impressum, Kontolöschung in der App | ja | ja (ergänzt) | ja (ergänzt; auf tvOS als Adresse) |
 | Erinnerungen an Sendungen | Systembenachrichtigung (`AlarmManager`) | nur in der laufenden App (Vega OS bietet Apps keinen Alarm) | echte lokale Benachrichtigung (`UNUserNotificationCenter`) |
