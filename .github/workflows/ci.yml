@@ -66,6 +66,10 @@ jobs:
       - name: Test cross-device resume rules
         run: npm run test:progress
 
+      # Fortschritts-API: Auth, Premium-Sperre, Nutzertrennung, Validierung.
+      - name: Progress API tests
+        run: npm run test:progress-api
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
