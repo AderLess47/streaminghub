@@ -117,6 +117,10 @@ final class AppModel {
     // MARK: - Playlist
 
     func importPlaylist(from address: String) async {
+        if let problem = SourceAddressRules.problem(for: address) {
+            errorMessage = problem
+            return
+        }
         guard let url = Self.normalizedURL(address) else {
             errorMessage = "Bitte eine vollständige Adresse angeben, zum Beispiel https://anbieter.example/playlist.m3u"
             return
@@ -181,6 +185,10 @@ final class AppModel {
     // MARK: - Programmdaten
 
     func importProgrammes(from address: String) async {
+        if let problem = SourceAddressRules.problem(for: address) {
+            errorMessage = problem
+            return
+        }
         guard let url = Self.normalizedURL(address) else {
             errorMessage = "Bitte eine vollständige Adresse der XMLTV-Datei angeben."
             return
@@ -428,6 +436,10 @@ final class AppModel {
     }
 
     private func applyManagedPlaylist(_ address: String) async {
+        if let problem = SourceAddressRules.problem(for: address) {
+            errorMessage = "Die im Konto hinterlegte Playlist ist auf diesem Gerät nicht abspielbar: \(problem)"
+            return
+        }
         guard let url = Self.normalizedURL(address) else { return }
         do {
             let text = try await download(url)
@@ -453,6 +465,9 @@ final class AppModel {
 
     /// Lädt den zwischengespeicherten Stand neu, ohne die Oberfläche zu stören.
     private func refreshCachedPlaylist(_ address: String) async {
+        // Eine zwischengespeicherte HTTP-Adresse kann es auf Apple nicht geben;
+        // falls doch, wird sie still übersprungen statt im Hintergrund zu scheitern.
+        guard SourceAddressRules.problem(for: address) == nil else { return }
         guard let url = Self.normalizedURL(address) else { return }
         do {
             let text = try await download(url)
