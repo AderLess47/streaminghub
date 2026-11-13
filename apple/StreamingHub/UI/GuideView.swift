@@ -99,10 +99,19 @@ struct GuideView: View {
 
                 if let target = row.running ?? row.next {
                     let scheduled = model.isReminderSet(target)
-                    Button(scheduled ? "Erinnerung löschen" : "Erinnern") {
-                        Task { await model.toggleReminder(target) }
+                    Group {
+                        if scheduled {
+                            Button("Erinnerung löschen") {
+                                Task { await model.toggleReminder(target) }
+                            }
+                            .buttonStyle(.bordered)
+                        } else {
+                            Button("Erinnern") {
+                                Task { await model.toggleReminder(target) }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
                     }
-                    .buttonStyle(scheduled ? AnyButtonStyle(BorderedButtonStyle()) : AnyButtonStyle(BorderedProminentButtonStyle()))
                     .frame(minHeight: Theme.minimumTarget)
                     .disabled(target.start < now)
                     .accessibilityHint(scheduled
