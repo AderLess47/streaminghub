@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import StreamingHubCore
 
 /// Einstellungen: Konto, Premium, Playlist, Programmdaten, Darstellung, Daten.
@@ -9,6 +10,8 @@ struct SettingsView: View {
     @State private var epgAddress = ""
     @State private var localError: String?
     @State private var showingLog = false
+    @State private var showingPlaylistImporter = false
+    @State private var showingProgrammeImporter = false
 
     var body: some View {
         Form {
@@ -146,6 +149,11 @@ struct SettingsView: View {
                 .autocorrectionDisabled()
                 .accessibilityLabel("Adresse der M3U-Playlist")
 
+            #if !os(tvOS)
+            Button("Playlist aus Datei laden") { showingPlaylistImporter = true }
+                .disabled(model.busy != nil)
+            #endif
+
             Button(model.busy == "playlist" ? "Lädt …" : "Playlist laden") {
                 Task {
                     if playlistAddress.isPlausibleURL {
@@ -165,6 +173,17 @@ struct SettingsView: View {
         } footer: {
             Text("StreamingHub stellt keine Sender, Filme oder Playlists bereit. Du importierst ausschließlich deine eigenen, rechtmäßig zugänglichen Quellen.")
         }
+        #if !os(tvOS)
+        .fileImporter(
+            isPresented: $showingPlaylistImporter,
+            allowedContentTypes: Self.playlistTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            handleImport(result) { url in
+                await model.importPlaylist(fromFile: url)
+            }
+        }
+        #endif
     }
 
     // MARK: - Programmdaten
@@ -185,6 +204,11 @@ struct SettingsView: View {
                 .autocorrectionDisabled()
                 .accessibilityLabel("Adresse der XMLTV-Datei")
 
+            #if !os(tvOS)
+            Button("Programmdaten aus Datei laden") { showingProgrammeImporter = true }
+                .disabled(model.busy != nil)
+            #endif
+
             Button(model.busy == "epg" ? "Lädt …" : "Programmdaten laden") {
                 Task {
                     if epgAddress.isPlausibleURL {
@@ -202,6 +226,47 @@ struct SettingsView: View {
             Text("Programmdaten")
         } footer: {
             Text("XMLTV wird nur auf diesem Gerät gelesen. Der Senderbezug läuft über die tvg-id der Playlist.")
+        }
+        #if !os(tvOS)
+        .fileImporter(
+            isPresented: $showingProgrammeImporter,
+            allowedContentTypes: Self.programmeTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            handleImport(result) { url in
+                await model.importProgrammes(fromFile: url)
+            }
+        }
+        #endif
+    }
+
+    // Dateitypen für den Systemdialog. M3U und XMLTV haben keine feste
+    // UTType-Konstante; die Endung wird deshalb aufgelöst, mit Text als Rückfall.
+    private static var playlistTypes: [UTType] {
+        var types: [UTType] = [.plainText]
+        for suffix in ["m3u", "m3u8"] {
+            if let type = UTType(filenameExtension: suffix) { types.append(type) }
+        }
+        return types
+    }
+
+    private static var programmeTypes: [UTType] {
+        var types: [UTType] = [.xml, .plainText]
+        if let type = UTType(filenameExtension: "xmltv") { types.append(type) }
+        return types
+    }
+
+    private func handleImport(
+        _ result: Result<[URL], Error>,
+        _ perform: @escaping (URL) async -> Void
+    ) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            Task { await perform(url) }
+        case .failure(let error):
+            localError = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "import")
         }
     }
 

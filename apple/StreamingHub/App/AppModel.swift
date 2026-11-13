@@ -212,6 +212,114 @@ final class AppModel {
         notice = "Programmdaten entfernt."
     }
 
+    // MARK: - Datei-Import
+
+    /// Liest eine lokale M3U-Datei. Wie auf Android ersetzt der Datei-Import die
+    /// URL als Quelle; die Hintergrund-Auffrischung entfällt danach, weil es
+    /// keine Adresse gibt.
+    func importPlaylist(fromFile fileURL: URL) async {
+        busy = "playlist"
+        defer { busy = nil }
+        do {
+            let text = try readText(at: fileURL)
+            let parsed = M3UParser.parse(text)
+            guard !parsed.isEmpty else {
+                errorMessage = "Die Datei enthielt keine lesbaren Einträge."
+                return
+            }
+            let cache = PlaylistCache(
+                channels: parsed,
+                sourceURL: nil,
+                sourceLabel: "M3U-Datei: \(fileURL.lastPathComponent)",
+                updatedAt: Date()
+            )
+            try store.savePlaylist(cache)
+            channels = parsed
+            sourceURL = cache.sourceURL
+            sourceLabel = cache.sourceLabel
+            playlistUpdatedAt = cache.updatedAt
+            settings.demoMode = false
+            store.saveSettings(settings)
+            appliedManagedURL = nil
+            notice = "\(parsed.count) Einträge geladen."
+            DiagnosticsLog.shared.record("\(parsed.count) Einträge aus einer Datei geladen.", area: "playlist")
+        } catch {
+            errorMessage = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "playlist", meta: fileURL.lastPathComponent)
+        }
+    }
+
+    /// Liest eine lokale XMLTV-Datei.
+    func importProgrammes(fromFile fileURL: URL) async {
+        busy = "epg"
+        defer { busy = nil }
+        do {
+            let data = try readData(at: fileURL)
+            let parsed = XMLTVParser.parse(data)
+            guard !parsed.isEmpty else {
+                errorMessage = "Die XMLTV-Datei enthielt keine lesbaren Sendungen."
+                return
+            }
+            let cache = ProgrammeCache(programmes: parsed, sourceURL: nil, updatedAt: Date())
+            try store.saveProgrammes(cache)
+            programmes = parsed
+            epgUpdatedAt = cache.updatedAt
+            notice = "\(parsed.count) Sendungen geladen."
+            DiagnosticsLog.shared.record("\(parsed.count) Sendungen aus einer Datei geladen.", area: "epg")
+        } catch {
+            errorMessage = error.localizedDescription
+            DiagnosticsLog.shared.record(error: error, area: "epg", meta: fileURL.lastPathComponent)
+        }
+    }
+
+    enum FileImportError: LocalizedError {
+        case notText
+        case tooLarge
+
+        var errorDescription: String? {
+            switch self {
+            case .notText:
+                return "Die Datei ist kein lesbarer Text. Erwartet wird eine M3U-Liste in UTF-8 oder ISO-8859-1."
+            case .tooLarge:
+                return "Die Datei ist größer als 50 MB. Bitte eine kleinere Quelle wählen."
+            }
+        }
+    }
+
+    private func readText(at url: URL) throws -> String {
+        let data = try readData(at: url)
+        guard let text = String(data: data, encoding: .utf8)
+            ?? String(data: data, encoding: .isoLatin1) else {
+            throw FileImportError.notText
+        }
+        return text
+    }
+
+    private func readData(at url: URL) throws -> Data {
+        try withSecurityScope(url) { scoped in
+            let values = try scoped.resourceValues(forKeys: [.fileSizeKey])
+            if let size = values.fileSize, size > 50 * 1024 * 1024 {
+                throw FileImportError.tooLarge
+            }
+            return try Data(contentsOf: scoped)
+        }
+    }
+
+    /// Der Dateidialog gibt eine URL außerhalb des App-Sandbox-Bereichs zurück;
+    /// ohne den Security-Scope schlägt das Lesen fehl. Auf tvOS gibt es keinen
+    /// Dialog, dort reicht der direkte Zugriff.
+    private func withSecurityScope<T>(_ url: URL, _ body: (URL) throws -> T) rethrows -> T {
+        #if os(tvOS)
+        return try body(url)
+        #else
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer {
+            if scoped { url.stopAccessingSecurityScopedResource() }
+        }
+        return try body(url)
+        #endif
+    }
+
     // MARK: - Favoriten, Fortschritt, Erinnerungen
 
     func toggleFavorite(_ channel: Channel) {
