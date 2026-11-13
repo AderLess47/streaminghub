@@ -22,6 +22,8 @@ import { signDeviceToken } from "@/lib/device-auth";
 import { GET as getProgress, PUT as putProgress } from "@/app/api/v1/progress/route";
 import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as activateDevice } from "@/app/api/devices/activate/route";
+import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
+import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
 import { __setPremium, __setSessionUser } from "./fakes/api";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -425,6 +427,148 @@ await check("Aktivierung: Gerätelimit des kostenlosen Kontos greift", async () 
   assert.equal(response.status, 409);
   assert.match((await bodyOf(response)).error.message, /Gerätelimit/);
   assert.equal(all("SELECT * FROM devices").length, 2, "kein drittes Gerät");
+});
+
+/* ============================== Kopplung ================================= */
+
+const PAIRING_BODY = { deviceName: "Wohnzimmer", platform: "firetv", appVersion: "1.4.0" };
+
+async function newPairing(): Promise<{ requestId: string; code: string; pollToken: string }> {
+  const response = await requestPairingCode(
+    call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }),
+  );
+  assert.equal(response.status, 201);
+  const data = await bodyOf(response);
+  return { requestId: data.requestId, code: data.code, pollToken: data.pollToken };
+}
+
+await check("Kopplung: ungültige Anfrage 400, gültige 201 mit Code und Poll-Token", async () => {
+  resetDb();
+
+  assert.equal((await requestPairingCode(call("POST", "/api/v1/pairing/request", { body: {} }))).status, 400);
+  assert.equal(
+    (await requestPairingCode(
+      call("POST", "/api/v1/pairing/request", { body: { deviceName: "", platform: "vega" } }),
+    )).status,
+    400,
+  );
+
+  const response = await requestPairingCode(
+    call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }),
+  );
+  assert.equal(response.status, 201);
+  const data = await bodyOf(response);
+  assert.match(data.code, /^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  assert.equal(typeof data.pollToken, "string");
+  assert.equal(data.expiresInSeconds, 600);
+  assert.equal(data.pollIntervalSeconds, 3);
+
+  const rows = all<{ code_hash: string; device_name: string; platform: string; poll_token_hash: string }>(
+    "SELECT code_hash, device_name, platform, poll_token_hash FROM pairing_requests",
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].device_name, "Wohnzimmer");
+  assert.equal(rows[0].platform, "firetv");
+  assert.notEqual(rows[0].code_hash, data.code, "Code darf nicht im Klartext liegen");
+  assert.equal(rows[0].code_hash, sha256(normalizePairingCode(data.code)));
+  assert.notEqual(rows[0].poll_token_hash, data.pollToken, "Poll-Token nur als Hash");
+});
+
+await check("Kopplung: Status ohne Angaben 400, unbekannt oder falscher Token 404", async () => {
+  resetDb();
+  const pair = await newPairing();
+
+  assert.equal((await getPairingStatus(call("GET", "/api/v1/pairing/status"))).status, 400);
+  assert.equal(
+    (await getPairingStatus(
+      call("GET", `/api/v1/pairing/status?requestId=${pair.requestId}`, { token: "falsch" }),
+    )).status,
+    404,
+  );
+  assert.equal(
+    (await getPairingStatus(
+      call("GET", "/api/v1/pairing/status?requestId=unbekannt", { token: pair.pollToken }),
+    )).status,
+    404,
+  );
+});
+
+await check("Kopplung: ausstehend, abgelaufen und beansprucht", async () => {
+  resetDb();
+  const pair = await newPairing();
+
+  const pending = await getPairingStatus(
+    call("GET", `/api/v1/pairing/status?requestId=${pair.requestId}`, { token: pair.pollToken }),
+  );
+  assert.equal(pending.status, 200);
+  const pendingData = await bodyOf(pending);
+  assert.equal(pendingData.status, "pending");
+  assert.equal(pendingData.activationStatus, "inactive");
+
+  run(
+    "UPDATE pairing_requests SET expires_at = ? WHERE id = ?",
+    new Date(Date.now() - 1_000).toISOString(),
+    pair.requestId,
+  );
+  const expired = await bodyOf(
+    await getPairingStatus(
+      call("GET", `/api/v1/pairing/status?requestId=${pair.requestId}`, { token: pair.pollToken }),
+    ),
+  );
+  assert.equal(expired.status, "expired");
+  assert.equal(expired.activationStatus, "inactive");
+  assert.equal(expired.activationToken, undefined, "abgelaufen liefert keinen Token");
+});
+
+await check("Kopplung: Code anfordern, aktivieren, Status liefert nutzbaren Token", async () => {
+  resetDb();
+  seedUser("user-a");
+  __setSessionUser({ id: "user-a", email: "a@example.test" });
+
+  const pair = await newPairing();
+  const statusUrl = `/api/v1/pairing/status?requestId=${pair.requestId}`;
+
+  const activated = await activateDevice(
+    call("POST", "/api/devices/activate", { body: { code: pair.code } }),
+  );
+  assert.equal(activated.status, 200);
+
+  const claimed = await getPairingStatus(call("GET", statusUrl, { token: pair.pollToken }));
+  assert.equal(claimed.status, 200);
+  const data = await bodyOf(claimed);
+  assert.equal(data.status, "claimed");
+  assert.equal(data.activationStatus, "active");
+  assert.equal(data.device.name, "Wohnzimmer");
+  assert.equal(data.device.platform, "firetv");
+  assert.equal(typeof data.activationToken, "string");
+
+  // Der ausgestellte Token öffnet die geschützte API genau für dieses Gerät.
+  const me = await getMe(call("GET", "/api/v1/me", { token: data.activationToken }));
+  assert.equal(me.status, 200);
+  const meData = await bodyOf(me);
+  assert.equal(meData.device.id, data.device.id);
+  assert.equal(meData.device.name, "Wohnzimmer");
+  assert.equal(meData.device.activationStatus, "active");
+
+  // Ein zweiter Poll-Token darf die Anfrage nicht lesen.
+  const foreign = await getPairingStatus(call("GET", statusUrl, { token: "fremd" }));
+  assert.equal(foreign.status, 404);
+});
+
+await check("Kopplung: mehr als 15 Anfragen je Adresse werden gebremst", async () => {
+  resetDb();
+  for (let index = 0; index < 15; index += 1) {
+    const response = await requestPairingCode(
+      call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }),
+    );
+    assert.equal(response.status, 201, `Anfrage ${index + 1} wurde blockiert`);
+  }
+  const blocked = await requestPairingCode(
+    call("POST", "/api/v1/pairing/request", { body: PAIRING_BODY }),
+  );
+  assert.equal(blocked.status, 429);
+  assert.equal(Number(blocked.headers.get("retry-after")) > 0, true);
+  assert.equal(all("SELECT * FROM pairing_requests").length, 15, "blockierte Anfrage legt nichts an");
 });
 
 /* ============================ Playlist-Abruf ============================= */

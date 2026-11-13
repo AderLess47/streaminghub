@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Führt `scripts/api-routes.test.ts` headless aus: Fortschritt, Geräte-
+ * Führt `scripts/api-routes.test.ts` headless aus: Fortschritt, Kopplung, Geräte-
  * Aktivierung und Playlist-Abruf.
  *
  * Die Routen importieren über den Next-Alias `@/…`; esbuild bündelt sie mit
