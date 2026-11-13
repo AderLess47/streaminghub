@@ -2,6 +2,8 @@ package de.streaminghub.app.data
 
 import android.content.Context
 import de.streaminghub.app.model.Channel
+import de.streaminghub.app.model.ChannelDrm
+import de.streaminghub.app.model.DrmScheme
 import de.streaminghub.app.model.MediaKind
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,6 +39,7 @@ class PlaylistRepository(context: Context) {
                             kind = runCatching {
                                 MediaKind.valueOf(item.optString("kind"))
                             }.getOrDefault(MediaKind.LIVE),
+                            drm = readDrm(item.optJSONObject("drm")),
                         ),
                     )
                 }
@@ -66,6 +69,18 @@ class PlaylistRepository(context: Context) {
                     put("group", channel.group)
                     put("tvgId", channel.tvgId ?: "")
                     put("kind", channel.kind.name)
+                    channel.drm?.let { drm ->
+                        put(
+                            "drm",
+                            JSONObject().apply {
+                                put("scheme", drm.scheme.kodipropName)
+                                put("licenseUrl", drm.licenseUrl)
+                                if (drm.headers.isNotEmpty()) {
+                                    put("headers", JSONObject(drm.headers as Map<*, *>))
+                                }
+                            },
+                        )
+                    }
                 },
             )
         }
@@ -76,6 +91,18 @@ class PlaylistRepository(context: Context) {
             .putString(KEY_SOURCE_LABEL, sourceLabel)
             .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
             .apply()
+    }
+
+    private fun readDrm(item: JSONObject?): ChannelDrm? {
+        if (item == null) return null
+        val scheme = DrmScheme.fromKodiprop(item.optString("scheme")) ?: return null
+        val licenseUrl = item.optString("licenseUrl").takeIf { it.isNotBlank() } ?: return null
+        val headers = item.optJSONObject("headers")?.let { stored ->
+            buildMap {
+                stored.keys().forEach { key -> put(key, stored.optString(key)) }
+            }
+        } ?: emptyMap()
+        return ChannelDrm(scheme = scheme, licenseUrl = licenseUrl, headers = headers)
     }
 
     fun clearPlaylist() {

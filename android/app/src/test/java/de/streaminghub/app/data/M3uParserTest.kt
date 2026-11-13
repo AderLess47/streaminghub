@@ -65,4 +65,40 @@ class M3uParserTest {
         assertEquals(1, channels.size)
         assertTrue(channels[0].url.startsWith("https://"))
     }
+
+    @Test
+    fun assignsKodipropToTheFollowingEntryOnly() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 group-title="Live",Verschlüsselt
+            #KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha
+            #KODIPROP:inputstream.adaptive.license_key=https://lizenz.example/wv|Authorization=Bearer%20abc
+            https://example.com/live/drm.m3u8
+            #EXTINF:-1 group-title="Live",Offen
+            https://example.com/live/free.m3u8
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist)
+
+        assertEquals(2, channels.size)
+        assertEquals(de.streaminghub.app.model.DrmScheme.WIDEVINE, channels[0].drm?.scheme)
+        assertEquals("https://lizenz.example/wv", channels[0].drm?.licenseUrl)
+        assertEquals("Bearer abc", channels[0].drm?.headers?.get("Authorization"))
+        assertNull(channels[1].drm)
+    }
+
+    @Test
+    fun entryWithLicenseTypeButNoKeyStaysFree() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1,Sender
+            #KODIPROP:inputstream.adaptive.license_type=com.widevine.alpha
+            https://example.com/live/no-key.m3u8
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist)
+
+        assertEquals(1, channels.size)
+        assertNull(channels[0].drm)
+    }
 }

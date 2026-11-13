@@ -69,6 +69,7 @@ import de.streaminghub.app.ui.theme.Muted
 import de.streaminghub.app.ui.theme.Panel
 import kotlinx.coroutines.delay
 import de.streaminghub.app.data.AppLog
+import de.streaminghub.app.data.PlaybackErrors
 
 @Composable
 fun PlayerScreen(
@@ -81,7 +82,20 @@ fun PlayerScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val startPosition = remember(channel.url) { viewModel.progressFor(channel) }
 
-    val exoPlayer = remember(channel.url, lowSpecMode) {
+    val mediaItem = remember(channel.url, channel.drm) {
+        val builder = MediaItem.Builder().setUri(channel.url)
+        channel.drm?.let { drm ->
+            builder.setDrmConfiguration(
+                MediaItem.DrmConfiguration.Builder(drm.scheme.uuid)
+                    .setLicenseUri(drm.licenseUrl)
+                    .setLicenseRequestHeaders(drm.headers)
+                    .build(),
+            )
+        }
+        builder.build()
+    }
+
+    val exoPlayer = remember(mediaItem, lowSpecMode) {
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
         val builder = ExoPlayer.Builder(context, renderersFactory)
@@ -100,7 +114,7 @@ fun PlayerScreen(
         }
 
         builder.build().apply {
-            setMediaItem(MediaItem.fromUri(channel.url), startPosition)
+            setMediaItem(mediaItem, startPosition)
             prepare()
             playWhenReady = true
         }
@@ -109,14 +123,17 @@ fun PlayerScreen(
     val listener = remember(exoPlayer) {
         object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
-                AppLog.error("player", error, AppLog.redactUrl(channel.url))
-                errorMessage = buildString {
-                    append("Die Quelle konnte nicht abgespielt werden.")
-                    error.localizedMessage?.takeIf { it.isNotBlank() }?.let {
-                        append("\n")
-                        append(it)
-                    }
-                }
+                AppLog.error(
+                    "player",
+                    error,
+                    "${AppLog.redactUrl(channel.url)} drm=${channel.drm?.scheme?.label ?: "keins"}",
+                )
+                errorMessage = PlaybackErrors.describe(
+                    errorCode = error.errorCode,
+                    detail = error.localizedMessage,
+                    hasDrm = channel.drm != null,
+                    insecure = channel.url.startsWith("http://", ignoreCase = true),
+                )
             }
         }
     }

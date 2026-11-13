@@ -10,6 +10,7 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Suche, Kategorien, Favoriten
 - Fokusführung für Fernbedienungen und adaptive Karten für Touch-Geräte
 - Wiedergabe von HLS- und VOD-Quellen über Media3/ExoPlayer
+- DRM aus `#KODIPROP` (Widevine, PlayReady) inklusive Lizenz-URL und Lizenz-Headern; verständliche DRM-Fehlermeldungen im Player
 - Lokaler Wiedergabefortschritt für Filme und Serien
 - Playlist aktualisieren und lokal entfernen
 - Gerätekopplung über einen Einmalcode auf `streaminghub.org/activate`
