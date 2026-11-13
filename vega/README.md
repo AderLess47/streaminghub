@@ -122,8 +122,13 @@ einer Maschine mit Vega SDK muss zeigen, ob Shaka dort lädt.
 [`scripts/verify-shaka.mjs`](scripts/verify-shaka.mjs) führt die Kette in einem
 Lauf aus und endet mit einer Zusammenfassung je Schritt:
 
+Ohne SDK und ohne Gerät prüft `npm run test:headless` die echte App-Logik unter
+Node: Playlist-Parser, XMLTV-Parser und die HLS-Nahtstelle. Das läuft auch in CI
+(`Vega logic tests`) und braucht nur Node.
+
 ```bash
 cd vega
+npm run test:headless                      # Parser und HLS-Nahtstelle, kein SDK nötig
 npm run verify:shaka                       # Voraussetzungen, Setup, Typprüfung, Build, .vpkg
 npm run verify:shaka -- --device VirtualDevice:Tv --start-vvd \
     --smoke-url https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
