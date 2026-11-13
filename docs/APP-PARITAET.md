@@ -12,12 +12,12 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
 | Funktion | Android / Fire TV | Vega OS | Apple (iOS, iPadOS, macOS, tvOS) |
 | --- | --- | --- | --- |
 | Playlist per URL importieren | ja | ja | ja |
-| Playlist aus einer Datei importieren | ja (SAF-Dateidialog) | **nein** – kein Dateidialog in Vega OS | **offen** – technisch über `.fileImporter` möglich, noch nicht gebaut |
+| Playlist aus einer Datei importieren | ja (SAF-Dateidialog) | **nein** – kein Dateidialog in Vega OS | ja über `.fileImporter` (iOS, iPadOS, macOS); auf tvOS **nein**, dort gibt es keinen Dokumentendialog |
 | Playlist-Cache, sofortiger Start | ja | ja | ja |
 | Hintergrund-Auffrischung nach 15 Minuten | ja | ja (ergänzt) | ja (ergänzt) |
 | Vom Konto hinterlegte Playlist übernehmen | ja | ja | ja |
 | EPG (XMLTV) per URL | ja | ja | ja |
-| EPG aus einer Datei | ja | **nein** (siehe oben) | **offen** (siehe oben) |
+| EPG aus einer Datei | ja | **nein** (siehe oben) | ja über `.fileImporter` (iOS, iPadOS, macOS); auf tvOS **nein** |
 | Demo-Modus ohne eigene Quelle | ja | ja | ja |
 | Low-Spec-Modus | ja | ja | ja |
 | Gerätekopplung über `streaminghub.org/activate` | ja | ja | ja |
@@ -40,9 +40,12 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
   `[tasks]`-Manifest. Die Vega-App erinnert deshalb im Vordergrund. Sobald Amazon
   eine Benachrichtigungs-API anbietet, ersetzt ein Adapter den Ticker.
 - **Datei-Import.** Der Android-Client öffnet den System-Dateidialog. Vega OS
-  bietet keinen; die Vega-App importiert deshalb nur per URL. Für Apple ist der
-  Import über `.fileImporter` möglich und als nächster Schritt vorgesehen – er
-  fehlt heute, statt als „vorhanden“ zu gelten.
+  bietet keinen; die Vega-App importiert deshalb nur per URL. Die Apple-App
+  nutzt `.fileImporter` auf iPhone, iPad und Mac – auf dem Apple TV gibt es
+  keinen Dokumentendialog, dort bleibt der URL-Import. Importierte Dateien
+  ersetzen die URL als Quelle; die 15-Minuten-Auffrischung entfällt dann, weil
+  es keine Adresse zum Nachladen gibt. Gelesen wird über den Security-Scope der
+  gewählten Datei, mit 50-MB-Grenze und UTF-8-/ISO-8859-1-Fallback.
 - **HLS auf Vega.** Siehe `vega/README.md`, Abschnitt „HLS und DASH“.
 
 ## Diagnose-Protokoll
@@ -59,7 +62,7 @@ lassen.
 
 - Zeitstempel in UTC (ISO 8601 mit Millisekunden)
 - Stufe (`INFO`, `WARN`, `ERROR`)
-- Bereich (`device`, `playlist`, `epg`, `account`, `pairing`, `player`, `settings`)
+- Bereich (`device`, `playlist`, `epg`, `account`, `pairing`, `player`, `settings`, `import`)
 - Meldung, optional Metadaten
 - Einmal je App-Start ein `device`-Kopf mit Systemstand, Modell, Bildschirm,
   Sprache und App-Version
