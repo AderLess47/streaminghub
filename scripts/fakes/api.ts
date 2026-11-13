@@ -74,9 +74,8 @@ export function tooManyRequests(retryAfterSeconds: number): Response {
   );
 }
 
-export function clientIp(): string {
-  return "127.0.0.1";
-}
+/** Echte Ermittlung, damit die Tests auch gefälschte Header abdecken. */
+export { clientIp } from "@/lib/client-ip";
 
 /** Gleiche Regeln wie `isSameOrigin` in `src/lib/api.ts`. */
 export function isSameOrigin(request: Request): boolean {
