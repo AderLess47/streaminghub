@@ -137,11 +137,13 @@ Marker `StreamingHub smoke: hls geladen` und `… wiedergabe laeuft` (oder
 bleibt die URL für einen Handtest stehen. Die Logs landen in
 `artifacts/vega-logs/` und sind gitignored.
 
-Optionen: `--timeout 120`, `--skip-build` (vorhandenes `.vpkg` testen),
+Optionen: `--timeout 120`, `--start-vvd`, `--vvd-no-gui` (headless),
+`--skip-build` (vorhandenes `.vpkg` testen),
 `--skip-setup`, `--skip-typecheck`, `--fresh-install`, `--force-setup`,
 `--require-device` (CI soll ohne Gerät scheitern), `--help`.
 
-Für CI gibt es [`.github/workflows/vega-shaka.yml`](../.github/workflows/vega-shaka.yml):
+Für CI gibt es [`.github/workflows/vega-shaka.yml`](../.github/workflows/vega-shaka.yml)
+(einmalige Einrichtung: [`docs/VEGA-RUNNER.md`](../docs/VEGA-RUNNER.md)):
 manuell startbar, läuft auf einem selbst gehosteten Runner mit dem Label `vega`,
 installiert Node 20 und JDK 21, baut Shaka, ruft das Skript mit
 `--require-device` auf und lädt die Gerätelogs als Artefakt hoch. Ohne

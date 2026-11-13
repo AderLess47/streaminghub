@@ -98,3 +98,5 @@ Android zusätzlich Teilen über den Systemdialog.
   SDK noch Xcode. Die Änderungen sind geschrieben, aber **nicht kompiliert**.
   Die CI baut weiterhin nur `StreamingHubCore` (swift:5.10); für die Oberflächen
   braucht es einen Mac bzw. ein Android-SDK.
+
+Der Vega-Smoke-Test (Setup, Build, HLS-Wiedergabe) ist mit `npm run verify:shaka` automatisiert; die Einrichtung des Runners steht in [VEGA-RUNNER.md](VEGA-RUNNER.md).
