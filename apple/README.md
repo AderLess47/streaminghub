@@ -10,6 +10,10 @@ Benachrichtigungen, Gerätekopplung, Kontostatus, Premium-Anbindung über
 StoreKit 2, Demo-Modus, Low-Spec-Modus, Diagnose-Protokoll sowie Datenschutz-,
 Impressum- und Kontolöschungs-Links.
 
+Nach einem Netzfehler bleibt die Meldung sichtbar, die Wiedergabe startet aber von
+selbst neu, sobald die Verbindung zurück ist (vier Versuche, dann „Erneut
+versuchen“).
+
 Die App ist kein Inhaltsangebot: Sie liest ausschließlich die vom Nutzer
 importierten Quellen. Übertragen werden nur Konto-, Geräte- und Abo-Metadaten
 sowie optional die vom Kunden freigegebene M3U-Quell-URL (`../docs/API.md`).
