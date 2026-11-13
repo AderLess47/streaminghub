@@ -78,3 +78,10 @@ manipulierte Nutzlast, fremder Schlüssel, unbekannte Wurzel, fremdes Bundle,
 fremdes Produkt, falscher Produkttyp, Sandbox ohne Freigabe, Ablauf, Widerruf,
 kaputte Eingaben, Zustandsregeln, Konfliktregeln und das Replay-Fenster.
 Die Testkette ist kein Geheimnis und nicht für den Produktivbetrieb gedacht.
+
+`src/lib/apple-subscriptions.test.ts` prüft zusätzlich die Schreibwege gegen eine
+echte SQLite-Datei: Beleg und Abo-Zeile entstehen in einer Transaktion, eine
+Verlängerung aktualisiert denselben Beleg statt einen zweiten anzulegen, der
+Unique-Index verhindert die Zuordnung zu einem zweiten Konto, eine Erstattung
+beendet Premium sofort, und der Refresh beendet eine abgelaufene Periode, ohne
+eine laufende anzutasten.
