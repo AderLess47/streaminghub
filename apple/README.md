@@ -59,10 +59,11 @@ weder Xcode noch einen Swift-Compiler. Das heißt:
 
 | Geprüft | Wie |
 | --- | --- |
-| Core-Bibliothek kompiliert und XCTest-Suite läuft | CI-Job `Apple core tests` mit offizieller Swift-Toolchain; **14 Prüfungen, alle grün** |
+| Core-Bibliothek kompiliert und XCTest-Suite läuft | CI-Job `Apple core tests` mit offizieller Swift-Toolchain; **29 Prüfungen, alle grün** |
+| App-Ziele kompilieren (iOS, tvOS, macOS) | CI-Job `Apple app build` auf `macos-15`: XcodeGen erzeugt das Projekt, `xcodebuild` baut alle drei Ziele ohne Signierung |
 | Parser, Regeln, Demo gegen die Kotlin- und TypeScript-Fassung | dieselben Fälle wie dort, zusätzlich hier als Test festgeschrieben |
-| SwiftUI-Oberfläche, Build im Simulator, Gerät, VoiceOver, StoreKit | **nicht geprüft** – dafür braucht es Xcode |
-| tvOS-Target (Projektdatei, Fokusführung, Wiedergabe auf dem Fernseher) | **nicht geprüft** – weder tvOS-SDK noch Simulator vorhanden |
+| SwiftUI-Oberfläche bedienen, Gerät, VoiceOver, StoreKit, echte Wiedergabe | **nicht geprüft** – ein Build ersetzt keinen Gerätelauf |
+| tvOS-Oberfläche mit Fernbedienung, Fokusführung, Wiedergabe am Fernseher | **nicht geprüft** – gebaut, aber nicht bedient |
 
 Der erste CI-Lauf hat zwei echte Fehler gefunden, die ohne Compiler niemand
 gesehen hätte: `URLSession.data(for:)` gibt es nur in Apples Foundation (jetzt
@@ -70,9 +71,14 @@ gesehen hätte: `URLSession.data(for:)` gibt es nur in Apples Foundation (jetzt
 rechnete die Zeitzone falsch (`20:00 +0100` ist 19:00 UTC, nicht 19:30). Genau
 deshalb läuft die Suite in CI und nicht nur auf dem Papier.
 
-Warum kein macOS-Runner: In diesem Repository werden macOS-Jobs sofort
-abgebrochen. Die Core-Prüfungen laufen deshalb im Linux-Container
-(`swift:5.10`); die Oberfläche bleibt bis zum ersten Mac-Build ungeprüft.
+Die Core-Prüfungen laufen im Linux-Container (`swift:5.10`), weil das schneller
+und billiger ist. Für die App-Ziele gibt es zusätzlich `apple-app.yml` auf einem
+`macos-15`-Runner; das Repository ist öffentlich, damit sind macOS-Runner
+kostenfrei. Der erste Lauf hat sofort vier echte Fehler gefunden, die vorher
+niemand sehen konnte: `positions = {}` statt `[:]`, einen Button-Style, der sich
+im `?:` nicht auf einen Typ bringen ließ, einen `Int64`-Vergleich gegen Sekunden
+und tvOS-/macOS-only-APIs (`ephemeral`, `fullScreenCover`, Benachrichtigungs-
+Inhalte). Genau dafür läuft der Job.
 
 ## Was auf Apple-Plattformen besser ist als auf Vega
 
