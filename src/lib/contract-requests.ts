@@ -1,5 +1,5 @@
 import { randomToken } from "./auth";
-import { get, nowIso, run } from "./db";
+import { all, get, nowIso, run } from "./db";
 import { cancelSubscription, effectiveStatus, getSubscription } from "./payments";
 
 /**
@@ -32,11 +32,14 @@ export type ContractRequest = {
   status: ContractRequestStatus;
   channel: string | null;
   effectiveAt: string | null;
+  handledAt: string | null;
+  handledBy: string | null;
   createdAt: string;
 };
 
 const COLUMNS = `id, reference, kind, email, name, contract, note, status,
-  channel, effective_at AS effectiveAt, created_at AS createdAt`;
+  channel, effective_at AS effectiveAt, handled_at AS handledAt,
+  handled_by AS handledBy, created_at AS createdAt`;
 
 export function findContractRequest(reference: string): ContractRequest | undefined {
   if (!reference) return undefined;
@@ -91,8 +94,69 @@ function insert(input: {
     status: input.status,
     channel: input.channel,
     effectiveAt: input.effectiveAt,
+    handledAt: null,
+    handledBy: null,
     createdAt,
   };
+}
+
+/**
+ * Liste für die Admin-Ansicht: offene Erklärungen zuerst, danach nach Datum.
+ * `state` filtert auf noch offene oder bereits bearbeitete Vorgänge.
+ */
+export function listContractRequests(filter: {
+  kind?: ContractRequestKind;
+  state?: "open" | "handled";
+  limit?: number;
+} = {}): ContractRequest[] {
+  const where: string[] = [];
+  const params: string[] = [];
+  if (filter.kind) {
+    where.push("kind = ?");
+    params.push(filter.kind);
+  }
+  if (filter.state === "open") where.push("handled_at IS NULL");
+  if (filter.state === "handled") where.push("handled_at IS NOT NULL");
+
+  const sql = `SELECT ${COLUMNS} FROM contract_requests
+    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY handled_at IS NOT NULL, created_at DESC
+    LIMIT ?`;
+  return all<ContractRequest>(sql, ...params, Math.min(Math.max(filter.limit ?? 200, 1), 500));
+}
+
+/** Zählt offene Erklärungen je Art – für die Kennzahlen über der Liste. */
+export function contractRequestStats(): {
+  open: number;
+  openWithdrawals: number;
+  openCancellations: number;
+} {
+  const row = get<{ open: number; withdrawals: number; cancellations: number }>(
+    `SELECT COUNT(*) AS open,
+            SUM(CASE WHEN kind = 'withdrawal' THEN 1 ELSE 0 END) AS withdrawals,
+            SUM(CASE WHEN kind = 'cancellation' THEN 1 ELSE 0 END) AS cancellations
+     FROM contract_requests WHERE handled_at IS NULL`,
+  );
+  return {
+    open: Number(row?.open ?? 0),
+    openWithdrawals: Number(row?.withdrawals ?? 0),
+    openCancellations: Number(row?.cancellations ?? 0),
+  };
+}
+
+/** Markiert einen Vorgang als erledigt oder öffnet ihn wieder. */
+export function setContractRequestHandled(input: {
+  id: string;
+  handled: boolean;
+  by: string;
+}): boolean {
+  const result = run(
+    `UPDATE contract_requests SET handled_at = ?, handled_by = ? WHERE id = ?`,
+    input.handled ? nowIso() : null,
+    input.handled ? input.by : null,
+    input.id,
+  );
+  return Number(result.changes ?? 0) > 0;
 }
 
 export function recordWithdrawal(input: {

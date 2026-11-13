@@ -15,9 +15,14 @@ const directory = mkdtempSync(path.join(os.tmpdir(), "streaminghub-contracts-"))
 process.env.DATABASE_PATH = path.join(directory, "test.db");
 
 const { get, nowIso, run } = await import("./db.ts");
-const { findContractRequest, recordCancellation, recordWithdrawal } = await import(
-  "./contract-requests.ts"
-);
+const {
+  contractRequestStats,
+  findContractRequest,
+  listContractRequests,
+  recordCancellation,
+  recordWithdrawal,
+  setContractRequestHandled,
+} = await import("./contract-requests.ts");
 
 function createUser(email: string) {
   const id = `user-${Math.random().toString(36).slice(2, 10)}`;
@@ -70,6 +75,57 @@ test("Kündigung ohne laufendes Abo ändert nichts", async () => {
 
   const record = await recordCancellation({ email, ip: "203.0.113.9" });
   assert.equal(record.status, "no_subscription");
+});
+
+test("Erledigt-Vermerk setzt Zeitpunkt und Bearbeiter und lässt sich zurücknehmen", () => {
+  const record = recordWithdrawal({
+    name: "Bob Beispiel",
+    email: "bob@example.org",
+    contract: "apple",
+    note: "",
+    ip: "203.0.113.11",
+  });
+
+  assert.equal(record.handledAt, null);
+  assert.equal(setContractRequestHandled({ id: record.id, handled: true, by: "support@example.org" }), true);
+
+  const handled = findContractRequest(record.reference);
+  assert.ok(handled?.handledAt);
+  assert.equal(handled?.handledBy, "support@example.org");
+
+  setContractRequestHandled({ id: record.id, handled: false, by: "support@example.org" });
+  const reopened = findContractRequest(record.reference);
+  assert.equal(reopened?.handledAt, null);
+  assert.equal(reopened?.handledBy, null);
+});
+
+test("Liste filtert nach Art und Bearbeitungsstand und zählt offene Vorgänge", () => {
+  const open = listContractRequests({ state: "open" });
+  assert.ok(open.length >= 1);
+  assert.ok(open.every((row) => row.handledAt === null));
+
+  const cancellations = listContractRequests({ kind: "cancellation" });
+  assert.ok(cancellations.every((row) => row.kind === "cancellation"));
+
+  const done = recordWithdrawal({
+    name: "Ada Beispiel",
+    email: "ada@example.org",
+    contract: "web",
+    note: "",
+    ip: "203.0.113.12",
+  });
+  setContractRequestHandled({ id: done.id, handled: true, by: "support@example.org" });
+
+  assert.ok(listContractRequests({ state: "handled" }).some((row) => row.id === done.id));
+  assert.ok(!listContractRequests({ state: "open" }).some((row) => row.id === done.id));
+
+  const stats = contractRequestStats();
+  assert.equal(stats.open, listContractRequests({ state: "open" }).length);
+  assert.ok(stats.openWithdrawals >= 1);
+});
+
+test("Unbekannte ID ändert nichts", () => {
+  assert.equal(setContractRequestHandled({ id: "gibt-es-nicht", handled: true, by: "x" }), false);
 });
 
 test("Kündigung eines Store-Abos verweist auf den Store und nennt das Periodenende", async () => {

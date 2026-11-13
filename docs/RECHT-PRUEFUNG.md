@@ -15,6 +15,7 @@ Stand: 13. November 2026.
 | Unmittelbare Bestätigung | Weiterleitung auf `/widerruf/bestaetigung?ref=…` mit Datum, Vertrag, Referenz |
 | Bestätigung in Textform | E-Mail über `src/lib/mail.ts` (`withdrawalMail`), zusätzlich Meldung an den Betreiber |
 | Nachweis | Tabelle `contract_requests` (Art, Vertrag, Zeitpunkt, Status, IP) plus Audit-Log `withdrawal.submitted` |
+| Support-Sicht | `/admin/contracts` mit Filtern nach Art und Bearbeitungsstand, „Als erledigt markieren“/„Wieder öffnen“, Bearbeiter und Zeitpunkt im Audit-Log |
 | Belehrung angepasst | `src/content/legal.ts`, Widerrufsinformationen nennen die Online-Funktion |
 
 Grenze: Die Erstattung selbst läuft weiterhin manuell über den Zahlungsanbieter.
@@ -30,6 +31,7 @@ Die Bestätigung sagt das offen; ein automatischer Refund ist nicht implementier
 | Bestätigung in Textform | `cancellationMail` mit Datum, Vertrag und Endzeitpunkt |
 | Sofortige Wirkung beim Web-Abo | `cancelSubscription()` setzt `cancel_at_period_end` bei Stripe |
 | Store-Abos | Status `store_channel`: belegt und bestätigt, Kündigung zusätzlich im Store |
+| Support-Sicht | dieselbe Ansicht `/admin/contracts`, Filter „Kündigung“ |
 
 Grenze: Bei Apple und Amazon liegt der Vertrag beim Store. Die Website kann dort
 technisch nicht kündigen; die Bestätigung sagt das ausdrücklich.

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { setContractRequestHandled } from "@/lib/contract-requests";
 import { all, get, nowIso, run } from "@/lib/db";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
@@ -399,6 +400,34 @@ export async function setTicketStatusAction(formData: FormData) {
   });
   revalidatePath(`/admin/tickets/${ticketId}`);
   redirect(`/admin/tickets/${ticketId}?ok=status`);
+}
+
+/**
+ * Erledigt-Vermerk für Widerrufe und Kündigungen. Die Erklärung selbst bleibt
+ * unverändert; erfasst wird nur, wer sie wann bearbeitet hat.
+ */
+export async function setContractRequestHandledAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const handled = String(formData.get("handled") ?? "") === "1";
+  if (!id) return;
+
+  const changed = setContractRequestHandled({ id, handled, by: staff.email });
+  if (changed) {
+    logAudit({
+      action: handled ? "admin.contract_request_handled" : "admin.contract_request_reopened",
+      actorId: staff.id,
+      actorEmail: staff.email,
+      targetType: "contract_request",
+      targetId: id,
+    });
+  }
+
+  revalidatePath("/admin/contracts");
+  // Filter aus der Liste erhalten und die Rückmeldung anhängen.
+  const target = new URL(adminPath(formData, "/admin/contracts"), "https://streaminghub.invalid");
+  target.searchParams.set("ok", handled ? "handled" : "reopened");
+  redirect(`${target.pathname}${target.search}`);
 }
 
 export async function releaseEmailSuppressionAction(formData: FormData) {
