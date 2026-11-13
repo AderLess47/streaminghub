@@ -47,21 +47,14 @@ export default async function AdminOverviewPage({
     { label: t.admin.overview.devices, value: devices, href: "/admin/devices", icon: "devices" as const },
     { label: t.admin.overview.subscriptions, value: subscriptions, href: "/admin/subscriptions", icon: "card" as const },
     { label: t.admin.overview.tickets, value: tickets, href: "/admin/tickets", icon: "mail" as const },
-    {
-      label: t.admin.overview.contractsOpen,
-      value: contracts.open,
-      href: "/admin/contracts?state=open",
-      icon: "check" as const,
-      warn: contracts.open > 0,
-      hint:
-        contracts.open > 0
-          ? [
-              plural(contracts.openWithdrawals, t.admin.contracts.withdrawal, t.admin.contracts.withdrawals),
-              plural(contracts.openCancellations, t.admin.contracts.cancellation, t.admin.contracts.cancellations),
-            ].join(" · ")
-          : t.admin.overview.contractsNone,
-    },
   ];
+  const contractHint =
+    contracts.open > 0
+      ? [
+          plural(contracts.openWithdrawals, t.admin.contracts.withdrawal, t.admin.contracts.withdrawals),
+          plural(contracts.openCancellations, t.admin.contracts.cancellation, t.admin.contracts.cancellations),
+        ].join(" · ")
+      : t.admin.overview.contractsNone;
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -82,24 +75,35 @@ export default async function AdminOverviewPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => (
-          <Link
-            key={kpi.label}
-            href={kpi.href}
-            className={`card card-hover p-4${kpi.warn ? " ring-1 ring-amber-500/40" : ""}`}
-          >
+          <Link key={kpi.label} href={kpi.href} className="card card-hover p-4">
             <div className="flex items-center justify-between">
               <span className="text-[0.68rem] uppercase tracking-[0.1em] text-muted">{kpi.label}</span>
-              <Icon name={kpi.icon} size={16} className={kpi.warn ? "text-amber-300" : "text-cyan"} />
+              <Icon name={kpi.icon} size={16} className="text-cyan" />
             </div>
             <p className="mt-2 text-2xl font-semibold">{kpi.value}</p>
-            {kpi.hint ? (
-              <p className="mt-1 text-[0.66rem] leading-relaxed text-muted">{kpi.hint}</p>
-            ) : null}
           </Link>
         ))}
       </div>
+
+      <Link
+        href="/admin/contracts?state=open"
+        className={`card card-hover flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4${
+          contracts.open > 0 ? " ring-1 ring-amber-500/40" : ""
+        }`}
+      >
+        <div className="min-w-0">
+          <span className="text-[0.68rem] uppercase tracking-[0.1em] text-muted">
+            {t.admin.overview.contractsOpen}
+          </span>
+          <p className="mt-1 text-xs text-muted">{contractHint}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-2xl font-semibold">{contracts.open}</p>
+          <Icon name="check" size={16} className={contracts.open > 0 ? "text-amber-300" : "text-cyan"} />
+        </div>
+      </Link>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="card p-5">
