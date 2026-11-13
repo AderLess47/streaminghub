@@ -55,6 +55,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import de.streaminghub.app.MainViewModel
@@ -70,6 +71,7 @@ import de.streaminghub.app.ui.theme.Panel
 import kotlinx.coroutines.delay
 import de.streaminghub.app.data.AppLog
 import de.streaminghub.app.data.PlaybackErrors
+import de.streaminghub.app.data.ResilientLoadErrorPolicy
 
 @Composable
 fun PlayerScreen(
@@ -102,7 +104,10 @@ fun PlayerScreen(
     val exoPlayer = remember(mediaItem, lowSpecMode) {
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
+        val mediaSourceFactory = DefaultMediaSourceFactory(context)
+            .setLoadErrorHandlingPolicy(ResilientLoadErrorPolicy())
         val builder = ExoPlayer.Builder(context, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
 
         if (lowSpecMode) {
             builder.setLoadControl(
