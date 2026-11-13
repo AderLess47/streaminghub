@@ -37,25 +37,39 @@ jobs:
         working-directory: apple
         run: xcodegen generate
 
-      - name: Build iOS
+      # Der Simulator-Start dauert oft länger als der Build; er läuft deshalb
+      # schon während des iOS-Builds im Hintergrund.
+      - name: Boot simulator in the background
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime in devices.values() for d in runtime if d["name"] == "iPhone 16"))
+          ')
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" || true
+
+      - name: Build iOS and tests
         working-directory: apple
         run: |
           set -o pipefail
           xcodebuild \
             -scheme StreamingHub_iOS \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/dd-ios" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            -quiet build
+            -quiet build-for-testing
 
       - name: Simulator smoke test
         working-directory: apple
+        timeout-minutes: 8
         run: |
           set -o pipefail
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
           rm -rf "$RUNNER_TEMP/smoke.xcresult"
-          xcodebuild test \
+          xcodebuild test-without-building \
             -scheme StreamingHub_iOS \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/dd-ios" \
             -only-testing:StreamingHubUITests \
             -resultBundlePath "$RUNNER_TEMP/smoke.xcresult" \
