@@ -33,7 +33,7 @@ export default async function AdminAuditPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.audit} title={t.admin.audit.title} description={t.admin.audit.subtitle} />
 
-      <ScrollRegion label={t.admin.audit.title} className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.audit.title} className="card hidden overflow-x-auto xl:block">
         <table className="data-table">
           <caption className="sr-only">{t.admin.audit.title}</caption>
           <thead>
@@ -72,6 +72,49 @@ export default async function AdminAuditPage() {
           </tbody>
         </table>
       </ScrollRegion>
+
+      <ul className="grid gap-3 md:grid-cols-2 xl:hidden">
+        {entries.map((entry) => (
+          <li key={entry.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 break-all font-mono text-[0.7rem] text-cyan-200/90">{entry.action}</p>
+              <p className="shrink-0 whitespace-nowrap text-[0.68rem] text-muted">
+                {dateFormat.format(new Date(entry.created_at))}
+              </p>
+            </div>
+
+            <dl className="mt-3 grid gap-1.5 text-xs">
+              <div className="flex items-start justify-between gap-3">
+                <dt className="shrink-0 text-muted">{t.admin.audit.actor}</dt>
+                <dd className="min-w-0 truncate text-right">{entry.actor_email ?? "system"}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="shrink-0 text-muted">{t.admin.audit.target}</dt>
+                <dd className="min-w-0 text-right">
+                  {entry.target_type ?? "—"}
+                  {entry.target_id ? (
+                    <span className="text-muted"> · {entry.target_id.slice(0, 10)}</span>
+                  ) : null}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="shrink-0 text-muted">{t.admin.audit.ip}</dt>
+                <dd className="text-right">{entry.ip ?? "—"}</dd>
+              </div>
+              {entry.meta ? (
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="shrink-0 text-muted">{t.admin.audit.meta}</dt>
+                  <dd className="min-w-0 break-all text-right text-[0.65rem] text-muted">{entry.meta}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </li>
+        ))}
+        {entries.length === 0 ? (
+          <li className="card p-6 text-center text-xs text-muted">{t.admin.audit.empty}</li>
+        ) : null}
+      </ul>
+
       <p className="text-[0.68rem] leading-relaxed text-muted">
         Das Protokoll ist append-only. Einträge werden nicht nachträglich verändert; Löschung erfolgt ausschließlich
         durch die automatische Aufbewahrungsfrist (90 Tage, sofern kein Vorfall vorliegt).

@@ -285,7 +285,7 @@ export function CustomerTable({
                 <select
                   name="role"
                   defaultValue={row.role}
-                  className="field !w-auto !py-1 !text-xs"
+                  className="field min-h-11 !w-auto !text-xs"
                   aria-label={`${t.admin.customers.role}: ${row.email}`}
                 >
                   <option value="customer">customer</option>
