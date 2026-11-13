@@ -155,7 +155,7 @@ export default async function AdminContractsPage({
         })}
       </div>
 
-      <ScrollRegion label={t.admin.contracts.title} className="card hidden overflow-x-auto md:block">
+      <ScrollRegion label={t.admin.contracts.title} className="card hidden overflow-x-auto xl:block">
         <table className="data-table">
           <caption className="sr-only">{t.admin.contracts.title}</caption>
           <thead>
@@ -232,7 +232,7 @@ export default async function AdminContractsPage({
         </table>
       </ScrollRegion>
 
-      <ul className="grid gap-3 md:hidden">
+      <ul className="grid gap-3 md:grid-cols-2 xl:hidden">
         {rows.map((row) => {
           const returnTo = href(filter, {});
           return (
