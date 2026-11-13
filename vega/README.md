@@ -123,7 +123,8 @@ einer Maschine mit Vega SDK muss zeigen, ob Shaka dort lädt.
 Lauf aus und endet mit einer Zusammenfassung je Schritt:
 
 Ohne SDK und ohne Gerät prüft `npm run test:headless` die echte App-Logik unter
-Node: Playlist-Parser, XMLTV-Parser und die HLS-Nahtstelle. Das läuft auch in CI
+Node: Playlist-Parser, XMLTV-Parser, HLS-Nahtstelle und die Speicherschicht
+(AsyncStorage ist dabei durch einen In-Memory-Mock ersetzt). Das läuft auch in CI
 (`Vega logic tests`) und braucht nur Node.
 
 ```bash

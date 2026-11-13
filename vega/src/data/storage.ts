@@ -71,15 +71,17 @@ function sanitizeChannel(value: unknown): Channel | null {
 /* ------------------------------- Playlist -------------------------------- */
 
 export async function loadPlaylist(): Promise<StoredPlaylist> {
-  const stored = await readJson<StoredPlaylist>(KEY.playlist, EMPTY_PLAYLIST);
-  const channels = Array.isArray(stored.channels)
+  // `stored` kann alles sein: alte Versionen, fremde Schreiber, kaputtes JSON.
+  // Ohne die Prüfung stürzt der Start bei `null` ab.
+  const stored = await readJson<StoredPlaylist | null>(KEY.playlist, EMPTY_PLAYLIST);
+  const channels = Array.isArray(stored?.channels)
     ? stored.channels.map(sanitizeChannel).filter((item): item is Channel => item !== null)
     : [];
   return {
     channels,
-    sourceUrl: typeof stored.sourceUrl === "string" ? stored.sourceUrl : null,
-    sourceLabel: typeof stored.sourceLabel === "string" ? stored.sourceLabel : "",
-    updatedAt: typeof stored.updatedAt === "number" ? stored.updatedAt : null,
+    sourceUrl: typeof stored?.sourceUrl === "string" ? stored.sourceUrl : null,
+    sourceLabel: typeof stored?.sourceLabel === "string" ? stored.sourceLabel : "",
+    updatedAt: typeof stored?.updatedAt === "number" ? stored.updatedAt : null,
   };
 }
 
@@ -94,8 +96,8 @@ export async function clearPlaylist(): Promise<void> {
 /* ---------------------------------- EPG ---------------------------------- */
 
 export async function loadEpg(): Promise<StoredEpg> {
-  const stored = await readJson<StoredEpg>(KEY.epg, EMPTY_EPG);
-  const programmes = Array.isArray(stored.programmes)
+  const stored = await readJson<StoredEpg | null>(KEY.epg, EMPTY_EPG);
+  const programmes = Array.isArray(stored?.programmes)
     ? stored.programmes.filter((item): item is EpgProgramme => {
         if (!item || typeof item !== "object") return false;
         return (
@@ -109,8 +111,8 @@ export async function loadEpg(): Promise<StoredEpg> {
     : [];
   return {
     programmes,
-    sourceUrl: typeof stored.sourceUrl === "string" ? stored.sourceUrl : null,
-    updatedAt: typeof stored.updatedAt === "number" ? stored.updatedAt : null,
+    sourceUrl: typeof stored?.sourceUrl === "string" ? stored.sourceUrl : null,
+    updatedAt: typeof stored?.updatedAt === "number" ? stored.updatedAt : null,
   };
 }
 
