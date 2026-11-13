@@ -432,3 +432,95 @@ APP_URL=https://streaminghub.org AMAZON_SYNC_TOKEN=… npm run amazon:sync
 
 The command prints the same JSON summary and exits non-zero when the endpoint
 fails, which is what the workflow relies on.
+
+## 12. Release auf Fly.io – Schritt für Schritt
+
+Die App läuft als Container `streaminghub-org` in `fra` mit dem Volume
+`streaminghub_data` auf `/app/data`. Eine Maschine, 512 MB – so steht es in
+`fly.toml`. **Nicht auf mehrere Maschinen skalieren:** SQLite, Sessions und
+Rate-Limits liegen in einer Datei auf diesem Volume.
+
+### 12.1 Voraussetzungen
+
+- `flyctl` installiert und angemeldet (`fly auth login`) oder `FLY_API_TOKEN`
+in der Umgebung – beides gehört nicht ins Repository.
+- `main` ausgecheckt, `gh pr checks` grün, lokal `npm run typecheck` und
+`npm run build` grün.
+- Das Image baut Fly selbst; lokal wird kein Docker gebraucht.
+
+### 12.2 Secrets setzen
+
+Namen prüfen, Werte nie in Repo, Chat oder `fly.toml`:
+
+```bash
+fly secrets list -a streaminghub-org            # zeigt nur Namen und Zeitstempel
+fly secrets set NAME=… -a streaminghub-org      # Wert aus dem eigenen Passwort-Manager
+```
+
+| Variable | Pflicht | Zweck |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | nur beim ersten Start | legt das Admin-Konto an; danach `fly secrets unset ADMIN_PASSWORD` |
+| `EMAIL_API_KEY` | für Mailversand | Resend-Schlüssel; ohne ihn bleiben Mails in der Outbox |
+| `EMAIL_WEBHOOK_SECRET` | für Zustellberichte | Svix-Secret des Endpunkts `/api/webhooks/resend` |
+| `STRIPE_SECRET_KEY` | für Checkout | Stripe-Secret; ohne ihn antwortet der Checkout 503 |
+| `STRIPE_WEBHOOK_SECRET` | für Checkout | Secret des Endpunkts `/api/webhooks/stripe` |
+| `OPERATOR_LEGAL_NAME`, `OPERATOR_REPRESENTATIVE`, `OPERATOR_STREET`, `OPERATOR_POSTAL_CODE`, `OPERATOR_CITY`, `OPERATOR_PHONE` | für den Livegang | Betreiberdaten im Impressum; ohne sie stehen dort Platzhalter |
+| `AMAZON_RVS_SHARED_SECRET` | für Fire-TV-Käufe | Shared Key aus der Amazon Developer Console |
+| `AMAZON_SYNC_TOKEN` | für den täglichen Abgleich | derselbe Wert zusätzlich als GitHub-Actions-Secret |
+| `AMAZON_RTN_TOPIC_ARN` | nach der RTN-Registrierung | SNS-Topic; vorher leer lassen (siehe 11.4) |
+
+Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,
+`DATABASE_PATH`, `SESSION_DAYS`, `ADMIN_EMAIL`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
+`STRIPE_PRICE_ID`, `OPERATOR_EMAIL`, `OPERATOR_COUNTRY`,
+`OPERATOR_SMALL_BUSINESS`, `APPLE_IAP_BUNDLE_ID`.
+
+### 12.3 Ausrollen
+
+```bash
+git switch main && git pull
+fly deploy -a streaminghub-org --remote-only
+fly status -a streaminghub-org
+fly logs -a streaminghub-org
+```
+
+Der Build läuft auf Fly und dauert einige Minuten. Die Schema-Migration läuft
+beim Start (`migrate()`), neue Spalten werden additiv ergänzt – es gibt keinen
+separaten Migrationsschritt und keinen Datenverlust bei bestehenden Zeilen.
+
+### 12.4 Prüfliste nach dem Ausrollen
+
+Der Reihe nach, jede Zeile mit Befehl oder Blick:
+
+- [ ] **Erreichbarkeit:** `curl -sI https://streaminghub.org/status | head -1` → `HTTP/2 200`
+- [ ] **Neue Rechtsseiten:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/widerruf https://streaminghub.org/kuendigung` → zweimal `200` (vor dem Release: `404`)
+- [ ] **Admin-Route vorhanden:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/admin/contracts` → `307` (Weiterleitung zum Login), nicht `404`
+- [ ] **Release-Konsistenz:** `npm run smoke:deploy -- --base https://streaminghub.org` → „serves one consistent release“
+- [ ] **Anmeldung:** Admin-Login mit MFA; `/admin` zeigt die Zeile „Offene Erklärungen“, `/admin/contracts` listet die Vorgänge
+- [ ] **Widerruf von Ende zu Ende:** `/widerruf` mit einer Testadresse abschicken → Bestätigungsseite, Eintrag erscheint in `/admin/contracts`, bei konfiguriertem Versand eine Mail in **Admin → E-Mail-Ausgang**
+- [ ] **Zahlung:** `/status` meldet den Zahlungsanbieter als verbunden; mit Testkarte `4242 4242 4242 4242` eine Testbuchung (nur mit gesetzten Stripe-Schlüsseln)
+- [ ] **E-Mail-Versand:** Kontaktformular abschicken → Outbox-Eintrag, bei Resend Status `delivered`
+- [ ] **Sicherheitsheader:** `curl -sI https://streaminghub.org | grep -i strict-transport-security` → gesetzt
+- [ ] **Sitemap:** `curl -s https://streaminghub.org/sitemap.xml | head -5` → XML mit den neuen Pfaden
+- [ ] **Backup:** `fly ssh console -a streaminghub-org -C "node /app/scripts/backup-db.mjs"`, danach `fly ssh console -a streaminghub-org -C "ls -la /app/data/backups"`
+- [ ] **Logs:** in den ersten Minuten keine `500` in `fly logs`
+- [ ] **Rollback notiert:** `fly releases -a streaminghub-org` → Image der vorherigen Version notieren
+
+### 12.5 Rollback
+
+```bash
+fly releases -a streaminghub-org
+fly deploy --image <image-der-vorherigen-version> -a streaminghub-org
+```
+
+Die Datenbank bleibt dabei unverändert; additive Spalten stören die alte
+Version nicht. Nur wenn eine Migration Daten umgeschrieben hätte, wäre ein
+Backup-Restore nötig – bei den bisherigen Änderungen ist das nicht der Fall.
+
+### 12.6 Was der Deploy nicht erledigt
+
+- Keine Secrets anlegen und keine DNS-Einträge ändern.
+- Keine Store-Einträge: APK/AAB entstehen separat über `npm run release:apk`,
+  TestFlight und App Store Connect bleiben Handarbeit.
+- Die Release-Metadaten (`src/content/release.ts`, `/api/release`) beschreiben
+  nur, was dort veröffentlicht wurde – ein neuer App-Build braucht einen
+  eigenen Upload, sonst zeigt `/download` weiter die alte Version.
