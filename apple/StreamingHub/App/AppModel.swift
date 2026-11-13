@@ -173,7 +173,7 @@ final class AppModel {
         store.clearPlaylist()
         channels = []
         favorites = []
-        positions = {}
+        positions = [:]
         sourceLabel = ""
         sourceURL = nil
         playlistUpdatedAt = nil
