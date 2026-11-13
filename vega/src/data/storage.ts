@@ -167,6 +167,8 @@ export async function loadSettings(): Promise<Settings> {
   return {
     lowSpec: stored.lowSpec === true,
     demoMode: stored.demoMode === true,
+    // Nur ausdrücklich gespeichertes Ja aktiviert Secure Buffers.
+    securePlayback: stored.securePlayback === true,
   };
 }
 

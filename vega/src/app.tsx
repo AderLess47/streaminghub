@@ -376,6 +376,17 @@ export function App() {
     setNotice("Programmdaten entfernt.");
   }, []);
 
+  const toggleSecurePlayback = useCallback(async () => {
+    const next = { ...settings, securePlayback: !settings.securePlayback };
+    setSettings(next);
+    await saveSettings(next);
+    setNotice(
+      next.securePlayback
+        ? "Secure Buffers sind an. DRM-Sender laufen jetzt über den geschützten Pfad."
+        : "Secure Buffers sind aus. DRM-Sender laufen über den Standardpfad.",
+    );
+  }, [settings]);
+
   const toggleLowSpec = useCallback(async () => {
     const next = { ...settings, lowSpec: !settings.lowSpec };
     setSettings(next);
@@ -425,6 +436,7 @@ export function App() {
         resumeMs={progress[playing.url] ?? 0}
         onClose={() => setPlaying(null)}
         onProgress={(positionMs, durationMs) => handleProgress(playing, positionMs, durationMs)}
+        securePlayback={settings.securePlayback}
       />
     );
   }
@@ -577,6 +589,7 @@ export function App() {
             onImportEpg={importEpg}
             onRemoveEpg={removeEpg}
             onToggleLowSpec={toggleLowSpec}
+        onToggleSecurePlayback={toggleSecurePlayback}
             onClearProgress={clearProgressPoints}
             onUnpair={unpair}
             onRefreshAccount={() => refreshAccount()}

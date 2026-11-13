@@ -27,6 +27,7 @@ type Props = {
   onImportEpg: (url: string) => Promise<void>;
   onRemoveEpg: () => Promise<void>;
   onToggleLowSpec: () => Promise<void>;
+  onToggleSecurePlayback: () => Promise<void>;
   onClearProgress: () => Promise<void>;
   onUnpair: () => Promise<void>;
   onRefreshAccount: () => Promise<void>;
@@ -210,6 +211,23 @@ export function SettingsScreen(props: Props) {
           <Button
             label={props.settings.lowSpec ? "Low-Spec ausschalten" : "Low-Spec einschalten"}
             onPress={() => void run(props.onToggleLowSpec)}
+            variant="ghost"
+          />
+        </View>
+      </Card>
+
+      <SectionTitle hint="Nur für DRM-Sender">Wiedergabe</SectionTitle>
+      <Card style={styles.card}>
+        <Text style={styles.row}>Secure Buffers: {props.settings.securePlayback ? "an" : "aus"}</Text>
+        <Text style={styles.muted}>
+          Schickt entschlüsseltes Bild nur in den geschützten Pfad (Widevine L1, PlayReady SL3000). Wirkt ausschließlich
+          auf Sender, deren Playlist DRM-Angaben enthält; unverschlüsselte Sender bleiben unverändert. Standardmäßig
+          aus, weil es auf Geräten ohne L1-Unterstützung die Wiedergabe verhindern kann.
+        </Text>
+        <View style={styles.actions}>
+          <Button
+            label={props.settings.securePlayback ? "Secure Buffers ausschalten" : "Secure Buffers einschalten"}
+            onPress={() => void run(props.onToggleSecurePlayback)}
             variant="ghost"
           />
         </View>
