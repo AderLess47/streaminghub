@@ -536,6 +536,8 @@ export const en: Dictionary = {
       channel: "Channel",
       channelWeb: "Web / sideload",
       channelAmazon: "Amazon Appstore",
+      channelApple: "App Store",
+      appleNotice: "This subscription was purchased through the App Store and is managed there. You can cancel it in your Apple account settings.",
       renewsAt: "Valid until",
       cancelAtPeriodEnd: "Cancellation scheduled for period end",
       startCta: "Subscribe to Premium on the web",

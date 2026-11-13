@@ -90,8 +90,16 @@ final class AppModel {
         }
 
         reminderScheduler.cancelOutdated(reminders)
-        // Ohne serverseitige Prüfung bleibt der Kauf gesperrt (siehe README).
-        premium.configure(verifier: nil)
+
+        // Der Server prüft die signierte Transaktion gegen Apples Wurzelzertifikat;
+        // die App schaltet nichts selbst frei.
+        let api = self.api
+        premium.configure(verifier: { jws, _ in
+            guard let token = KeychainToken.load() else {
+                throw PurchaseError.notPaired
+            }
+            return try await api.verifyApplePurchase(token: token, jws: jws)
+        })
         await premium.load()
         await refreshAccount()
     }
@@ -335,6 +343,23 @@ final class AppModel {
         isPaired = false
         if !silently {
             notice = "Kopplung aufgehoben. Die Playlist bleibt auf dem Gerät."
+        }
+    }
+
+    /// Kauf abschließen: StoreKit liefert die Transaktion, der Server bestätigt
+    /// sie. Danach wird der Kontostatus nachgezogen, damit die Anzeige stimmt.
+    func purchasePremium() async {
+        await premium.purchase()
+        if case .active = premium.state {
+            await refreshAccount()
+        }
+    }
+
+    enum PurchaseError: LocalizedError {
+        case notPaired
+
+        var errorDescription: String? {
+            "Bitte koppele das Gerät zuerst, damit der Kauf einem Konto zugeordnet werden kann."
         }
     }
 

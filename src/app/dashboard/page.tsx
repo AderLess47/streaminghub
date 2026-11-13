@@ -188,7 +188,13 @@ export default async function DashboardPage() {
             <InfoRow label={t.dashboard.subscription.status} value={status} />
             <InfoRow
               label={t.dashboard.subscription.channel}
-              value={subscription.channel === "amazon" ? t.dashboard.subscription.channelAmazon : t.dashboard.subscription.channelWeb}
+              value={
+                subscription.channel === "amazon"
+                  ? t.dashboard.subscription.channelAmazon
+                  : subscription.channel === "apple"
+                    ? t.dashboard.subscription.channelApple
+                    : t.dashboard.subscription.channelWeb
+              }
             />
           </div>
           <div className="mt-4 grid gap-2">

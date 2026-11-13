@@ -25,6 +25,11 @@ export const amazonPurchaseSchema = z.object({
   productId: z.string().trim().min(1, "productId fehlt.").max(120),
 });
 
+export const applePurchaseSchema = z.object({
+  // StoreKit liefert ein kompaktes JWS; alles darunter ist kein Beleg.
+  jws: z.string().trim().min(100, "Der Kaufbeleg fehlt.").max(20_000),
+});
+
 export const loginSchema = z.object({
   email,
   password: z.string().min(1).max(200),

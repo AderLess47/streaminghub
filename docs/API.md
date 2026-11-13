@@ -110,6 +110,30 @@ accounts. A device resumes at the later of its local and the synced position, so
 offline progress is never lost. Playlist content and stream URLs stay on the
 device.
 
+## 3b. App Store purchase (premium, Apple platforms)
+
+`POST /api/v1/apple/purchase` with `Authorization: Bearer <activationToken>`
+
+```json
+{ "jws": "<StoreKit 2 signed transaction>" }
+```
+
+The server verifies the JWS signature chain against Apple Root CA G3, checks
+`bundleId`, `productId`, `type = Auto-Renewable Subscription`, the sandbox flag
+and the validity period, and only then stores the subscription. The app never
+unlocks premium on its own. Answer:
+
+```json
+{ "ok": true, "subscription": { "plan": "premium", "status": "active", "channel": "apple", "currentPeriodEnd": "2026-12-13T10:00:00.000Z", "premiumActive": true } }
+```
+
+`409` means the subscription already belongs to another account or another
+channel is active; both are resolved by support, never by silently merging.
+
+`POST /api/v1/apple/refresh` re-evaluates the stored period (no body). A renewal
+arrives as a new signed transaction via `/api/v1/apple/purchase`; an elapsed
+period without a reported renewal ends premium here.
+
 ## 4. Website-side redemption (already implemented)
 
 `POST /api/devices/activate` with the customer session cookie:
@@ -134,4 +158,5 @@ logged-in account.
 
 - No content, EPG or stream URLs are served.
 - The only playlist-related value is the optional admin-managed M3U source URL returned to the selected active paired device; playlist content is not served.
-- No payment initiation from the app (web checkout only for sideload builds).
+- No payment initiation from the app. Store purchases are verified server-side
+  (`apple`) or via Amazon RVS (`amazon`); the web checkout stays on the website.

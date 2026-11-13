@@ -359,6 +359,27 @@ Keep `AMAZON_SYNC_TOKEN` identical in both places – the app rejects any other
 value, and a mismatch shows up as `403 forbidden` in the workflow log. Never put
 these values in the repository, in `fly.toml` or in the chat.
 
+### 11.6 App Store (iOS, iPadOS, macOS)
+
+The Apple app sends its StoreKit transaction to `/api/v1/apple/purchase`; the
+server verifies the signature chain against Apple Root CA G3. **No secret is
+needed** – Apple's certificates are public and the root ships in
+`src/lib/apple-root-ca.ts`.
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `APPLE_IAP_BUNDLE_ID` | Fly env | Bundle id of the app, e.g. `org.streaminghub.app`. Without it the endpoint answers `503`, so a test deployment never accepts real receipts |
+| `APPLE_IAP_PRODUCT_ID` | Fly env (optional) | Defaults to `premium_monthly`; must match the product in App Store Connect |
+| `APPLE_IAP_ALLOW_SANDBOX` | Fly env (optional) | `1` only while testing with a sandbox account or TestFlight. Leave it unset in production |
+
+```bash
+flyctl secrets set APPLE_IAP_BUNDLE_ID=org.streaminghub.app -a streaminghub-org
+```
+
+These are not secrets; they can also live in `fly.toml` under `[env]`. See
+[`IAP-APPLE.md`](IAP-APPLE.md) for the verification rules, the conflict handling
+and the two known gaps (no App Store Server API, no notifications webhook).
+
 ### 11.2 What the run does
 
 The sync selects Amazon receipts whose `renewal_date`, `cancel_date` or grace

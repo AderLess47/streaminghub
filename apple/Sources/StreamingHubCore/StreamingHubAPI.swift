@@ -110,6 +110,29 @@ public struct StreamingHubAPI {
         )
     }
 
+    // MARK: - App Store
+
+    /// Schickt die von StoreKit signierte Transaktion an den Server. Premium gilt
+    /// erst, wenn der Server die Signaturkette und den Zeitraum geprüft hat.
+    public func verifyApplePurchase(token: String, jws: String) async throws -> Bool {
+        let json = try await call(
+            path: "/api/v1/apple/purchase",
+            method: "POST",
+            token: token,
+            body: ["jws": jws]
+        )
+        let subscription = json["subscription"] as? [String: Any]
+        return subscription?["premiumActive"] as? Bool ?? false
+    }
+
+    /// Fragt den gespeicherten Abo-Stand ab; eine Verlängerung meldet die App
+    /// selbst als neue Transaktion (StoreKit 2 `Transaction.updates`).
+    public func refreshAppleSubscription(token: String) async throws -> Bool {
+        let json = try await call(path: "/api/v1/apple/refresh", method: "POST", token: token)
+        let subscription = json["subscription"] as? [String: Any]
+        return subscription?["premiumActive"] as? Bool ?? false
+    }
+
     // MARK: - Fortschritt
 
     public struct ProgressItem: Codable, Sendable {

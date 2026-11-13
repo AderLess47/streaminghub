@@ -78,15 +78,13 @@ abgebrochen. Die Core-Prüfungen laufen deshalb im Linux-Container
 
 Premium läuft über StoreKit 2 (`PremiumStore`). Die Regel ist dieselbe wie in
 allen anderen Clients: **Der Client schaltet nichts frei.** StoreKit liefert
-eine signierte Transaktion; erst wenn der Server sie geprüft und
-`premiumActive` bestätigt hat, gilt das Abo.
+eine signierte Transaktion; erst wenn der Server sie gegen Apples
+Zertifikatskette geprüft und `premiumActive` bestätigt hat, gilt das Abo.
 
-Was dafür noch fehlt: ein Serverendpunkt, der eine App-Store-Transaktion
-(JWS) prüft – `docs/API.md` kennt bisher nur den Amazon-Weg
-(`/api/v1/amazon/purchase`). Solange dieser Endpunkt fehlt, ist der Kauf
-bewusst gesperrt und die App sagt das, statt einen Kauf anzunehmen und nichts
-freizuschalten. Sobald der Endpunkt existiert, genügt in `AppModel.bootstrap()`
-ein Aufruf von `premium.configure(verifier:)`.
+Der Kauf ist angeschlossen: `AppModel.bootstrap()` setzt den Prüfer auf
+`POST /api/v1/apple/purchase` (`StreamingHubAPI.verifyApplePurchase`). Fehlt die
+Serverkonfiguration (`APPLE_IAP_BUNDLE_ID`), antwortet der Server mit `503` und
+die App zeigt den Grund, statt einen Kauf anzunehmen und nichts freizuschalten.
 
 Ein App-Store-Build darf außerdem nicht auf einen externen Checkout verweisen;
 die App enthält deshalb keinen Link zur Web-Bezahlung.
@@ -96,6 +94,9 @@ die App enthält deshalb keinen Link zur Web-Bezahlung.
 - `docs/API.md` kennt die Plattformwerte `firetv`, `androidtv`, `android`, `ios`
   und `web` – keinen für macOS. Der Mac meldet sich deshalb als `ios`
   (`AppModel.platform`). Sauber wäre ein zusätzlicher Wert in der API.
+- Verlängerungen meldet die App als neue Transaktion; ohne App-Start bleibt der
+  Serverstand alt, bis der Zeitraum abläuft. Ein Webhook (App Store Server
+  Notifications V2) würde das schließen.
 - Die Playlist wird vollständig im Speicher gehalten. Bei sehr großen Listen
   (Zehntausende Einträge) wäre eine seitenweise Ablage nötig; der Low-Spec-Modus
   ist bisher nur ein Schalter ohne eigene Grenze.
