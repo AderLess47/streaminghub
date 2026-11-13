@@ -38,6 +38,15 @@ export function registeredShakaVersion(): string {
   return playerVersion;
 }
 
+/**
+ * Schreibt einen Marker in die Geräte-Logs. `scripts/verify-shaka.mjs` liest
+ * genau diese Zeilen, um einen HLS-Lauf ohne Fernbedienung zu bewerten.
+ * Absichtlich ASCII, damit grep auf jedem Gerät greift.
+ */
+function smokeMarker(message: string): void {
+  console.log(`StreamingHub smoke: ${message}`);
+}
+
 function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
   let video: VideoPlayer | null = null;
   let shaka: ShakaPlayerInstance | null = null;
@@ -100,6 +109,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
   return {
     async start(handle, url, startPositionMs) {
       if (!playerConstructor) {
+        smokeMarker("fehler: shaka fehlt");
         callbacks.onError("Der Shaka-Player ist nicht eingebunden.");
         return;
       }
@@ -116,6 +126,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
         current.autoplay = false;
 
         current.addEventListener("playing", () => {
+          smokeMarker("wiedergabe laeuft");
           callbacks.onStatus("Wiedergabe läuft");
           callbacks.onPausedChange(false);
         });
@@ -126,6 +137,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
           reportProgress();
         });
         current.addEventListener("error", () => {
+          smokeMarker("fehler: video");
           callbacks.onError("Die Quelle konnte nicht wiedergegeben werden.");
           void logError("player", "VideoPlayer meldet error", redactUrl(url));
         });
@@ -163,9 +175,13 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
           }
         }
 
+        smokeMarker("hls geladen");
         callbacks.onStatus("Wiedergabe läuft");
         void logEvent("player", "HLS-Wiedergabe über Shaka gestartet.", "info", redactUrl(url));
       } catch (reason) {
+        smokeMarker(
+          `fehler: ${reason instanceof Error ? reason.message : "quelle nicht ladbar"}`,
+        );
         callbacks.onError(
           reason instanceof Error ? reason.message : "Der HLS-Player konnte die Quelle nicht laden.",
         );

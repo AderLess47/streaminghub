@@ -117,6 +117,42 @@ Ehrlich zum Stand: Amazons `setup.sh` wurde hier mit Java 21 für 4.8.5 und
 dafür fehlen in dieser Umgebung das Vega SDK und ein Gerät. Der erste Build auf
 einer Maschine mit Vega SDK muss zeigen, ob Shaka dort lädt.
 
+## Auf einem Vega-SDK-Rechner prüfen
+
+[`scripts/verify-shaka.mjs`](scripts/verify-shaka.mjs) führt die Kette in einem
+Lauf aus und endet mit einer Zusammenfassung je Schritt:
+
+```bash
+cd vega
+npm run verify:shaka                       # Voraussetzungen, Setup, Typprüfung, Build, .vpkg
+npm run verify:shaka -- --device VirtualDevice:Tv --start-vvd \
+    --smoke-url https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+```
+
+Der zweite Aufruf prüft zusätzlich die Wiedergabe. Dafür schreibt das Skript die
+URL in [`src/smoke.ts`](src/smoke.ts), baut die App, startet sie mit
+`vega run-app`, liest `vega device start-log-stream` mit und wartet auf die
+Marker `StreamingHub smoke: hls geladen` und `… wiedergabe laeuft` (oder
+`… fehler: …`). Danach stellt es `src/smoke.ts` zurück; mit `--keep-smoke`
+bleibt die URL für einen Handtest stehen. Die Logs landen in
+`artifacts/vega-logs/` und sind gitignored.
+
+Optionen: `--timeout 120`, `--skip-build` (vorhandenes `.vpkg` testen),
+`--skip-setup`, `--skip-typecheck`, `--fresh-install`, `--force-setup`,
+`--require-device` (CI soll ohne Gerät scheitern), `--help`.
+
+Für CI gibt es [`.github/workflows/vega-shaka.yml`](../.github/workflows/vega-shaka.yml):
+manuell startbar, läuft auf einem selbst gehosteten Runner mit dem Label `vega`,
+installiert Node 20 und JDK 21, baut Shaka, ruft das Skript mit
+`--require-device` auf und lädt die Gerätelogs als Artefakt hoch. Ohne
+verbundenen Runner startet der Workflow nicht von selbst; Pull Requests bleiben
+unberührt.
+
+Grenzen des Automatismus: Das Skript erkennt, dass ein Manifest geladen und
+Wiedergabe gemeldet wurde, und wertet Shaka-Fehler aus. **Bild und Ton** kann es
+nicht beurteilen – dafür bleibt ein Blick auf das Gerät nötig. Läuft kein
+Gerät, endet der Lauf mit „übersprungen“ und das steht so im Bericht.
+
 ## Erinnerungen: was Vega OS (noch) nicht kann
 
 Der Android-Client plant Erinnerungen mit `AlarmManager` und zeigt danach eine
