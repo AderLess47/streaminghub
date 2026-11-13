@@ -87,7 +87,9 @@ export default async function SubscriptionPage({
               value={
                 subscription.channel === "amazon"
                   ? t.dashboard.subscription.channelAmazon
-                  : t.dashboard.subscription.channelWeb
+                  : subscription.channel === "apple"
+                    ? t.dashboard.subscription.channelApple
+                    : t.dashboard.subscription.channelWeb
               }
             />
             <InfoRow label={t.dashboard.subscription.renewsAt} value={periodEnd ?? "—"} />
@@ -103,6 +105,12 @@ export default async function SubscriptionPage({
           {subscription.channel === "amazon" ? (
             <p className="mt-4 rounded-xl border border-line/60 bg-white/2 px-3.5 py-3 text-xs leading-relaxed text-muted">
               {t.dashboard.subscription.amazonNotice}
+            </p>
+          ) : null}
+
+          {subscription.channel === "apple" ? (
+            <p className="mt-4 rounded-xl border border-line/60 bg-white/2 px-3.5 py-3 text-xs leading-relaxed text-muted">
+              {t.dashboard.subscription.appleNotice}
             </p>
           ) : null}
 

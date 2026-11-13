@@ -36,7 +36,7 @@ export type ReceiptRow = {
 export type SubscriptionView = {
   plan: "premium";
   status: SubscriptionStatus;
-  channel: "web" | "amazon";
+  channel: "web" | "amazon" | "apple";
   currentPeriodEnd: string | null;
   premiumActive: boolean;
 };

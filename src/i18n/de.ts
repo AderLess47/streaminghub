@@ -539,6 +539,8 @@ export const de = {
       channel: "Kanal",
       channelWeb: "Web / Sideload",
       channelAmazon: "Amazon Appstore",
+      channelApple: "App Store",
+      appleNotice: "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Kündigen kannst du es in deinen Apple-Konto-Einstellungen.",
       renewsAt: "Läuft bis",
       cancelAtPeriodEnd: "Kündigung zum Periodenende vorgemerkt",
       startCta: "Premium im Web abschließen",

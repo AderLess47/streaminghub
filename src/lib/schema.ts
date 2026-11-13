@@ -271,6 +271,10 @@ CREATE INDEX IF NOT EXISTS idx_iap_user ON iap_receipts(user_id, provider);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_amazon_customer
   ON subscriptions(provider_customer_id) WHERE provider = 'amazon';
 
+-- Dasselbe fuer den App Store: eine Transaktion gehoert zu genau einem Konto.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_apple_customer
+  ON subscriptions(provider_customer_id) WHERE provider = 'apple';
+
 -- Cross-device resume for premium accounts: one position per title and user.
 CREATE TABLE IF NOT EXISTS watch_progress (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -26,7 +26,7 @@ export type Subscription = {
   id: string;
   user_id: string;
   status: SubscriptionStatus;
-  channel: "web" | "amazon";
+  channel: "web" | "amazon" | "apple";
   provider: string;
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
@@ -501,6 +501,13 @@ export async function cancelSubscription(userId: string) {
       ok: false as const,
       message:
         "Dieses Abonnement wurde über den Amazon Appstore abgeschlossen und wird dort verwaltet. Bitte kündige es in deinem Amazon-Konto.",
+    };
+  }
+  if (subscription.channel === "apple") {
+    return {
+      ok: false as const,
+      message:
+        "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Bitte kündige es in deinen Apple-Konto-Einstellungen.",
     };
   }
   if (subscription.provider !== "stripe" || !subscription.provider_subscription_id) {

@@ -48,6 +48,13 @@ export const env = {
     amazonIapSku: process.env.AMAZON_IAP_SKU ?? "premium_monthly",
     amazonRtnTopicArn: process.env.AMAZON_RTN_TOPIC_ARN ?? "",
     amazonSyncToken: process.env.AMAZON_SYNC_TOKEN ?? "",
+    /**
+     * Apple App Store (StoreKit 2). Der Server prueft die signierte Transaktion
+     * gegen Apples Root CA G3; ohne Bundle-ID bleibt die Anbindung aus.
+     */
+    appleIapBundleId: process.env.APPLE_IAP_BUNDLE_ID ?? "",
+    appleIapProductId: process.env.APPLE_IAP_PRODUCT_ID ?? "premium_monthly",
+    appleIapAllowSandbox: bool(process.env.APPLE_IAP_ALLOW_SANDBOX),
   },
   downloads: {
     /**
@@ -73,6 +80,8 @@ export const isBillingConfigured = () =>
   );
 export const isAmazonIapConfigured = () =>
   Boolean(env.billing.amazonRvsSharedSecret && env.billing.amazonIapSku);
+export const isAppleIapConfigured = () =>
+  Boolean(env.billing.appleIapBundleId && env.billing.appleIapProductId);
 
 /** Company / operator details. Placeholders are intentional until confirmed. */
 const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);

@@ -132,6 +132,68 @@ const spec = {
         },
       },
     },
+    "/api/v1/apple/purchase": {
+      post: {
+        summary: "Verify an App Store transaction",
+        description:
+          "Verifies the StoreKit 2 JWS (signature chain up to Apple Root CA G3, bundle id, product id, subscription type, environment and validity). Premium is granted only by the resulting server state.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["jws"],
+                properties: { jws: { type: "string", maxLength: 20000 } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Transaction accepted",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    subscription: {
+                      type: "object",
+                      properties: {
+                        plan: { type: "string", enum: ["premium"] },
+                        status: { type: "string" },
+                        channel: { type: "string", enum: ["web", "amazon", "apple"] },
+                        currentPeriodEnd: { type: ["string", "null"] },
+                        premiumActive: { type: "boolean" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Transaction rejected" },
+          "401": { description: "Missing or invalid device token" },
+          "409": { description: "Subscription belongs to another account or channel" },
+          "503": { description: "App Store integration not configured" },
+        },
+      },
+    },
+    "/api/v1/apple/refresh": {
+      post: {
+        summary: "Refresh the stored App Store subscription",
+        description:
+          "Re-evaluates the stored period. Renewals arrive as new transactions through /api/v1/apple/purchase.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Current subscription state" },
+          "401": { description: "Missing or invalid device token" },
+          "503": { description: "App Store integration not configured" },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {

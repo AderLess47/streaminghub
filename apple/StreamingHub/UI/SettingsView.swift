@@ -82,7 +82,7 @@ struct SettingsView: View {
             switch model.premium.state {
             case .ready:
                 Button("Kauf starten") {
-                    Task { await model.premium.purchase() }
+                    Task { await model.purchasePremium() }
                 }
                 .buttonStyle(.borderedProminent)
             case .pending:
