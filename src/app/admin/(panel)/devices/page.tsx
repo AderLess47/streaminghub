@@ -50,7 +50,9 @@ export default async function AdminDevicesPage() {
             {devices.map((device) => (
               <tr key={device.id}>
                 <td>{device.name}</td>
-                <td className="text-xs">{device.email ?? "—"}</td>
+                <td className="max-w-[13rem] truncate text-xs" title={device.email ?? undefined}>
+                  {device.email ?? "—"}
+                </td>
                 <td className="text-xs">{device.platform}</td>
                 <td>
                   <Badge tone={device.status === "active" ? "ok" : "neutral"}>{device.status}</Badge>
