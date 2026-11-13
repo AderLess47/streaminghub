@@ -33,9 +33,9 @@ struct ReminderScheduler {
         if status == .authorized || status == .provisional {
             return true
         }
-        #if !os(tvOS)
+        #if os(iOS)
         // `ephemeral` gibt es nur auf iOS und visionOS (App Clips); auf tvOS
-        // existiert der Fall nicht und würde den Build brechen.
+        // und macOS existiert der Fall nicht und würde den Build brechen.
         if status == .ephemeral {
             return true
         }
