@@ -95,6 +95,10 @@ fun PlayerScreen(
         builder.build()
     }
 
+    // Der Player wird nur gebaut, wenn Sender oder Modus wechseln. Jedes
+    // `prepare()` auf einem DRM-Sender kostet eine Lizenzanfrage, deshalb darf
+    // dieser Block nicht bei jeder Recomposition (Fortschritt, Fehlermeldung)
+    // erneut laufen.
     val exoPlayer = remember(mediaItem, lowSpecMode) {
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
