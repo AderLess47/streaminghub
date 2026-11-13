@@ -3,8 +3,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { KeplerVideoView, VideoPlayer } from "@amazon-devices/react-native-w3cmedia";
 import type { Channel } from "../../model/types";
 import { logError, logEvent, redactUrl } from "../../data/diagnostics";
-import { createHlsAdapter, hasHlsAdapter, isAdaptiveSource } from "../../player/hls";
+import { isAdaptiveSource } from "../../player/hls";
 import { Button, Notice } from "../components";
+import { AdaptivePlayer } from "./AdaptivePlayer";
 import { colors, radius, space, text as sizes } from "../theme";
 
 /**
@@ -42,7 +43,9 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
   const adaptive = isAdaptiveSource(channel.url);
 
   useEffect(() => {
-    if (adaptive && !hasHlsAdapter()) return;
+    // Adaptive Quellen laufen über AdaptivePlayer/Shaka, nicht über den
+    // URL-Modus dieses Players.
+    if (adaptive) return;
 
     const video = new VideoPlayer();
     playerRef.current = video;
@@ -86,26 +89,17 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
     video.addEventListener("ended", onEnded);
     video.addEventListener("error", onError);
 
-    if (adaptive) {
-      const adapter = createHlsAdapter(video);
-      void adapter?.load(channel.url).catch((reason: unknown) => {
+    video
+      .initialize()
+      .then(() => {
+        video.src = channel.url;
+        return video.play();
+      })
+      .catch((reason: unknown) => {
         if (disposed) return;
-        setError("Der HLS-Player konnte die Quelle nicht laden.");
+        setError(`Der Player konnte nicht starten: ${String(reason)}`);
         void logError("player", reason, redactUrl(channel.url));
       });
-    } else {
-      video
-        .initialize()
-        .then(() => {
-          video.src = channel.url;
-          return video.play();
-        })
-        .catch((reason: unknown) => {
-          if (disposed) return;
-          setError(`Der Player konnte nicht starten: ${String(reason)}`);
-          void logError("player", reason, redactUrl(channel.url));
-        });
-    }
 
     void logEvent("player", "Wiedergabe vorbereitet.", "info", redactUrl(channel.url));
     setPlayer(video);
@@ -147,6 +141,19 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
     setPosition(next);
   }
 
+  // Manifeste (HLS/DASH) brauchen MSE; dafür gibt es eine eigene Oberfläche
+  // mit Surface-Handle.
+  if (adaptive) {
+    return (
+      <AdaptivePlayer
+        channel={channel}
+        resumeMs={resumeMs}
+        onClose={onClose}
+        onProgress={onProgress}
+      />
+    );
+  }
+
   return (
     <View style={styles.root}>
       <View style={styles.surface}>
@@ -154,14 +161,8 @@ export function PlayerScreen({ channel, resumeMs, onClose, onProgress }: Props) 
           <KeplerVideoView style={styles.video} videoPlayer={player} />
         ) : (
           <View style={styles.surfaceFallback}>
-            <Text style={styles.fallbackTitle}>
-              {adaptive && !hasHlsAdapter() ? "HLS braucht den Shaka-Player" : "Kein Bild"}
-            </Text>
-            <Text style={styles.fallbackText}>
-              {adaptive && !hasHlsAdapter()
-                ? "Diese Quelle ist ein HLS-Manifest. Vega OS spielt sie nur im MSE-Modus mit einem JavaScript-Player. Das gepatchte Shaka-Paket von Amazon ist in diesem Projekt noch nicht eingebunden (siehe README, Abschnitt „HLS und DASH“). Progressive Dateien wie MP4 laufen ohne diesen Schritt."
-                : "Der Player wurde noch nicht erzeugt."}
-            </Text>
+            <Text style={styles.fallbackTitle}>Kein Bild</Text>
+            <Text style={styles.fallbackText}>Der Player wurde noch nicht erzeugt.</Text>
           </View>
         )}
       </View>

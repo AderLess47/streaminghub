@@ -2,3 +2,10 @@ node_modules/
 build/
 *.vpkg
 .DS_Store
+
+# Amazons Shaka-Player (proprietary/confidential), eingesetzt per scripts/setup-shaka.mjs
+src/shakaplayer/
+src/polyfills/
+src/PlayerInterface.ts
+src/PlayerBase.ts
+.shaka-build/

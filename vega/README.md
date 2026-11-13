@@ -70,25 +70,41 @@ Abhängigkeiten aus `package.json` ergänzen.
 ## HLS und DASH (wichtig)
 
 Der W3C-Player der Plattform spielt im **URL-Modus** nur progressive Dateien
-(MP4, MKV …). Ein `.m3u8`- oder `.mpd`-Manifest braucht **MSE-Modus** plus
-JavaScript-Player. Amazon liefert dafür gepatchte Shaka-Pakete, die als
-Quellordner ins Projekt kopiert werden (Dokumentation: *Play adaptive content
-with Shaka Player*).
+(MP4, MKV …). Ein `.m3u8`- oder `.mpd`-Manifest braucht **MSE-Modus** plus einen
+JavaScript-Player. Amazon liefert dafür einen gepatchten Shaka-Player
+(Dokumentation: *Play adaptive content with Shaka Player*). Dieser Player ist von
+Amazon als **proprietary/confidential** gekennzeichnet – er liegt deshalb nicht
+im Repository, sondern wird einmalig eingesetzt:
 
-Solange das Paket fehlt, zeigt der Player für HLS-Quellen eine Erklärung statt
-einer schwarzen Fläche – kein vorgetäuschtes "lädt". Der Anschluss ist
-vorbereitet:
+```bash
+cd vega
+npm run setup:shaka
+```
 
-1. Shaka-Paket von Amazon herunterladen, entpacken und laut Dokumentation
-   `src/` nach `vega/src/shakaplayer/` kopieren.
-2. [`src/player/shaka-adapter.example.ts`](src/player/shaka-adapter.example.ts)
-   nach `src/player/shaka-adapter.ts` kopieren, die kommentierten Zeilen
-   aktivieren (`new ShakaPlayer(...)`, `load(...)`).
-3. In `src/app.tsx` einmalig `registerShakaAdapter()` aufrufen.
+Das Skript [`scripts/setup-shaka.mjs`](scripts/setup-shaka.mjs) lädt Amazons
+Paket (`shaka-rel-v4.16.13-r1.2-devices_scope.tar.gz`), baut es mit Amazons
+`setup.sh` (braucht **Java 21+** und **git**), kopiert Wrapper, Polyfills,
+`PlayerBase` und `dist` nach `src/` und schreibt
+`src/player/shaka-registration.ts`. Die kopierten Dateien sind in
+[`.gitignore`](.gitignore) ausgenommen. Mit `--tarball <datei>` lässt sich ein
+bereits geladenes Archiv verwenden, mit `--skip-build` nur kopieren.
 
-Damit läuft HLS über `createHlsAdapter()` in
-[`src/player/hls.ts`](src/player/hls.ts); der Rest der App bleibt unverändert.
-**Progressive Quellen laufen ohne diesen Schritt.**
+Danach läuft HLS/DASH über [`src/player/hls.ts`](src/player/hls.ts) und
+[`src/ui/screens/AdaptivePlayer.tsx`](src/ui/screens/AdaptivePlayer.tsx): Der
+Bildschirm rendert `KeplerVideoSurfaceView`, der Adapter erzeugt den
+`VideoPlayer`, setzt den Surface-Handle und lädt das Manifest über Shaka. Für
+MPEG-TS-HLS wird `manifest.hls.sequenceMode` aktiviert.
+
+**Ohne das Paket baut die App weiterhin**; HLS-Quellen zeigen dann eine
+Erklärung statt einer schwarzen Fläche, und im Diagnose-Protokoll steht, dass
+der Shaka-Player fehlt. Progressive Quellen laufen ohne diesen Schritt.
+
+Ehrlich zum Stand: Der Anschluss ist geschrieben und typgeprüft, aber **nicht
+auf einem Vega-Gerät gebaut oder abgespielt**. Amazons ausgeliefertes Paket
+enthält `src/ShakaPlayer.ts` und die Polyfills, aber kein `src/PlayerBase.ts`;
+das Skript weist darauf hin. Ohne diese Datei bricht der Vega-Build ab – sie muss
+aus Amazons Shaka-Repository ergänzt werden. Das Setup-Skript selbst wurde hier
+nicht ausgeführt (kein Java in dieser Umgebung, kein Vega SDK).
 
 ## Erinnerungen: was Vega OS (noch) nicht kann
 
