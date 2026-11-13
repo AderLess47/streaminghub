@@ -48,6 +48,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             -quiet build
 
+      - name: Simulator smoke test
+        working-directory: apple
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme StreamingHub_iOS \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath "$RUNNER_TEMP/dd-ios" \
+            -only-testing:StreamingHubUITests \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            -quiet
+
       - name: Build tvOS
         working-directory: apple
         run: |

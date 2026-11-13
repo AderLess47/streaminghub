@@ -47,3 +47,30 @@ targets:
       configs:
         Release:
           SWIFT_COMPILATION_MODE: wholemodule
+
+  StreamingHubUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: StreamingHubUITests
+    dependencies:
+      - target: StreamingHub_iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.streaminghub.app.uitests
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: StreamingHub_iOS
+
+schemes:
+  StreamingHub_iOS:
+    build:
+      targets:
+        StreamingHub_iOS: all
+        StreamingHubUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - StreamingHubUITests
