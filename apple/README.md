@@ -172,3 +172,33 @@ tvOS-Zweige sind deshalb nur gelesen, nicht kompiliert.
    `AVKit`/`StoreKit`-Verfügbarkeiten und an tvOS-Fokus).
 3. Prüfprotokoll nach `../docs/PRUEFPROTOKOLL-VORLAGE.md` auf iPhone, iPad, Mac
    und Apple TV – inklusive VoiceOver und Dynamic Type.
+
+## HTTP-Quellen und App Transport Security
+
+Apple blockiert mit App Transport Security (ATS) unverschlüsselte Verbindungen.
+Die App setzt **keine** ATS-Ausnahme: `http://`-Playlists, `http://`-XMLTV-Dateien
+und `http://`-Streams werden auf iPhone, iPad, Mac und Apple TV nicht geladen.
+Statt eines generischen Netzwerkfehlers prüft `SourceAddressRules` die Adresse
+vor dem Download und nennt den Grund; scheitert die Wiedergabe an ATS, erklärt
+`PlaybackFailureText` das im Player.
+
+Entscheidung und Begründung:
+
+- ATS-Ausnahmen lassen sich nur pro Domain setzen (`NSExceptionDomains`). Die
+  Quellen kommen vom Nutzer, die Hosts sind beliebig – eine Domainliste ist
+  deshalb nicht möglich.
+- `NSAllowsArbitraryLoadsForMedia` würde AVPlayer erlauben, unverschlüsselte
+  Streams zu laden, **nicht** aber den Playlist- und XMLTV-Download über
+  `URLSession`. Das Problem bliebe an der wichtigsten Stelle bestehen.
+- `NSAllowsArbitraryLoads` schaltet ATS für den gesamten Netzwerkverkehr ab,
+  also auch für die App-API, und muss im App-Store-Review begründet werden.
+  Das ist für ein Konto- und Abo-Produkt der falsche Handel.
+- Die App-API selbst ist ohnehin auf HTTPS festgelegt; die Regel gilt damit
+  einheitlich für alles, was die App lädt.
+
+Bewusste Folge: Anders als die Android- und die Vega-App (dort sind HTTP-Quellen
+mit sichtbarem Hinweis erlaubt) braucht es auf Apple eine HTTPS-Adresse. Wer
+HTTP-Anbieter unterstützen will, muss das Produkt entscheiden und dann
+`NSAllowsArbitraryLoadsForMedia` plus eine HTTPS-Pflicht für Playlists in
+`project.yml` eintragen – das braucht einen Gerätetest und eine Begründung im
+App-Store-Review.
