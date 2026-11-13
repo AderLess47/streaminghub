@@ -1,4 +1,4 @@
-import type { Channel, MediaKind } from "../model/types";
+import type { Channel, ChannelDrm, MediaKind } from "../model/types";
 
 /**
  * Liest das erweiterte M3U-Format der IPTV-Anbieter.
@@ -9,6 +9,52 @@ import type { Channel, MediaKind } from "../model/types";
 
 const MAX_CHANNELS = 50_000;
 const ATTRIBUTE = /([A-Za-z0-9_-]+)\s*=\s*"([^"]*)"/g;
+
+const WIDEVINE = "com.widevine.alpha";
+const PLAYREADY = "com.microsoft.playready";
+
+function decode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * `#KODIPROP:inputstream.adaptive.license_key` hat die Form
+ * `https://lizenz.example/wv|Authorization=Bearer%20abc&X-Test=1`. Alles ab dem
+ * ersten `|` sind Header, `&`-getrennt und URL-kodiert.
+ */
+function licenseHeaders(raw: string | undefined): [string, string][] | undefined {
+  if (!raw) return undefined;
+  const pairs: [string, string][] = [];
+  for (const part of raw.split("&")) {
+    const separator = part.indexOf("=");
+    if (separator <= 0) continue;
+    const name = decode(part.slice(0, separator).trim());
+    if (!name) continue;
+    pairs.push([name, decode(part.slice(separator + 1))]);
+  }
+  return pairs.length > 0 ? pairs : undefined;
+}
+
+/** Baut aus den gesammelten `#KODIPROP`-Zeilen die DRM-Angaben des Senders. */
+export function drmFromProperties(properties: Map<string, string>): ChannelDrm | undefined {
+  const type = properties.get("inputstream.adaptive.license_type")?.trim().toLowerCase();
+  const scheme = type === WIDEVINE || type === PLAYREADY ? type : undefined;
+  if (!scheme) return undefined;
+
+  const raw = properties.get("inputstream.adaptive.license_key")?.trim();
+  if (!raw) return undefined;
+
+  const [urlPart, headerPart] = raw.split("|");
+  const licenseUrl = urlPart?.trim() ?? "";
+  if (!licenseUrl) return undefined;
+
+  const headers = licenseHeaders(headerPart);
+  return headers ? { scheme, licenseUrl, headers } : { scheme, licenseUrl };
+}
 
 type PendingInfo = {
   name: string;
@@ -62,6 +108,9 @@ export function parseM3u(content: string): Channel[] {
   const channels = new Map<string, Channel>();
   let pending: PendingInfo | null = null;
   let extGroup = "";
+  // KODIPROP-Zeilen gelten für den nächsten Eintrag; Anbieter setzen sie vor
+  // oder nach #EXTINF, deshalb wird erst nach der URL geleert.
+  let properties = new Map<string, string>();
 
   for (const rawLine of content.split(/\r?\n/)) {
     const line = rawLine.trim().replace(/^\uFEFF/, "");
@@ -87,6 +136,15 @@ export function parseM3u(content: string): Channel[] {
       continue;
     }
 
+    if (line.toUpperCase().startsWith("#KODIPROP:")) {
+      const body = line.slice(line.indexOf(":") + 1);
+      const separator = body.indexOf("=");
+      if (separator > 0) {
+        properties.set(body.slice(0, separator).trim().toLowerCase(), body.slice(separator + 1).trim());
+      }
+      continue;
+    }
+
     if (line.startsWith("#")) continue;
     if (!line.includes("://") && !line.startsWith("/")) continue;
     if (channels.size >= MAX_CHANNELS) break;
@@ -104,8 +162,11 @@ export function parseM3u(content: string): Channel[] {
       tvgId: info?.tvgId,
       kind: inferKind(title, group, line),
     };
+    const drm = drmFromProperties(properties);
+    if (drm) channel.drm = drm;
     if (!channels.has(channel.url)) channels.set(channel.url, channel);
     pending = null;
+    properties = new Map();
   }
 
   return [...channels.values()];

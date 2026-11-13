@@ -24,6 +24,8 @@ export type ShakaContent = {
   secure: "true" | "false";
   drm_scheme: string;
   drm_license_uri: string;
+  /** Lizenz-Header, die der Wrapper als `[Name, Wert]`-Paare erwartet. */
+  drm_license_header?: [string, string][];
   type?: "HLS" | "DASH";
   container?: string;
   start_position?: number;

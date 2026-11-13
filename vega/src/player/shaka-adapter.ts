@@ -1,6 +1,8 @@
 import { VideoPlayer } from "@amazon-devices/react-native-w3cmedia";
 import { logError, logEvent, redactUrl } from "../data/diagnostics";
+import { drmContentFields } from "./drm";
 import { registerHlsAdapter, type HlsAdapter, type HlsCallbacks } from "./hls";
+import type { ChannelDrm } from "../model/types";
 import type {
   ShakaPlayerConstructor,
   ShakaPlayerInstance,
@@ -107,7 +109,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
   }
 
   return {
-    async start(handle, url, startPositionMs) {
+    async start(handle, url, startPositionMs, drm?: ChannelDrm) {
       if (!playerConstructor) {
         smokeMarker("fehler: shaka fehlt");
         callbacks.onError("Der Shaka-Player ist nicht eingebunden.");
@@ -156,8 +158,7 @@ function createAdapter(callbacks: HlsCallbacks): HlsAdapter {
           {
             uri: url,
             secure: "false",
-            drm_scheme: "",
-            drm_license_uri: "",
+            ...drmContentFields(drm),
             type: dash ? "DASH" : "HLS",
             container: dash ? "MP4" : "MPEG2TS",
             start_position: startPositionMs > 5_000 ? startPositionMs / 1000 : 0,

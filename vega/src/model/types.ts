@@ -3,6 +3,19 @@
 
 export type MediaKind = "live" | "movie" | "series";
 
+/**
+ * DRM-Angaben aus der Playlist (`#KODIPROP`), wie sie IPTV-Anbieter liefern.
+ *
+ * Nur Widevine und PlayReady sind auf Vega überhaupt spielbar; alles andere
+ * wird beim Einlesen verworfen, statt später beim Abspielen zu scheitern.
+ */
+export type ChannelDrm = {
+  scheme: "com.widevine.alpha" | "com.microsoft.playready";
+  licenseUrl: string;
+  /** Zusätzliche Lizenz-Header (z. B. `Authorization`), falls der Anbieter sie verlangt. */
+  headers?: [string, string][];
+};
+
 export type Channel = {
   name: string;
   url: string;
@@ -10,6 +23,8 @@ export type Channel = {
   group: string;
   tvgId?: string;
   kind: MediaKind;
+  /** Gesetzt, wenn die Playlist für diesen Sender DRM-Angaben enthält. */
+  drm?: ChannelDrm;
 };
 
 export type EpgProgramme = {

@@ -13,6 +13,8 @@
  * die nicht startet.
  */
 
+import type { ChannelDrm } from "../model/types";
+
 export type HlsCallbacks = {
   /** Kurzer Zustandstext für die Oberfläche („Lade Manifest …“). */
   onStatus: (text: string) => void;
@@ -26,7 +28,12 @@ export type HlsCallbacks = {
 
 export type HlsAdapter = {
   /** Oberfläche ist bereit: Player erzeugen, Handle setzen, Manifest laden. */
-  start(surfaceHandle: string, url: string, startPositionMs: number): Promise<void>;
+  start(
+    surfaceHandle: string,
+    url: string,
+    startPositionMs: number,
+    drm?: ChannelDrm,
+  ): Promise<void>;
   togglePlayback(): void;
   seekBy(seconds: number): void;
   /** Gibt Decoder, Surface und globale Handles frei. Mehrfachaufruf ist harmlos. */
