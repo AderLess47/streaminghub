@@ -114,6 +114,10 @@ jobs:
       - name: Session logout tests
         run: npm run test:session-logout
 
+      # Geraete-Kopplung vom Pairing-Code bis zum Geraete-Token.
+      - name: Pairing flow tests
+        run: npm run test:pairing
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
