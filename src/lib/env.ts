@@ -68,6 +68,11 @@ export const env = {
     amazonStore: process.env.AMAZON_STORE_URL ?? "",
   },
   contactTo: process.env.CONTACT_TO_EMAIL ?? "service@streaminghub.org",
+  /** Aufbewahrungsfrist für Kontaktanfragen; Standard entspricht 24 Monaten. */
+  contactRetentionDays: Math.min(
+    Math.max(Number(process.env.CONTACT_RETENTION_DAYS ?? 730) || 730, 30),
+    3650,
+  ),
 } as const;
 
 export const isEmailConfigured = () =>

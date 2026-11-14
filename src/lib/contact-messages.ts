@@ -1,8 +1,13 @@
+import { logAudit } from "./audit";
 import { all, get, run } from "./db";
+import { env } from "./env";
 
 /** Kontaktanfragen aus dem öffentlichen Formular. */
 export const CONTACT_MESSAGE_STATUSES = ["new", "read", "handled"] as const;
 export type ContactMessageStatus = (typeof CONTACT_MESSAGE_STATUSES)[number];
+
+/** Standard sind 24 Monate, entsprechend der Datenschutzerklärung. */
+export const CONTACT_RETENTION_DAYS = env.contactRetentionDays;
 
 export type ContactMessage = {
   id: string;
@@ -60,6 +65,28 @@ export function contactMessageStats(): {
 export function setContactMessageStatus(id: string, status: ContactMessageStatus): boolean {
   const result = run(`UPDATE contact_messages SET status = ? WHERE id = ?`, status, id);
   return Number(result.changes ?? 0) > 0;
+}
+
+/**
+ * Löscht Anfragen, die älter als die Aufbewahrungsfrist sind. Läuft beim Öffnen
+ * des Posteingangs, damit keine manuelle Pflege nötig ist. Gibt die Anzahl der
+ * gelöschten Zeilen zurück.
+ */
+export function purgeExpiredContactMessages(
+  retentionDays: number = env.contactRetentionDays,
+  now: Date = new Date(),
+): number {
+  const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const result = run(`DELETE FROM contact_messages WHERE created_at < ?`, cutoff);
+  const deleted = Number(result.changes ?? 0);
+  if (deleted > 0) {
+    logAudit({
+      action: "contact_messages.purged",
+      targetType: "contact_message",
+      meta: { deleted, retentionDays, cutoff },
+    });
+  }
+  return deleted;
 }
 
 /** Löscht eine Anfrage und gibt ihren Inhalt für den Audit-Eintrag zurück. */

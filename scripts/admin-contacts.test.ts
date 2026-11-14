@@ -17,8 +17,10 @@ const { get, nowIso, run } = await import("@/lib/db");
 const { hashPassword } = await import("@/lib/auth");
 const { createSession } = await import("@/lib/session");
 const {
+  CONTACT_RETENTION_DAYS,
   contactMessageStats,
   listContactMessages,
+  purgeExpiredContactMessages,
 } = await import("@/lib/contact-messages");
 const {
   deleteContactMessageAction,
@@ -66,7 +68,12 @@ function seedUser(id: string, email: string, role: "customer" | "admin" = "custo
 }
 
 let sequence = 0;
-function seedMessage(subject: string, status: "new" | "read" | "handled", email = "kunde@example.test") {
+function seedMessage(
+  subject: string,
+  status: "new" | "read" | "handled",
+  email = "kunde@example.test",
+  createdAt = new Date(Date.UTC(2026, 10, 14, 10, sequence)).toISOString(),
+) {
   sequence += 1;
   const id = `contact-${sequence}`;
   run(
@@ -76,7 +83,7 @@ function seedMessage(subject: string, status: "new" | "read" | "handled", email 
     email,
     subject,
     status,
-    new Date(Date.UTC(2026, 10, 14, 10, sequence)).toISOString(),
+    createdAt,
   );
   return id;
 }
@@ -146,6 +153,52 @@ await check("Filter liefert nur den gewaehlten Status", async () => {
 
 await check("Zaehler stimmen", async () => {
   assert.deepEqual(contactMessageStats(), { new: 1, read: 1, handled: 1, total: 3 });
+});
+
+await check("Aufbewahrungsfrist ist 24 Monate", async () => {
+  assert.equal(CONTACT_RETENTION_DAYS, 730);
+});
+
+await check("Anfragen aelter als die Frist werden geloescht", async () => {
+  const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const expiredId = seedMessage("Uralte Anfrage", "handled", "alt@example.test", daysAgo(731));
+  const recentId = seedMessage("Knapp junge Anfrage", "handled", "jung@example.test", daysAgo(700));
+  run("DELETE FROM audit_log");
+
+  assert.equal(purgeExpiredContactMessages(), 1);
+  assert.equal(exists(expiredId), false);
+  assert.equal(exists(recentId), true);
+
+  const audit = latestAudit();
+  assert.equal(audit?.action, "contact_messages.purged");
+  assert.equal(audit?.actor_id, null);
+  const meta = JSON.parse(audit?.meta ?? "{}");
+  assert.equal(meta.deleted, 1);
+  assert.equal(meta.retentionDays, 730);
+  assert.ok(
+    Math.abs(Date.parse(meta.cutoff) - (Date.now() - 730 * 24 * 60 * 60 * 1000)) < 5000,
+    "Cutoff muss 730 Tage vor dem Lauf liegen",
+  );
+  run("DELETE FROM contact_messages WHERE id = ?", recentId);
+});
+
+await check("Zweiter Lauf loescht nichts und protokolliert nicht", async () => {
+  run("DELETE FROM audit_log");
+  assert.equal(purgeExpiredContactMessages(), 0);
+  assert.equal(auditRows("contact_messages.purged"), 0);
+});
+
+await check("Eigene Frist wird beachtet", async () => {
+  const tenDaysOld = seedMessage(
+    "Zehn Tage alt",
+    "new",
+    "zehn@example.test",
+    new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+  );
+  assert.equal(purgeExpiredContactMessages(30), 0);
+  assert.equal(exists(tenDaysOld), true);
+  assert.equal(purgeExpiredContactMessages(7), 1);
+  assert.equal(exists(tenDaysOld), false);
 });
 
 await check("Kunde darf den Status nicht aendern", async () => {

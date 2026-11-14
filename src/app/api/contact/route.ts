@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { purgeExpiredContactMessages } from "@/lib/contact-messages";
 import { nowIso, run } from "@/lib/db";
 import { env } from "@/lib/env";
 import { contactMail, sendMail } from "@/lib/mail";
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
     ip,
     nowIso(),
   );
+
+  // Aufbewahrungsfrist auch ohne Admin-Besuch durchsetzen.
+  purgeExpiredContactMessages();
 
   const mail = contactMail({
     name: data.name,

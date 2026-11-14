@@ -4,8 +4,10 @@ import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import {
   CONTACT_MESSAGE_STATUSES,
+  CONTACT_RETENTION_DAYS,
   contactMessageStats,
   listContactMessages,
+  purgeExpiredContactMessages,
   type ContactMessageStatus,
 } from "@/lib/contact-messages";
 import { deleteContactMessageAction, setContactMessageStatusAction } from "@/lib/actions/admin";
@@ -34,6 +36,7 @@ export default async function AdminContactsPage({
   const de = locale !== "en";
 
   const status = parseStatus(statusRaw);
+  const purged = purgeExpiredContactMessages();
   const rows = listContactMessages({ status, limit: 200 });
   const stats = contactMessageStats();
 
@@ -49,6 +52,7 @@ export default async function AdminContactsPage({
   });
 
   const returnTo = filterHref(status);
+  const retentionMonths = Math.round(CONTACT_RETENTION_DAYS / 30);
 
   return (
     <div className="grid gap-5">
@@ -57,10 +61,18 @@ export default async function AdminContactsPage({
         title={de ? "Kontaktanfragen" : "Contact messages"}
         description={
           de
-            ? "Anfragen aus dem öffentlichen Kontaktformular. Jede Anfrage geht zusätzlich per E-Mail an den Support."
-            : "Requests from the public contact form. Every request is also sent to support by email."
+            ? `Anfragen aus dem öffentlichen Kontaktformular. Jede Anfrage geht zusätzlich per E-Mail an den Support und wird nach ${retentionMonths} Monaten automatisch gelöscht.`
+            : `Requests from the public contact form. Every request is also sent to support by email and deleted automatically after ${retentionMonths} months.`
         }
       />
+
+      {purged > 0 ? (
+        <Alert tone="info" live>
+          {de
+            ? `${purged} ${purged === 1 ? "Anfrage wurde" : "Anfragen wurden"} nach Ablauf der ${retentionMonths}-monatigen Aufbewahrungsfrist automatisch gelöscht.`
+            : `${purged} ${purged === 1 ? "message was" : "messages were"} deleted automatically after the ${retentionMonths}-month retention period.`}
+        </Alert>
+      ) : null}
 
       {ok === "status" ? (
         <Alert tone="success" live>
