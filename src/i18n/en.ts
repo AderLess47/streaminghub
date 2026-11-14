@@ -543,6 +543,8 @@ export const en: Dictionary = {
       statusEnded: "Ended",
       statusPastDue: "Payment failed",
       statusIncomplete: "Payment not completed",
+      paymentFailed:
+        "The last payment failed, so Premium is paused. Check your payment method with the payment provider or contact support — Premium is restored once the payment succeeds.",
       subscriptionEnded:
         "Your premium subscription has ended. Your devices and playlist stay in place; you can subscribe to Premium again at any time.",
       startCta: "Subscribe to Premium on the web",

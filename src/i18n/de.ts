@@ -546,6 +546,8 @@ export const de = {
       statusEnded: "Beendet",
       statusPastDue: "Zahlung fehlgeschlagen",
       statusIncomplete: "Zahlung nicht abgeschlossen",
+      paymentFailed:
+        "Die letzte Zahlung ist fehlgeschlagen, deshalb ruht Premium derzeit. Prüfe deine Zahlungsmethode beim Zahlungsanbieter oder schreib dem Support – nach erfolgreicher Zahlung wird Premium wieder freigeschaltet.",
       subscriptionEnded:
         "Dein Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
       startCta: "Premium im Web abschließen",
