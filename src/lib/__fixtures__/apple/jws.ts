@@ -1,12 +1,18 @@
 import { createPrivateKey, randomUUID, sign } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
  * Testmaterial für die App-Store-Prüfung: signierte Transaktionen und
  * Notifications gegen die eigens erzeugte Kette in diesem Ordner.
  */
-export const fixture = (name: string) => readFileSync(path.join(import.meta.dirname, name), "utf8");
+// Gebündelte Tests liegen in einem temporären Verzeichnis; dann greift der
+// Pfad relativ zum Repo (Tests laufen mit cwd = Repo-Wurzel).
+export const fixture = (name: string) => {
+  const local = path.join(import.meta.dirname, name);
+  const fromRepo = path.join(process.cwd(), "src/lib/__fixtures__/apple", name);
+  return readFileSync(existsSync(local) ? local : fromRepo, "utf8");
+};
 
 export const rootPem = fixture("root.pem");
 export const intermediatePem = fixture("intermediate.pem");

@@ -4,8 +4,9 @@
  *
  * Wie `run-api-tests.mjs`, aber ohne Fake für `@/lib/payments`: Die Store-
  * Routen sollen den echten Mailversand und die echten Marker benutzen. Ersetzt
- * werden nur die NextResponse-Helfer; Amazon RVS läuft gegen einen lokalen
- * HTTP-Server im Test.
+ * werden nur die NextResponse-Helfer und die Apple-Testwurzel (damit signierte
+ * Fixture-Payloads durch die echte Kettenprüfung laufen); Amazon RVS läuft
+ * gegen einen lokalen HTTP-Server im Test.
  *
  * Aufruf: npm run test:store-api
  */
@@ -21,6 +22,7 @@ const workDir = mkdtempSync(path.join(tmpdir(), "streaminghub-store-api-"));
 const bundle = path.join(workDir, "store-routes.mjs");
 const databasePath = path.join(workDir, "test.db");
 const fakes = path.join(repoRoot, "scripts", "fakes", "api.ts");
+const appleRoot = path.join(repoRoot, "scripts", "fakes", "apple-root.ts");
 
 try {
   const esbuild = spawnSync(
@@ -34,6 +36,7 @@ try {
       "--format=esm",
       "--target=node22",
       `--alias:@/lib/api=${fakes}`,
+      `--alias:@/lib/apple-root-ca=${appleRoot}`,
       `--alias:@=${path.join(repoRoot, "src")}`,
       `--outfile=${bundle}`,
       "--log-level=warning",
