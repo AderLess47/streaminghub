@@ -53,7 +53,9 @@
     "test:withdrawal-cancellation": "node scripts/run-withdrawal-cancellation-tests.mjs",
     "test:contact-form": "node scripts/run-contact-form-tests.mjs",
     "test:admin-contacts": "node scripts/run-admin-contacts-tests.mjs",
-    "retention:purge": "node scripts/contact-retention.mjs"
+    "test:audit-retention": "node scripts/run-audit-retention-tests.mjs",
+    "retention:purge": "node scripts/contact-retention.mjs",
+    "retention:audit": "node scripts/audit-retention.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

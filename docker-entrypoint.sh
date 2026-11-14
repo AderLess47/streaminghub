@@ -14,9 +14,11 @@ retention_interval="${RETENTION_INTERVAL_SECONDS:-86400}"
 (
   sleep "$retention_initial_delay"
   while true; do
-    if ! node /app/scripts/contact-retention.mjs; then
-      echo "[retention] run failed; next attempt in ${retention_interval}s" >&2
-    fi
+    for job in contact-retention audit-retention; do
+      if ! node "/app/scripts/${job}.mjs"; then
+        echo "[retention] ${job} failed; next attempt in ${retention_interval}s" >&2
+      fi
+    done
     sleep "$retention_interval"
   done
 ) &
