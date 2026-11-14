@@ -63,6 +63,10 @@ jobs:
       - name: Apple IAP receipt tests
         run: npm run test:apple-iap
 
+      # Auslaufen, Wiederkauf und Dedupe der Abschlussmails.
+      - name: Subscription mail tests
+        run: npm run test:subscription-mails
+
       - name: Test cross-device resume rules
         run: npm run test:progress
 
