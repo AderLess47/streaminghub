@@ -394,10 +394,11 @@ export async function applyStripeEvent(event: StripeEvent) {
         status,
         customerId: idOf(object.customer),
       });
-      // Ohne Mail merkt der Kunde den Ausfall erst, wenn Premium-Funktionen
-      // fehlen. Der Status steht zu diesem Zeitpunkt schon auf past_due.
+      const attemptCount = typeof object.attempt_count === "number" ? object.attempt_count : 1;
       const user = userContact(userId);
-      if (user) {
+      // Nur der erste Fehlversuch informiert den Kunden; die Wiederholungen
+      // innerhalb desselben Zahlungsplans wären dieselbe Nachricht.
+      if (user && attemptCount <= 1) {
         await sendMail({
           to: user.email,
           ...paymentFailedMail({ name: user.display_name, locale: user.locale }),
@@ -407,7 +408,6 @@ export async function applyStripeEvent(event: StripeEvent) {
       // Erst der zweite Fehlversuch verdient eine interne Meldung; jede
       // weitere Wiederholung würde den Support nur erneut zum selben Fall
       // anschreiben.
-      const attemptCount = typeof object.attempt_count === "number" ? object.attempt_count : 0;
       if (user && attemptCount === 2) {
         const nextAttempt =
           typeof object.next_payment_attempt === "number"
