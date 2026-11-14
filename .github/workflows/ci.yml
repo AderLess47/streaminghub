@@ -90,6 +90,10 @@ jobs:
       - name: Resend webhook tests
         run: npm run test:resend-webhook
 
+      # Admin: Aufheben einer E-Mail-Sperre inklusive Audit-Eintrag.
+      - name: Admin suppression tests
+        run: npm run test:admin-suppression
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
