@@ -45,7 +45,8 @@
     "test:email-verification": "node scripts/run-email-verification-tests.mjs",
     "test:mfa-login": "node scripts/run-mfa-login-tests.mjs",
     "test:session-logout": "node scripts/run-session-logout-tests.mjs",
-    "test:pairing": "node scripts/run-pairing-tests.mjs"
+    "test:pairing": "node scripts/run-pairing-tests.mjs",
+    "test:device-revoke": "node scripts/run-device-revoke-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

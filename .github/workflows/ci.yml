@@ -118,6 +118,10 @@ jobs:
       - name: Pairing flow tests
         run: npm run test:pairing
 
+      # Geraet entfernen/sperren und sofortige Token-Sperre.
+      - name: Device revoke tests
+        run: npm run test:device-revoke
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
