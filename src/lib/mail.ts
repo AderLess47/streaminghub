@@ -366,6 +366,20 @@ export function paymentFailedMail(input: { name: string; locale: string }): Mail
   };
 }
 
+/** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
+export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Zahlung erfolgreich – Premium ist wieder aktiv"
+      : "Payment successful – Premium is active again",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndeine ausstehende Zahlung ist eingegangen. Dein StreamingHub-Premium-Abo ist damit wieder aktiv.\n\nAbrechnungszeitraum und Status siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour outstanding payment has arrived. Your StreamingHub Premium subscription is active again.\n\nYou can see the billing period and status here:\n${link}${signature(false)}`,
+  };
+}
+
 export function ticketCreatedMail(input: {
   ticketId: string;
   subject: string;
