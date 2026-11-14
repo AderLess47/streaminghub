@@ -488,12 +488,24 @@ export async function notifyStoreSubscriptionEnded(input: {
   subscriptionKey: string;
   periodEnd?: string | null;
   reason?: "ended" | "refunded";
+  /**
+   * Zeitraum, für den eine Erstattung auch die spätere Ablaufmail abdeckt.
+   * Apple kann nach einer Erstattung noch eine EXPIRED-Meldung für dieselbe
+   * Periode schicken; der Kunde soll dann nicht zwei Nachrichten bekommen.
+   */
+  coversPeriodEnd?: string | null;
 }) {
   const user = userContact(input.userId);
   if (!user) return false;
   const reason = input.reason ?? "ended";
   const key = `mail:store-subscription-${reason}:${input.subscriptionKey}:${input.periodEnd ?? "unknown"}`;
   if (!claimMailMarker(input.userId, key)) return false;
+  if (reason === "refunded" && input.coversPeriodEnd) {
+    claimMailMarker(
+      input.userId,
+      `mail:store-subscription-ended:${input.subscriptionKey}:${input.coversPeriodEnd}`,
+    );
+  }
   const template =
     reason === "refunded"
       ? storeSubscriptionRefundedMail({

@@ -320,6 +320,42 @@ await check("apple/notifications: REFUND mailt mit Erstattungsgrund, einmal", as
   assert.equal(mailCount(), 1);
 });
 
+await check("apple/notifications: EXPIRED nach REFUND mailt nicht erneut", async () => {
+  resetDb();
+  const periodEnd = Date.now() - 3_600_000;
+  const revokedAt = periodEnd - 86_400_000;
+  seedApple("apple-refund-then-expired", new Date(periodEnd).toISOString());
+  const token = tokenFor("apple-refund-then-expired");
+
+  await appleNotifications(
+    call("/api/v1/apple/notifications", token, {
+      signedPayload: buildNotification({
+        notificationType: "REFUND",
+        transaction: {
+          originalTransactionId: "orig-apple-refund-then-expired",
+          expiresDate: periodEnd,
+          revocationDate: revokedAt,
+        },
+      }),
+    }),
+  );
+  assert.equal(mailCount(), 1);
+
+  // Apple schickt für dieselbe Periode noch den Ablauf hinterher.
+  await appleNotifications(
+    call("/api/v1/apple/notifications", token, {
+      signedPayload: buildNotification({
+        notificationType: "EXPIRED",
+        transaction: {
+          originalTransactionId: "orig-apple-refund-then-expired",
+          expiresDate: periodEnd,
+        },
+      }),
+    }),
+  );
+  assert.equal(mailCount(), 1, "die Erstattung deckt den Ablauf derselben Periode ab");
+});
+
 await check("apple/notifications: REFUND_REVERSED mailt nicht", async () => {
   resetDb();
   seedApple("apple-reversed", new Date(future).toISOString());
