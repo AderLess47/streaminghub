@@ -160,10 +160,6 @@ export default async function AdminSubscriptionsPage() {
           <li className="card p-6 text-center text-xs text-muted">{t.admin.subscriptions.empty}</li>
         ) : null}
       </ul>
-
-      <p className="rounded-xl border border-amber-500/20 bg-amber-500/6 px-3.5 py-3 text-xs leading-relaxed text-amber-200/90">
-        {t.admin.subscriptions.note}
-      </p>
     </div>
   );
 }
