@@ -86,6 +86,10 @@ jobs:
       - name: Mail outbox tests
         run: npm run test:mail-outbox
 
+      # Resend-Webhook: Signatur, Zustellung und Sperrung von Adressen.
+      - name: Resend webhook tests
+        run: npm run test:resend-webhook
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
