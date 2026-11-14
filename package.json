@@ -42,7 +42,8 @@
     "test:admin-suppression": "node scripts/run-admin-suppression-tests.mjs",
     "test:admin-retry": "node scripts/run-admin-retry-tests.mjs",
     "test:password-reset": "node scripts/run-password-reset-tests.mjs",
-    "test:email-verification": "node scripts/run-email-verification-tests.mjs"
+    "test:email-verification": "node scripts/run-email-verification-tests.mjs",
+    "test:mfa-login": "node scripts/run-mfa-login-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

@@ -106,6 +106,10 @@ jobs:
       - name: Email verification flow tests
         run: npm run test:email-verification
 
+      # MFA fuer Staff: zweiter Faktor, Recovery-Code, gesperrte Sitzung.
+      - name: MFA login flow tests
+        run: npm run test:mfa-login
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
