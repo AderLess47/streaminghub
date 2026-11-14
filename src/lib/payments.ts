@@ -1,6 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { get, nowIso, run } from "./db";
 import { env, isBillingConfigured } from "./env";
+import { paymentFailedMail, sendMail } from "./mail";
 
 export const PREMIUM_PRICE_EUR = 2.49;
 export const PREMIUM_PLAN_ID = "premium_monthly";
@@ -375,6 +376,19 @@ export async function applyStripeEvent(event: StripeEvent) {
         status,
         customerId: idOf(object.customer),
       });
+      // Ohne Mail merkt der Kunde den Ausfall erst, wenn Premium-Funktionen
+      // fehlen. Der Status steht zu diesem Zeitpunkt schon auf past_due.
+      const user = get<{ email: string; display_name: string; locale: string }>(
+        `SELECT email, display_name, locale FROM users WHERE id = ?`,
+        userId,
+      );
+      if (user) {
+        await sendMail({
+          to: user.email,
+          ...paymentFailedMail({ name: user.display_name, locale: user.locale }),
+          kind: "subscription",
+        });
+      }
       break;
     }
     default:
