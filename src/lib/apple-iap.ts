@@ -491,7 +491,13 @@ export function decideAppleApplication(
 
   if (existing.channel === "apple") {
     if (existing.providerCustomerId && existing.providerCustomerId !== originalTransactionId) {
-      return { ok: false, code: "receipt_owned_by_other_account" };
+      // Nach einem Lapse kann Apple fuer denselben Kunden eine neue
+      // Original-Transaktion vergeben. Ein abgelaufenes Abo darf deshalb mit
+      // der neuen ID weiterlaufen; ein aktives bleibt beim alten Beleg.
+      if (existing.status === "active" || existing.status === "past_due") {
+        return { ok: false, code: "receipt_owned_by_other_account" };
+      }
+      return { ok: true };
     }
     return { ok: true };
   }

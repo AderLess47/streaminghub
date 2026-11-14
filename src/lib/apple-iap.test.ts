@@ -180,6 +180,18 @@ test("conflict rule blocks a second channel but allows the same subscription", (
     { ok: false, code: "receipt_owned_by_other_account" },
   );
   assert.deepEqual(
+    decideAppleApplication({ channel: "apple", status: "past_due", providerCustomerId: "o1" }, "o2"),
+    { ok: false, code: "receipt_owned_by_other_account" },
+  );
+  // Nach einem Lapse darf Apple eine neue Original-ID ausstellen.
+  assert.deepEqual(
+    decideAppleApplication(
+      { channel: "apple", status: "canceled", providerCustomerId: "o1" },
+      "o2",
+    ),
+    { ok: true },
+  );
+  assert.deepEqual(
     decideAppleApplication({ channel: "web", status: "active", providerCustomerId: null }, "o1"),
     { ok: false, code: "already_active_other_channel" },
   );
