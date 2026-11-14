@@ -14,6 +14,7 @@ import {
 import {
   decideAppleApplication,
   isReplayable,
+  isReplayablePurchase,
   notificationEffect,
   transactionState,
   verifyAppleNotification,
@@ -206,6 +207,65 @@ test("replay window only covers freshly verified receipts", () => {
   assert.equal(isReplayable(new Date(now - 1_000).toISOString()), true);
   assert.equal(isReplayable(new Date(now - 60 * 60_000).toISOString()), false);
   assert.equal(isReplayable("kein Datum"), false);
+});
+
+test("a lapsed receipt does not swallow the repurchase", () => {
+  const verifiedAt = new Date(now - 1_000).toISOString();
+  const future = now + 30 * 86_400_000;
+  const purchase: AppleTransaction = {
+    transactionId: "repurchase-tx",
+    originalTransactionId: "repurchase-original",
+    bundleId: "org.streaminghub.app",
+    productId: "premium_monthly",
+    productType: "Auto-Renewable Subscription",
+    environment: "Production",
+    purchaseDate: now - 1_000,
+    expiresDate: future,
+    revocationDate: null,
+    inAppOwnershipType: "PURCHASED",
+    appAccountToken: null,
+  };
+
+  // Gleiche Transaktion erneut gemeldet: aus dem Beleg beantworten.
+  assert.equal(
+    isReplayablePurchase(
+      { status: "active", renewal_date: new Date(future).toISOString(), verified_at: verifiedAt },
+      purchase,
+      now,
+    ),
+    true,
+  );
+  // Ablauf gerade erkannt (verified_at frisch, Beleg expired): anwenden.
+  assert.equal(
+    isReplayablePurchase(
+      { status: "expired", renewal_date: new Date(now - 86_400_000).toISOString(), verified_at: verifiedAt },
+      purchase,
+      now,
+    ),
+    false,
+  );
+  // Laufendes Abo, aber die Transaktion reicht weiter als der gespeicherte Zeitraum.
+  assert.equal(
+    isReplayablePurchase(
+      { status: "active", renewal_date: new Date(now + 86_400_000).toISOString(), verified_at: verifiedAt },
+      purchase,
+      now,
+    ),
+    false,
+  );
+  // Alter Beleg außerhalb des Fensters wird ohnehin neu geprüft.
+  assert.equal(
+    isReplayablePurchase(
+      {
+        status: "active",
+        renewal_date: new Date(future).toISOString(),
+        verified_at: new Date(now - 60 * 60_000).toISOString(),
+      },
+      purchase,
+      now,
+    ),
+    false,
+  );
 });
 
 test("a signed notification is accepted with its transaction", () => {

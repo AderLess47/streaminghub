@@ -1,7 +1,7 @@
 import { apiError, clientIp, json, parseBody, tooManyRequests } from "@/lib/api";
 import {
   decideAppleApplication,
-  isReplayable,
+  isReplayablePurchase,
   transactionState,
   verifyAppleTransaction,
 } from "@/lib/apple-iap";
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
   if (known && known.user_id !== auth.userId) {
     return apiError("conflict", "Dieser Kaufbeleg ist bereits mit einem anderen Konto verknüpft.");
   }
-  if (known && isReplayable(known.verified_at)) {
+  if (known && isReplayablePurchase(known, transaction)) {
     return json({ ok: true, subscription: appleSubscriptionView(auth.userId) });
   }
 
