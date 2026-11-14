@@ -130,6 +130,10 @@ jobs:
       - name: Change password tests
         run: npm run test:change-password
 
+      # Support-Ticket vom Kunden bis zur Admin-Antwort.
+      - name: Support ticket tests
+        run: npm run test:support-tickets
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
