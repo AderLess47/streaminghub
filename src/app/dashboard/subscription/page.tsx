@@ -121,6 +121,15 @@ export default async function SubscriptionPage({
             <p className="mt-4 text-xs leading-relaxed text-muted">
               {t.dashboard.subscription.subscriptionEnded}
             </p>
+          ) : status === "past_due" ? (
+            <div className="mt-4 grid gap-2">
+              <p className="text-xs leading-relaxed text-muted">
+                {t.dashboard.subscription.paymentFailed}
+              </p>
+              <Link href="/dashboard/support" className="btn btn-outline btn-sm w-fit">
+                {t.dashboard.overview.contactSupport}
+              </Link>
+            </div>
           ) : status !== "active" ? (
             <p className="mt-4 text-xs leading-relaxed text-muted">{t.dashboard.subscription.noSubscription}</p>
           ) : null}
@@ -128,8 +137,10 @@ export default async function SubscriptionPage({
 
         <div className="grid gap-4">
           {/* Bei aktivem Abo bietet der Server keinen zweiten Abschluss an
-              (already_active) – dann wird die Handlung auch nicht angeboten. */}
-          {status !== "active" ? (
+              (already_active) – dann wird die Handlung auch nicht angeboten.
+              Bei fehlgeschlagener Zahlung ebenso: Ein neuer Checkout würde ein
+              zweites Abo anlegen, statt die offene Zahlung zu klären. */}
+          {status !== "active" && status !== "past_due" ? (
             <div className="card p-5">
               <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
