@@ -6,6 +6,14 @@ import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Setzt hinter Komma und Doppelpunkt ein Leerzeichen, damit die Metadaten am
+ * Handy an Feldgrenzen umbrechen statt mitten im Schlüssel ("chan" / "nel").
+ */
+function breakableMeta(meta: string) {
+  return meta.replace(/,(?=\S)/g, ", ").replace(/:(?=\S)/g, ": ");
+}
+
 export default async function AdminAuditPage() {
   await requireStaff();
   const { t, locale } = await getI18n();
@@ -106,7 +114,9 @@ export default async function AdminAuditPage() {
               {entry.meta ? (
                 <div className="flex items-start justify-between gap-3">
                   <dt className="shrink-0 text-muted">{t.admin.audit.meta}</dt>
-                  <dd className="min-w-0 break-all text-right text-[0.65rem] text-muted">{entry.meta}</dd>
+                  <dd className="min-w-0 break-words text-right text-[0.65rem] text-muted">
+                    {breakableMeta(entry.meta)}
+                  </dd>
                 </div>
               ) : null}
             </dl>
