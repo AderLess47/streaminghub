@@ -1,5 +1,7 @@
 /** `next/headers` für Server-Action-Tests: ein Session-Token aus dem Test. */
 export const sessionToken = { value: null as string | null };
+/** Letztes von einer Route gesetztes Session-Cookie (Token). */
+export const lastSetSession = { value: null as string | null };
 
 export async function cookies() {
   return {
@@ -9,7 +11,9 @@ export async function cookies() {
       }
       return undefined;
     },
-    set() {},
+    set(name: string, value: string) {
+      if (name === "sh_session") lastSetSession.value = value;
+    },
     delete() {},
   };
 }
