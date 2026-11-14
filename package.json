@@ -44,7 +44,8 @@
     "test:password-reset": "node scripts/run-password-reset-tests.mjs",
     "test:email-verification": "node scripts/run-email-verification-tests.mjs",
     "test:mfa-login": "node scripts/run-mfa-login-tests.mjs",
-    "test:session-logout": "node scripts/run-session-logout-tests.mjs"
+    "test:session-logout": "node scripts/run-session-logout-tests.mjs",
+    "test:pairing": "node scripts/run-pairing-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",
