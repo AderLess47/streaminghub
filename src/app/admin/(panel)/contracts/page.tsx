@@ -113,13 +113,13 @@ export default async function AdminContractsPage({
         </div>
         <div className="card p-4">
           <p className="text-[0.68rem] uppercase tracking-[0.12em] text-muted">
-            {t.admin.contracts.withdrawals}
+            {t.admin.contracts.statOpenWithdrawals}
           </p>
           <p className="mt-1 text-2xl font-semibold">{stats.openWithdrawals}</p>
         </div>
         <div className="card p-4">
           <p className="text-[0.68rem] uppercase tracking-[0.12em] text-muted">
-            {t.admin.contracts.cancellations}
+            {t.admin.contracts.statOpenCancellations}
           </p>
           <p className="mt-1 text-2xl font-semibold">{stats.openCancellations}</p>
         </div>
