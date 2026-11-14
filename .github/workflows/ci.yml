@@ -78,6 +78,10 @@ jobs:
       - name: Store refresh route tests
         run: npm run test:store-api
 
+      # Stripe-Webhook: Signatur, Mailzyklus und Dedupe.
+      - name: Stripe webhook route tests
+        run: npm run test:stripe-webhook
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
