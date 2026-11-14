@@ -426,6 +426,32 @@ export function storeSubscriptionEndedMail(input: {
   };
 }
 
+/**
+ * Abschlussmail für ein erstattetes Store-Abo. Der Text nennt den Grund, weil
+ * „ausgelaufen“ bei einer Erstattung falsch wäre.
+ */
+export function storeSubscriptionRefundedMail(input: {
+  name: string;
+  locale: string;
+  store: "apple" | "amazon";
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const store = de
+    ? input.store === "apple"
+      ? "den App Store"
+      : "den Amazon Appstore"
+    : input.store === "apple"
+      ? "the App Store"
+      : "the Amazon Appstore";
+  return {
+    subject: de ? "Dein Premium-Abo wurde erstattet" : "Your Premium subscription was refunded",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nder Kauf deines StreamingHub-Premium-Abos über ${store} wurde erstattet. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Wenn du Premium weiter nutzen willst, kannst du es erneut abschließen.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of the StreamingHub Premium subscription via ${store} was refunded. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. If you want to keep using Premium, you can subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+  };
+}
+
 /** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
 export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
   const de = input.locale !== "en";
