@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Icon } from "@/components/icons";
 import { ScrollRegion } from "@/components/scroll-region";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
@@ -130,14 +129,13 @@ export default async function AdminContactsPage({
                     {dateFormat.format(new Date(row.createdAt))}
                   </td>
                   <td className="align-top">
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-nowrap gap-1.5">
                       {rowStatus !== "read" ? (
                         <form action={setContactMessageStatusAction}>
                           <input type="hidden" name="id" value={row.id} />
                           <input type="hidden" name="status" value="read" />
                           <input type="hidden" name="returnTo" value={returnTo} />
                           <button type="submit" className="btn btn-ghost btn-sm">
-                            <Icon name="check" size={14} />
                             {de ? "Gelesen" : "Read"}
                           </button>
                         </form>
@@ -148,7 +146,6 @@ export default async function AdminContactsPage({
                           <input type="hidden" name="status" value="handled" />
                           <input type="hidden" name="returnTo" value={returnTo} />
                           <button type="submit" className="btn btn-ghost btn-sm">
-                            <Icon name="check" size={14} />
                             {de ? "Erledigt" : "Handled"}
                           </button>
                         </form>
@@ -156,10 +153,9 @@ export default async function AdminContactsPage({
                       <form action={deleteContactMessageAction}>
                         <input type="hidden" name="id" value={row.id} />
                         <input type="hidden" name="returnTo" value={returnTo} />
-                        <button type="submit" className="btn btn-ghost btn-sm !text-rose-300">
-                          <Icon name="trash" size={14} />
-                          {de ? "Löschen" : "Delete"}
-                        </button>
+                                                  <button type="submit" className="btn btn-ghost btn-sm !text-rose-300">
+                            {de ? "Löschen" : "Delete"}
+                          </button>
                       </form>
                     </div>
                   </td>
