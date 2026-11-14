@@ -6,6 +6,7 @@ import {
   CONTACT_MESSAGE_STATUSES,
   CONTACT_RETENTION_DAYS,
   contactMessageStats,
+  lastContactRetentionRun,
   listContactMessages,
   purgeExpiredContactMessages,
   type ContactMessageStatus,
@@ -37,6 +38,7 @@ export default async function AdminContactsPage({
 
   const status = parseStatus(statusRaw);
   const purged = purgeExpiredContactMessages();
+  const lastRun = lastContactRetentionRun();
   const rows = listContactMessages({ status, limit: 200 });
   const stats = contactMessageStats();
 
@@ -84,6 +86,16 @@ export default async function AdminContactsPage({
           {de ? "Anfrage gelöscht." : "Request deleted."}
         </Alert>
       ) : null}
+
+      <p className="text-xs text-muted">
+        {lastRun
+          ? de
+            ? `Letzter täglicher Löschlauf: ${dateFormat.format(new Date(lastRun.at))} · ${lastRun.deleted} gelöscht · Frist ${retentionMonths} Monate`
+            : `Last daily purge: ${dateFormat.format(new Date(lastRun.at))} · ${lastRun.deleted} deleted · ${retentionMonths}-month retention`
+          : de
+            ? "Noch kein täglicher Löschlauf protokolliert."
+            : "No daily purge recorded yet."}
+      </p>
 
       <div className="flex flex-wrap gap-1.5">
         <Link

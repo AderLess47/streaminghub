@@ -9,6 +9,30 @@ export type ContactMessageStatus = (typeof CONTACT_MESSAGE_STATUSES)[number];
 /** Standard sind 24 Monate, entsprechend der Datenschutzerklärung. */
 export const CONTACT_RETENTION_DAYS = env.contactRetentionDays;
 
+const LAST_RUN_KEY = "contact_retention_last_run";
+
+export type ContactRetentionRun = {
+  at: string;
+  deleted: number;
+  retentionDays: number;
+  source?: string;
+};
+
+/** Letzter Lauf des täglichen Container-Jobs (scripts/contact-retention.mjs). */
+export function lastContactRetentionRun(): ContactRetentionRun | null {
+  const row = get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, LAST_RUN_KEY);
+  if (!row) return null;
+  try {
+    const parsed = JSON.parse(row.value) as ContactRetentionRun;
+    if (!parsed || typeof parsed.at !== "string" || !Number.isFinite(Date.parse(parsed.at))) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export type ContactMessage = {
   id: string;
   name: string;
