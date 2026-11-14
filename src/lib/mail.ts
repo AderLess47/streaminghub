@@ -366,6 +366,23 @@ export function paymentFailedMail(input: { name: string; locale: string }): Mail
   };
 }
 
+/**
+ * Interne Meldung an den Support, wenn eine Zahlung zum zweiten Mal scheitert,
+ * damit jemand den Kunden kontaktieren kann. Einmal je Zahlungsplan.
+ */
+export function paymentFailedSupportNotice(input: {
+  name: string;
+  email: string;
+  customerId: string | null;
+  attemptCount: number;
+  nextAttemptAt: string | null;
+}): MailTemplate {
+  return {
+    subject: `[Zahlung fehlgeschlagen] ${input.email} – ${input.attemptCount}. Versuch`.slice(0, 160),
+    text: `Zahlung wiederholt fehlgeschlagen.\n\nKunde: ${input.name || "-"} <${input.email}>\nStripe-Kunde: ${input.customerId ?? "-"}\nFehlversuche: ${input.attemptCount}\nNächster Versuch: ${input.nextAttemptAt ?? "-"}\n\nPremium ruht, bis die Zahlung eingeht. Bitte Zahlungsmethode prüfen und den Kunden kontaktieren.`,
+  };
+}
+
 /** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
 export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
   const de = input.locale !== "en";
