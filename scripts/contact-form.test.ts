@@ -129,9 +129,10 @@ await check("Fehlende Datenschutzbestaetigung wird abgelehnt", async () => {
   assert.equal(messages().length, 0);
 });
 
-await check("Gefuelltes Honeypot-Feld wird abgelehnt", async () => {
+await check("Gefuelltes Honeypot-Feld wird still quittiert", async () => {
   const response = await contact(post(body({ website: "https://spam.example" })));
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
   assert.equal(messages().length, 0);
   assert.equal(mails().length, 0);
 });

@@ -198,15 +198,28 @@ await check("Bestaetigungsseite findet den Widerruf, unbekannte Referenz nicht",
   assert.equal(findContractRequest("W-gibtesnicht"), undefined);
 });
 
-await check("Gefuelltes Honeypot-Feld wird abgelehnt", async () => {
+await check("Gefuelltes Honeypot-Feld wird still quittiert", async () => {
   run("DELETE FROM outbox_emails");
   const before = contractRequests().length;
 
-  // Das Schema erlaubt nur ein leeres Feld, deshalb endet Spam bereits mit 400.
   const response = await withdrawal(
     post("/api/withdrawal", withdrawalBody({ website: "https://spam.example" })),
   );
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, reference: "" });
+  assert.equal(contractRequests().length, before);
+  assert.equal(mails().length, 0);
+});
+
+await check("Gefuelltes Honeypot-Feld bei der Kuendigung wird still quittiert", async () => {
+  run("DELETE FROM outbox_emails");
+  const before = contractRequests().length;
+
+  const response = await cancellation(
+    post("/api/cancellation", { ...cancellationBody("store@example.test"), website: "https://spam.example" }),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, reference: "" });
   assert.equal(contractRequests().length, before);
   assert.equal(mails().length, 0);
 });
