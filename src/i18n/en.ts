@@ -540,6 +540,9 @@ export const en: Dictionary = {
       appleNotice: "This subscription was purchased through the App Store and is managed there. You can cancel it in your Apple account settings.",
       renewsAt: "Valid until",
       cancelAtPeriodEnd: "Cancellation scheduled for period end",
+      statusEnded: "Ended",
+      subscriptionEnded:
+        "Your premium subscription has ended. Your devices and playlist stay in place; you can subscribe to Premium again at any time.",
       startCta: "Subscribe to Premium on the web",
       manageCta: "Manage in customer account",
       cancelCta: "Cancel subscription",

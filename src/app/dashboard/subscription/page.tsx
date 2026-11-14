@@ -26,10 +26,10 @@ export default async function SubscriptionPage({
       ? t.dashboard.overview.planPremium
       : status === "pending"
         ? t.dashboard.overview.planPending
-        : status === "past_due"
+                  : status === "past_due"
           ? "past_due"
           : status === "canceled"
-            ? "canceled"
+            ? t.dashboard.subscription.statusEnded
             : t.dashboard.overview.planNone;
 
   const periodEnd = subscription.current_period_end
@@ -92,7 +92,8 @@ export default async function SubscriptionPage({
               value={locale === "de" ? "2,49 € / Monat; keine USt. (Kleinunternehmerregelung)" : `€${PREMIUM_PRICE_EUR.toFixed(2)} / month; no VAT (small business regulation)`}
             />
           </div>
-          {subscription.cancel_at_period_end ? (
+          {/* Nach dem Periodenende ist die Kündigung vorbei, nicht mehr vorgemerkt. */}
+          {subscription.cancel_at_period_end && status === "active" ? (
             <p className="mt-3 text-xs text-amber-300">{t.dashboard.subscription.cancelAtPeriodEnd}</p>
           ) : null}
 
@@ -114,7 +115,11 @@ export default async function SubscriptionPage({
             <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
           ) : null}
 
-          {status !== "active" ? (
+          {status === "canceled" ? (
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              {t.dashboard.subscription.subscriptionEnded}
+            </p>
+          ) : status !== "active" ? (
             <p className="mt-4 text-xs leading-relaxed text-muted">{t.dashboard.subscription.noSubscription}</p>
           ) : null}
         </div>
