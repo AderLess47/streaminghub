@@ -6,6 +6,7 @@ import {
   paymentFailedSupportNotice,
   paymentRecoveredMail,
   sendMail,
+  subscriptionEndedMail,
 } from "./mail";
 
 export const PREMIUM_PRICE_EUR = 2.49;
@@ -349,10 +350,18 @@ export async function applyStripeEvent(event: StripeEvent) {
         periodEnd: isoFromSeconds(subscription.current_period_end) ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
       });
+      // "unpaid" ist bei Stripe das Ende der Wiederholungen: Premium ist weg,
+      // ohne dass je eine Kündigung erklärt wurde.
+      if (subscription.status === "unpaid") {
+        await mailSubscriptionEnded(userId, subscription.id ?? null);
+      }
       break;
     }
     case "customer.subscription.deleted": {
       const subscription = object as StripeSubscriptionObject;
+      // Nur ein Abo, das zuletzt an einer offenen Zahlung hing, verdient die
+      // Abschlussmail; eine normale Kündigung hat ihre Bestätigung schon.
+      const previous = effectiveStatus(getSubscription(userId));
       status = "canceled";
       patchSubscription(userId, {
         status,
@@ -360,6 +369,9 @@ export async function applyStripeEvent(event: StripeEvent) {
         subscriptionId: subscription.id ?? null,
         cancelAtPeriodEnd: false,
       });
+      if (previous === "past_due") {
+        await mailSubscriptionEnded(userId, subscription.id ?? null);
+      }
       break;
     }
     case "invoice.paid": {
@@ -436,6 +448,31 @@ export async function applyStripeEvent(event: StripeEvent) {
 
   run(`UPDATE subscription_events SET user_id = ? WHERE provider_event_id = ?`, userId, event.id);
   return { handled: true, duplicate: false as const, status };
+}
+
+/** Markiert eine bereits verschickte Mail, damit spätere Ereignisse sie nicht wiederholen. */
+function claimMailMarker(userId: string, key: string) {
+  const result = run(
+    `INSERT OR IGNORE INTO subscription_events
+       (id, user_id, provider, event_type, provider_event_id, payload, created_at)
+     VALUES (?, ?, 'stripe', 'mail.sent', ?, '{}', ?)`,
+    randomUUID(),
+    userId,
+    key,
+    nowIso(),
+  );
+  return Number(result.changes ?? 0) > 0;
+}
+
+async function mailSubscriptionEnded(userId: string, subscriptionId: string | null) {
+  const user = userContact(userId);
+  if (!user) return;
+  if (!claimMailMarker(userId, `mail:subscription-ended:${subscriptionId ?? userId}`)) return;
+  await sendMail({
+    to: user.email,
+    ...subscriptionEndedMail({ name: user.display_name, locale: user.locale }),
+    kind: "subscription",
+  });
 }
 
 function userContact(userId: string) {
