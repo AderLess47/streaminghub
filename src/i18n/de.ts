@@ -802,9 +802,11 @@ export const de = {
       handledBy: "Erledigt von",
       note: "Hinweis",
       reference: "Referenz",
-      openSummary: "offen",
+      openSummary: "noch offen",
       withdrawals: "Widerrufe",
       cancellations: "Kündigungen",
+      statOpenWithdrawals: "offene Widerrufe",
+      statOpenCancellations: "offene Kündigungen",
     },
     emails: {
       title: "E-Mail-Ausgang",
