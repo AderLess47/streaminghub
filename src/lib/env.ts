@@ -73,6 +73,7 @@ export const env = {
     Math.max(Number(process.env.CONTACT_RETENTION_DAYS ?? 730) || 730, 30),
     3650,
   ),
+
 } as const;
 
 export const isEmailConfigured = () =>

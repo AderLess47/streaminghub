@@ -6,6 +6,8 @@
  */
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
 import { sessionToken } from "./fakes/next-headers.ts";
 import { RedirectError } from "./fakes/next-navigation.ts";
 import { revalidated } from "./fakes/next-cache.ts";
@@ -186,6 +188,40 @@ await check("Zweiter Lauf loescht nichts und protokolliert nicht", async () => {
   run("DELETE FROM audit_log");
   assert.equal(purgeExpiredContactMessages(), 0);
   assert.equal(auditRows("contact_messages.purged"), 0);
+});
+
+function runRetentionScript() {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(process.cwd(), "scripts", "contact-retention.mjs")],
+    { env: { ...process.env, DATABASE_PATH: process.env.DATABASE_PATH }, encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout.trim().split("\n").pop() ?? "{}");
+}
+
+await check("Taeglicher Container-Lauf loescht abgelaufene Anfragen", async () => {
+  const oldId = seedMessage(
+    "Taeglicher Lauf",
+    "handled",
+    "cron@example.test",
+    new Date(Date.now() - 800 * 24 * 60 * 60 * 1000).toISOString(),
+  );
+  run("DELETE FROM audit_log");
+
+  const output = runRetentionScript();
+  assert.equal(output.deleted, 1);
+  assert.equal(output.retentionDays, 730);
+  assert.equal(exists(oldId), false);
+
+  const audit = latestAudit();
+  assert.equal(audit?.action, "contact_messages.purged");
+  assert.deepEqual(JSON.parse(audit?.meta ?? "{}").deleted, 1);
+});
+
+await check("Taeglicher Lauf meldet beim zweiten Mal null", async () => {
+  const output = runRetentionScript();
+  assert.equal(output.deleted, 0);
 });
 
 await check("Eigene Frist wird beachtet", async () => {

@@ -257,6 +257,20 @@ Defaults can be overridden with:
 | `BACKUP_INITIAL_DELAY_SECONDS` | `120` |
 | `BACKUP_INTERVAL_SECONDS` | `86400` |
 
+Contact messages expire after `CONTACT_RETENTION_DAYS` (default `730`, i.e. 24
+months, clamped to 30–3650). `docker-entrypoint.sh` runs
+`scripts/contact-retention.mjs` shortly after startup and then once per day,
+next to the backup loop; the same purge also runs when the admin inbox is opened
+and when a new contact request arrives. The scheduled run is independent of
+traffic, and deletions are audited as `contact_messages.purged`. Every run
+prints a JSON line (`deleted`, `retentionDays`, `cutoff`) to the container log.
+
+| Variable | Default |
+| --- | --- |
+| `CONTACT_RETENTION_DAYS` | `730` |
+| `RETENTION_INITIAL_DELAY_SECONDS` | `180` |
+| `RETENTION_INTERVAL_SECONDS` | `86400` |
+
 Run a backup manually in the container:
 
 ```bash
@@ -278,8 +292,8 @@ fly volumes snapshots create vol_42k2gkdelj0xj904 --app streaminghub-org
 Test a restore by copying a backup to a temporary path, opening it with SQLite
 and running `PRAGMA integrity_check`; never overwrite the live database without
 a maintenance window. Logs/audit retention: 90 days for `audit_log`, 30 days for
-server logs, support tickets 24 months; admin-managed M3U URLs until account
-deletion or removal. The privacy policy documents these periods.
+server logs, support tickets 24 months, contact messages 24 months (see above);
+admin-managed M3U URLs until account deletion or removal. The privacy policy documents these periods.
 
 ## 8. Scaling
 
