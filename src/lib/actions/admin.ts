@@ -5,6 +5,12 @@ import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { setContractRequestHandled } from "@/lib/contract-requests";
+import {
+  CONTACT_MESSAGE_STATUSES,
+  deleteContactMessage,
+  setContactMessageStatus,
+  type ContactMessageStatus,
+} from "@/lib/contact-messages";
 import { all, get, nowIso, run } from "@/lib/db";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
@@ -35,6 +41,13 @@ type RoleValue = (typeof ROLE_VALUES)[number];
 function adminPath(formData: FormData, fallback: string) {
   const raw = String(formData.get("returnTo") ?? "");
   return raw.startsWith("/admin") ? raw : fallback;
+}
+
+/** Erhält den Listenfilter und hängt die Rückmeldung an. */
+function withOk(formData: FormData, fallback: string, ok: string) {
+  const target = new URL(adminPath(formData, fallback), "https://streaminghub.invalid");
+  target.searchParams.set("ok", ok);
+  return `${target.pathname}${target.search}`;
 }
 
 /**
@@ -444,6 +457,43 @@ export async function releaseEmailSuppressionAction(formData: FormData) {
   });
   revalidatePath("/admin/emails");
   redirect("/admin/emails?ok=suppression");
+}
+
+export async function setContactMessageStatusAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as ContactMessageStatus;
+  if (!CONTACT_MESSAGE_STATUSES.includes(status)) return;
+  if (!setContactMessageStatus(id, status)) return;
+
+  logAudit({
+    action: "admin.contact_message_status_changed",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "contact_message",
+    targetId: id,
+    meta: { status },
+  });
+  revalidatePath("/admin/contacts");
+  redirect(withOk(formData, "/admin/contacts", "status"));
+}
+
+export async function deleteContactMessageAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const message = deleteContactMessage(id);
+  if (!message) return;
+
+  logAudit({
+    action: "admin.contact_message_deleted",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "contact_message",
+    targetId: id,
+    meta: { subject: message.subject.slice(0, 120), email: message.email },
+  });
+  revalidatePath("/admin/contacts");
+  redirect(withOk(formData, "/admin/contacts", "deleted"));
 }
 
 export async function retryEmailAction(formData: FormData) {

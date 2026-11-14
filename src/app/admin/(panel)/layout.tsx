@@ -8,7 +8,8 @@ import { requireStaff } from "@/lib/session";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireStaff();
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
+  const de = locale !== "en";
 
   const items: DashNavItem[] = [
     { href: "/admin", label: t.admin.nav.overview, icon: "activity" },
@@ -17,6 +18,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/subscriptions", label: t.admin.nav.subscriptions, icon: "card" },
     { href: "/admin/pairing", label: t.admin.nav.pairing, icon: "key" },
     { href: "/admin/tickets", label: t.admin.nav.tickets, icon: "mail" },
+    {
+      href: "/admin/contacts",
+      label: de ? "Kontaktanfragen" : "Contact messages",
+      icon: "mail",
+    },
     { href: "/admin/contracts", label: t.admin.nav.contracts, icon: "check" },
     { href: "/admin/emails", label: t.admin.nav.emails, icon: "file-text" },
     { href: "/admin/content", label: t.admin.nav.content, icon: "layers" },
