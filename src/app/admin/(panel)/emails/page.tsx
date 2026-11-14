@@ -47,7 +47,9 @@ export default async function AdminEmailsPage() {
           <details key={mail.id} className="card px-4 py-3">
             <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 text-xs marker:hidden [&::-webkit-details-marker]:hidden">
               <div className="min-w-0">
-                <p className="truncate text-[0.82rem] text-slate-200">{mail.subject}</p>
+                <p className="truncate text-[0.82rem] text-slate-200" title={mail.subject}>
+                  {mail.subject}
+                </p>
                 <p className="break-words text-[0.68rem] text-muted">
                   {mail.to_email} · {dateFormat.format(new Date(mail.created_at))} · {mail.kind}
                   {mail.provider_status ? ` · ${mail.provider_status}` : ""} · {mail.attempts}
