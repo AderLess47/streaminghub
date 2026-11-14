@@ -544,6 +544,8 @@ export const de = {
       renewsAt: "Läuft bis",
       cancelAtPeriodEnd: "Kündigung zum Periodenende vorgemerkt",
       statusEnded: "Beendet",
+      statusPastDue: "Zahlung fehlgeschlagen",
+      statusIncomplete: "Zahlung nicht abgeschlossen",
       subscriptionEnded:
         "Dein Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
       startCta: "Premium im Web abschließen",

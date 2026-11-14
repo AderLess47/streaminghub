@@ -541,6 +541,8 @@ export const en: Dictionary = {
       renewsAt: "Valid until",
       cancelAtPeriodEnd: "Cancellation scheduled for period end",
       statusEnded: "Ended",
+      statusPastDue: "Payment failed",
+      statusIncomplete: "Payment not completed",
       subscriptionEnded:
         "Your premium subscription has ended. Your devices and playlist stay in place; you can subscribe to Premium again at any time.",
       startCta: "Subscribe to Premium on the web",
