@@ -1,7 +1,10 @@
 /** `next/headers` für Server-Action-Tests: ein Session-Token aus dem Test. */
 export const sessionToken = { value: null as string | null };
-/** Letztes von einer Route gesetztes Session-Cookie (Token). */
-export const lastSetSession = { value: null as string | null };
+/** Letztes von einer Route gesetztes Session-Cookie (Token und Optionen). */
+export const lastSetSession = {
+  value: null as string | null,
+  options: null as Record<string, unknown> | null,
+};
 
 export async function cookies() {
   return {
@@ -11,8 +14,11 @@ export async function cookies() {
       }
       return undefined;
     },
-    set(name: string, value: string) {
-      if (name === "sh_session") lastSetSession.value = value;
+    set(name: string, value: string, options?: Record<string, unknown>) {
+      if (name === "sh_session") {
+        lastSetSession.value = value;
+        lastSetSession.options = options ?? null;
+      }
     },
     delete() {},
   };
