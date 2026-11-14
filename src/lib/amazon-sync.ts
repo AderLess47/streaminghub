@@ -14,6 +14,7 @@ import {
   applyVerifiedReceipt,
   type ReceiptRow,
 } from "./amazon-subscriptions";
+import { notifyStoreSubscriptionEnded } from "./payments";
 
 const DAY = 86_400_000;
 
@@ -70,6 +71,11 @@ export async function syncAmazonReceipts(options: SyncOptions): Promise<SyncResu
     if (!outcome.ok) {
       if (outcome.code === "canceled") {
         applyCanceledReceipt({ userId: row.user_id, receiptId: row.receipt_id });
+        await notifyStoreSubscriptionEnded({
+          userId: row.user_id,
+          store: "amazon",
+          subscriptionKey: `amazon:${row.receipt_id}`,
+        });
         result.canceled += 1;
         continue;
       }
@@ -85,8 +91,16 @@ export async function syncAmazonReceipts(options: SyncOptions): Promise<SyncResu
       state,
       rawResponse: null,
     });
-    if (state.status === "canceled") result.canceled += 1;
-    else result.updated += 1;
+    if (state.status === "canceled") {
+      await notifyStoreSubscriptionEnded({
+        userId: row.user_id,
+        store: "amazon",
+        subscriptionKey: `amazon:${row.receipt_id}`,
+      });
+      result.canceled += 1;
+    } else {
+      result.updated += 1;
+    }
   }
 
   run(

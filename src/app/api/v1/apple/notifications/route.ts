@@ -1,9 +1,10 @@
 import { apiError, clientIp, json, parseBody, tooManyRequests } from "@/lib/api";
 import { notificationEffect, verifyAppleNotification } from "@/lib/apple-iap";
 import { APPLE_ROOT_CA_G3 } from "@/lib/apple-root-ca";
-import { applyAppleNotification } from "@/lib/apple-subscriptions";
+import { applyAppleNotification, getLatestAppleReceipt } from "@/lib/apple-subscriptions";
 import { logAudit } from "@/lib/audit";
 import { env, isAppleIapConfigured } from "@/lib/env";
+import { notifyStoreSubscriptionEnded } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { appleNotificationSchema } from "@/lib/validation";
 
@@ -83,6 +84,21 @@ export async function POST(request: Request) {
       status: outcome.handled ? outcome.status : null,
     },
   });
+
+  if (
+    outcome.handled &&
+    outcome.status === "canceled" &&
+    notification.notificationType === "EXPIRED"
+  ) {
+    const receipt = getLatestAppleReceipt(outcome.userId);
+    if (receipt) {
+      await notifyStoreSubscriptionEnded({
+        userId: outcome.userId,
+        store: "apple",
+        subscriptionKey: `apple:${receipt.receipt_id}`,
+      });
+    }
+  }
 
   return json({ ok: true, ...outcome });
 }

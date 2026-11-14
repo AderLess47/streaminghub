@@ -6,6 +6,7 @@ import {
   paymentFailedSupportNotice,
   paymentRecoveredMail,
   sendMail,
+  storeSubscriptionEndedMail,
   subscriptionEndedMail,
 } from "./mail";
 
@@ -462,6 +463,32 @@ function claimMailMarker(userId: string, key: string) {
     nowIso(),
   );
   return Number(result.changes ?? 0) > 0;
+}
+
+/**
+ * Abschlussmail für ein Store-Abo. Wird von den Apple- und Amazon-Pfaden nach
+ * dem Statuswechsel gerufen; die Markierung verhindert Doppelmails, wenn
+ * Notification und Pull-Refresh denselben Ablauf feststellen.
+ */
+export async function notifyStoreSubscriptionEnded(input: {
+  userId: string;
+  store: "apple" | "amazon";
+  subscriptionKey: string;
+}) {
+  const user = userContact(input.userId);
+  if (!user) return false;
+  const key = `mail:store-subscription-ended:${input.subscriptionKey}`;
+  if (!claimMailMarker(input.userId, key)) return false;
+  await sendMail({
+    to: user.email,
+    ...storeSubscriptionEndedMail({
+      name: user.display_name,
+      locale: user.locale,
+      store: input.store,
+    }),
+    kind: "subscription",
+  });
+  return true;
 }
 
 async function mailSubscriptionEnded(userId: string, subscriptionId: string | null) {

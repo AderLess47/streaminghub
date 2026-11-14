@@ -8,6 +8,7 @@ import {
 } from "@/lib/amazon-subscriptions";
 import { authenticateDevice } from "@/lib/device-auth";
 import { env, isAmazonIapConfigured } from "@/lib/env";
+import { notifyStoreSubscriptionEnded } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -42,6 +43,11 @@ export async function POST(request: Request) {
   if (!result.ok) {
     if (result.code === "canceled") {
       applyCanceledReceipt({ userId: auth.userId, receiptId: row.receipt_id });
+      await notifyStoreSubscriptionEnded({
+        userId: auth.userId,
+        store: "amazon",
+        subscriptionKey: `amazon:${row.receipt_id}`,
+      });
       return json({ ok: true, subscription: subscriptionView(auth.userId) });
     }
     if (result.code === "misconfigured") {
@@ -59,13 +65,21 @@ export async function POST(request: Request) {
     return json({ ok: true, subscription: subscriptionView(auth.userId) });
   }
 
+  const state = receiptState(result.receipt);
   applyVerifiedReceipt({
     userId: auth.userId,
     appUserId: row.app_user_id,
     receipt: result.receipt,
-    state: receiptState(result.receipt),
+    state,
     rawResponse: null,
   });
+  if (state.status === "canceled") {
+    await notifyStoreSubscriptionEnded({
+      userId: auth.userId,
+      store: "amazon",
+      subscriptionKey: `amazon:${row.receipt_id}`,
+    });
+  }
 
   return json({ ok: true, subscription: subscriptionView(auth.userId) });
 }

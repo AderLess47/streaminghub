@@ -1,7 +1,12 @@
 import { apiError, json, tooManyRequests } from "@/lib/api";
-import { appleSubscriptionView, refreshStoredAppleReceipt } from "@/lib/apple-subscriptions";
+import {
+  appleSubscriptionView,
+  getLatestAppleReceipt,
+  refreshStoredAppleReceipt,
+} from "@/lib/apple-subscriptions";
 import { authenticateDevice } from "@/lib/device-auth";
 import { isAppleIapConfigured } from "@/lib/env";
+import { notifyStoreSubscriptionEnded } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -30,5 +35,13 @@ export async function POST(request: Request) {
   if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds);
 
   refreshStoredAppleReceipt(auth.userId);
+  const receipt = getLatestAppleReceipt(auth.userId);
+  if (receipt?.status === "expired") {
+    await notifyStoreSubscriptionEnded({
+      userId: auth.userId,
+      store: "apple",
+      subscriptionKey: `apple:${receipt.receipt_id}`,
+    });
+  }
   return json({ ok: true, subscription: appleSubscriptionView(auth.userId) });
 }

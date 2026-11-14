@@ -400,6 +400,32 @@ export function subscriptionEndedMail(input: { name: string; locale: string }): 
   };
 }
 
+/**
+ * Abschlussmail für Store-Abos (App Store, Amazon Appstore). Kündigung und
+ * Verlängerung laufen dort, deshalb nennt der Text den Store.
+ */
+export function storeSubscriptionEndedMail(input: {
+  name: string;
+  locale: string;
+  store: "apple" | "amazon";
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const store = de
+    ? input.store === "apple"
+      ? "den App Store"
+      : "den Amazon Appstore"
+    : input.store === "apple"
+      ? "the App Store"
+      : "the Amazon Appstore";
+  return {
+    subject: de ? "Dein Premium-Abo ist ausgelaufen" : "Your Premium subscription has ended",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo über ${store} ist ausgelaufen. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Wenn du Premium weiter nutzen willst, schließe es erneut ab.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription via ${store} has ended. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. If you want to keep using Premium, subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+  };
+}
+
 /** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
 export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
   const de = input.locale !== "en";
