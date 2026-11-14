@@ -1,7 +1,12 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { get, nowIso, run } from "./db";
 import { env, isBillingConfigured } from "./env";
-import { paymentFailedMail, paymentRecoveredMail, sendMail } from "./mail";
+import {
+  paymentFailedMail,
+  paymentFailedSupportNotice,
+  paymentRecoveredMail,
+  sendMail,
+} from "./mail";
 
 export const PREMIUM_PRICE_EUR = 2.49;
 export const PREMIUM_PLAN_ID = "premium_monthly";
@@ -397,6 +402,30 @@ export async function applyStripeEvent(event: StripeEvent) {
           to: user.email,
           ...paymentFailedMail({ name: user.display_name, locale: user.locale }),
           kind: "subscription",
+        });
+      }
+      // Erst der zweite Fehlversuch verdient eine interne Meldung; jede
+      // weitere Wiederholung würde den Support nur erneut zum selben Fall
+      // anschreiben.
+      const attemptCount = typeof object.attempt_count === "number" ? object.attempt_count : 0;
+      if (user && attemptCount === 2) {
+        const nextAttempt =
+          typeof object.next_payment_attempt === "number"
+            ? new Date(object.next_payment_attempt * 1000).toLocaleDateString("de-DE", {
+                timeZone: "Europe/Berlin",
+                dateStyle: "long",
+              })
+            : null;
+        await sendMail({
+          to: env.supportEmail,
+          ...paymentFailedSupportNotice({
+            name: user.display_name,
+            email: user.email,
+            customerId: idOf(object.customer),
+            attemptCount,
+            nextAttemptAt: nextAttempt,
+          }),
+          kind: "system",
         });
       }
       break;
