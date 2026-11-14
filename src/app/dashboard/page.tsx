@@ -185,7 +185,10 @@ export default async function DashboardPage() {
         <div className="card p-5">
           <h2 className="text-base font-semibold">{t.dashboard.overview.quickActions}</h2>
           <div className="mt-3">
-            <InfoRow label={t.dashboard.subscription.status} value={status} />
+            <InfoRow
+              label={t.dashboard.subscription.status}
+              value={status === "canceled" ? t.dashboard.subscription.statusEnded : status}
+            />
             <InfoRow
               label={t.dashboard.subscription.channel}
               value={

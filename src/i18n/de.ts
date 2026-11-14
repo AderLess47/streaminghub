@@ -543,6 +543,9 @@ export const de = {
       appleNotice: "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Kündigen kannst du es in deinen Apple-Konto-Einstellungen.",
       renewsAt: "Läuft bis",
       cancelAtPeriodEnd: "Kündigung zum Periodenende vorgemerkt",
+      statusEnded: "Beendet",
+      subscriptionEnded:
+        "Dein Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
       startCta: "Premium im Web abschließen",
       manageCta: "Im Kundenkonto verwalten",
       cancelCta: "Abonnement kündigen",
