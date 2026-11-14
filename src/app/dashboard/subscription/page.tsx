@@ -26,11 +26,13 @@ export default async function SubscriptionPage({
       ? t.dashboard.overview.planPremium
       : status === "pending"
         ? t.dashboard.overview.planPending
-                  : status === "past_due"
-          ? "past_due"
+        : status === "past_due"
+          ? t.dashboard.subscription.statusPastDue
           : status === "canceled"
             ? t.dashboard.subscription.statusEnded
-            : t.dashboard.overview.planNone;
+            : status === "incomplete"
+              ? t.dashboard.subscription.statusIncomplete
+              : t.dashboard.overview.planNone;
 
   const periodEnd = subscription.current_period_end
     ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(
