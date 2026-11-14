@@ -14,6 +14,28 @@ import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Bricht eine Adresse nur an @ und . statt an beliebiger Stelle, damit in einer
+ * schmalen Spalte „admin@“ / „example.test“ statt „admin@example.te“ / „st“ steht.
+ */
+function breakableEmail(value: string) {
+  const at = value.indexOf("@");
+  if (at < 0) return value;
+  const domain = value.slice(at + 1).split(".");
+  return (
+    <>
+      {value.slice(0, at)}@<wbr />
+      {domain.map((part, index) => (
+        <span key={index}>
+          {part}
+          {index < domain.length - 1 ? "." : null}
+          {index < domain.length - 1 ? <wbr /> : null}
+        </span>
+      ))}
+    </>
+  );
+}
+
 type Filter = {
   kind?: ContractRequestKind;
   state?: "open" | "handled";
@@ -199,8 +221,10 @@ export default async function AdminContractsPage({
                       <>
                         <Badge tone="ok">{t.admin.contracts.handled}</Badge>
                         <p className="mt-1 text-[0.68rem] text-muted">
-                          {dateFormat.format(new Date(row.handledAt))}
-                          {row.handledBy ? ` · ${row.handledBy}` : ""}
+                          <span className="block">{dateFormat.format(new Date(row.handledAt))}</span>
+                          {row.handledBy ? (
+                            <span className="block">{breakableEmail(row.handledBy)}</span>
+                          ) : null}
                         </p>
                       </>
                     ) : (
@@ -267,8 +291,10 @@ export default async function AdminContractsPage({
                       <>
                         <Badge tone="ok">{t.admin.contracts.handled}</Badge>
                         <p className="mt-1 text-[0.68rem] text-muted">
-                          {dateFormat.format(new Date(row.handledAt))}
-                          {row.handledBy ? ` · ${row.handledBy}` : ""}
+                          <span className="block">{dateFormat.format(new Date(row.handledAt))}</span>
+                          {row.handledBy ? (
+                            <span className="block">{breakableEmail(row.handledBy)}</span>
+                          ) : null}
                         </p>
                       </>
                     ) : (
