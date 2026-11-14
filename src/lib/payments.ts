@@ -354,7 +354,11 @@ export async function applyStripeEvent(event: StripeEvent) {
       // "unpaid" ist bei Stripe das Ende der Wiederholungen: Premium ist weg,
       // ohne dass je eine Kündigung erklärt wurde.
       if (subscription.status === "unpaid") {
-        await mailSubscriptionEnded(userId, subscription.id ?? null);
+        await mailSubscriptionEnded(
+          userId,
+          subscription.id ?? null,
+          isoFromSeconds(subscription.current_period_end) ?? null,
+        );
       }
       break;
     }
@@ -362,7 +366,8 @@ export async function applyStripeEvent(event: StripeEvent) {
       const subscription = object as StripeSubscriptionObject;
       // Nur ein Abo, das zuletzt an einer offenen Zahlung hing, verdient die
       // Abschlussmail; eine normale Kündigung hat ihre Bestätigung schon.
-      const previous = effectiveStatus(getSubscription(userId));
+      const previousSub = getSubscription(userId);
+      const previous = effectiveStatus(previousSub);
       status = "canceled";
       patchSubscription(userId, {
         status,
@@ -371,7 +376,11 @@ export async function applyStripeEvent(event: StripeEvent) {
         cancelAtPeriodEnd: false,
       });
       if (previous === "past_due") {
-        await mailSubscriptionEnded(userId, subscription.id ?? null);
+        await mailSubscriptionEnded(
+          userId,
+          subscription.id ?? null,
+          previousSub?.current_period_end ?? null,
+        );
       }
       break;
     }
@@ -494,10 +503,17 @@ export async function notifyStoreSubscriptionEnded(input: {
   return true;
 }
 
-async function mailSubscriptionEnded(userId: string, subscriptionId: string | null) {
+async function mailSubscriptionEnded(
+  userId: string,
+  subscriptionId: string | null,
+  periodEnd: string | null,
+) {
   const user = userContact(userId);
   if (!user) return;
-  if (!claimMailMarker(userId, `mail:subscription-ended:${subscriptionId ?? userId}`)) return;
+  // Der Zeitraum gehört zum Schlüssel: Wird dasselbe Abo nach einer Zahlung
+  // wieder aktiv und läuft später erneut aus, soll es wieder eine Mail geben.
+  const key = `mail:subscription-ended:${subscriptionId ?? userId}:${periodEnd ?? "unknown"}`;
+  if (!claimMailMarker(userId, key)) return;
   await sendMail({
     to: user.email,
     ...subscriptionEndedMail({ name: user.display_name, locale: user.locale }),
