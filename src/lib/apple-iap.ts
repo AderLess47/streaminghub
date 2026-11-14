@@ -509,6 +509,24 @@ export function decideAppleApplication(
   return { ok: true };
 }
 
+/**
+ * Ein erneuter Aufruf wird nur dann aus dem gespeicherten Beleg beantwortet,
+ * wenn dieser noch aktiv ist und die eingehende Transaktion nicht weiter
+ * reicht. Beim festgestellten Ablauf wird `verified_at` erneuert – ohne diese
+ * Prüfung bekäme ein Kauf direkt danach den alten, abgelaufenen Status zurück.
+ */
+export function isReplayablePurchase(
+  known: { status: string; renewal_date: string | null; verified_at: string | null },
+  transaction: AppleTransaction,
+  now = Date.now(),
+) {
+  if (known.status !== "active") return false;
+  if (!isReplayable(known.verified_at, now)) return false;
+  const storedEnd = known.renewal_date ? Date.parse(known.renewal_date) : Number.NaN;
+  if (!Number.isFinite(storedEnd)) return true;
+  return transaction.expiresDate !== null && transaction.expiresDate <= storedEnd;
+}
+
 /** Eine gerade geprüfte Transaktion wird nicht erneut geprüft. */
 export function isReplayable(verifiedAt: string | null, now = Date.now(), windowMs = 10 * 60_000) {
   if (!verifiedAt) return false;
