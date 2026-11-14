@@ -39,7 +39,8 @@
     "test:stripe-webhook": "node scripts/run-stripe-webhook-tests.mjs && node scripts/run-stripe-webhook-unconfigured.mjs",
     "test:mail-outbox": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/mail-outbox.test.ts && node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/mail-outbox-unconfigured.test.ts",
     "test:resend-webhook": "node scripts/run-resend-webhook-tests.mjs configured && node scripts/run-resend-webhook-tests.mjs unconfigured",
-    "test:admin-suppression": "node scripts/run-admin-suppression-tests.mjs"
+    "test:admin-suppression": "node scripts/run-admin-suppression-tests.mjs",
+    "test:admin-retry": "node scripts/run-admin-retry-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

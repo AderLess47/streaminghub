@@ -94,6 +94,10 @@ jobs:
       - name: Admin suppression tests
         run: npm run test:admin-suppression
 
+      # Admin: erneuter Mailversand inklusive Audit-Metadaten.
+      - name: Admin retry tests
+        run: npm run test:admin-retry
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
