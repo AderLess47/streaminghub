@@ -184,7 +184,6 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      <p className="mt-10 text-xs text-muted/70">{t.download.notice}</p>
     </div>
   );
 }

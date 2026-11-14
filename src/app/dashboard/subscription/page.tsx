@@ -64,14 +64,8 @@ export default async function SubscriptionPage({
           {t.dashboard.subscription.checkoutCanceled}
         </Alert>
       ) : null}
-      {/* Statischer Hinweis: keine Statusrolle, sonst wird er bei jedem Laden als
-          Aktualisierung angesagt und konkurriert mit der Fehlermeldung des
-          Checkout-Knopfs. */}
-      {!configured ? (
-        <Alert tone="warning" live={false}>
-          {t.dashboard.subscription.checkoutNotConfigured}
-        </Alert>
-      ) : null}
+      {/* Der Hinweis auf den fehlenden Zahlungsanbieter steht am deaktivierten
+          Checkout-Knopf; oben würde derselbe Satz ein zweites Mal erscheinen. */}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div className="card p-5">
