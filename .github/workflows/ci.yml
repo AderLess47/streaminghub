@@ -110,6 +110,10 @@ jobs:
       - name: MFA login flow tests
         run: npm run test:mfa-login
 
+      # Logout und Sitzungsablauf inklusive Sperre abgelaufener Sitzungen.
+      - name: Session logout tests
+        run: npm run test:session-logout
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
