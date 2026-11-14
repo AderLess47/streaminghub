@@ -108,7 +108,9 @@ export default async function SubscriptionPage({
             </p>
           ) : null}
 
-          {status === "active" && subscription.channel === "web" ? (
+          {/* Nach der Kündigung ist die Handlung erledigt; der Hinweis oben nennt
+              bereits das Periodenende, ein zweiter Klick wäre nur ein Duplikat. */}
+          {status === "active" && subscription.channel === "web" && !subscription.cancel_at_period_end ? (
             <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
           ) : null}
 
