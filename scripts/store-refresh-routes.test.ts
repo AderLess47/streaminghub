@@ -279,6 +279,67 @@ await check("apple/notifications: EXPIRED mailt einmal, Refresh dedupliziert", a
   assert.equal(mailCount(), 1);
 });
 
+await check("apple/notifications: REFUND mailt mit Erstattungsgrund, einmal", async () => {
+  resetDb();
+  const revocation = Date.now() - 3_600_000;
+  seedApple("apple-refund", new Date(future).toISOString());
+  const token = tokenFor("apple-refund");
+
+  const signedPayload = buildNotification({
+    notificationType: "REFUND",
+    transaction: {
+      originalTransactionId: "orig-apple-refund",
+      expiresDate: future,
+      revocationDate: revocation,
+    },
+  });
+
+  const response = await appleNotifications(
+    call("/api/v1/apple/notifications", token, { signedPayload }),
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { handled: boolean };
+  assert.equal(body.handled, true);
+  assert.equal(mailCount(), 1);
+  const [mail] = all<{ subject: string; body_text: string }>(
+    `SELECT subject, body_text FROM outbox_emails`,
+  );
+  assert.match(mail.subject, /erstattet/);
+  assert.match(mail.body_text, /erstattet/);
+
+  // Dieselbe Erstattung noch einmal gemeldet: keine zweite Mail.
+  const duplicate = buildNotification({
+    notificationType: "REFUND",
+    transaction: {
+      originalTransactionId: "orig-apple-refund",
+      expiresDate: future,
+      revocationDate: revocation,
+    },
+  });
+  await appleNotifications(call("/api/v1/apple/notifications", token, { signedPayload: duplicate }));
+  assert.equal(mailCount(), 1);
+});
+
+await check("apple/notifications: REFUND_REVERSED mailt nicht", async () => {
+  resetDb();
+  seedApple("apple-reversed", new Date(future).toISOString());
+  const token = tokenFor("apple-reversed");
+
+  const signedPayload = buildNotification({
+    notificationType: "REFUND_REVERSED",
+    transaction: {
+      originalTransactionId: "orig-apple-reversed",
+      expiresDate: future,
+    },
+  });
+
+  const response = await appleNotifications(
+    call("/api/v1/apple/notifications", token, { signedPayload }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(mailCount(), 0, "eine aufgehobene Erstattung beendet kein Abo");
+});
+
 /* ----------------------------- Amazon Refresh ----------------------------- */
 
 function seedAmazon(userId: string, renewalDate: string) {

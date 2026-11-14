@@ -104,5 +104,23 @@ export async function POST(request: Request) {
     }
   }
 
+  // Eine Erstattung beendet Premium sofort; „ausgelaufen“ wäre dafür der
+  // falsche Text, deshalb eine eigene Mail mit dem Erstattungsgrund.
+  if (outcome.handled && outcome.status === "canceled" && notification.notificationType === "REFUND") {
+    const receipt = getLatestAppleReceipt(outcome.userId);
+    if (receipt) {
+      await notifyStoreSubscriptionEnded({
+        userId: outcome.userId,
+        store: "apple",
+        subscriptionKey: `apple:${receipt.receipt_id}`,
+        periodEnd:
+          notification.transaction.revocationDate === null
+            ? receipt.renewal_date
+            : new Date(notification.transaction.revocationDate).toISOString(),
+        reason: "refunded",
+      });
+    }
+  }
+
   return json({ ok: true, ...outcome });
 }

@@ -7,6 +7,7 @@ import {
   paymentRecoveredMail,
   sendMail,
   storeSubscriptionEndedMail,
+  storeSubscriptionRefundedMail,
   subscriptionEndedMail,
 } from "./mail";
 
@@ -486,20 +487,26 @@ export async function notifyStoreSubscriptionEnded(input: {
   store: "apple" | "amazon";
   subscriptionKey: string;
   periodEnd?: string | null;
+  reason?: "ended" | "refunded";
 }) {
   const user = userContact(input.userId);
   if (!user) return false;
-  const key = `mail:store-subscription-ended:${input.subscriptionKey}:${input.periodEnd ?? "unknown"}`;
+  const reason = input.reason ?? "ended";
+  const key = `mail:store-subscription-${reason}:${input.subscriptionKey}:${input.periodEnd ?? "unknown"}`;
   if (!claimMailMarker(input.userId, key)) return false;
-  await sendMail({
-    to: user.email,
-    ...storeSubscriptionEndedMail({
-      name: user.display_name,
-      locale: user.locale,
-      store: input.store,
-    }),
-    kind: "subscription",
-  });
+  const template =
+    reason === "refunded"
+      ? storeSubscriptionRefundedMail({
+          name: user.display_name,
+          locale: user.locale,
+          store: input.store,
+        })
+      : storeSubscriptionEndedMail({
+          name: user.display_name,
+          locale: user.locale,
+          store: input.store,
+        });
+  await sendMail({ to: user.email, ...template, kind: "subscription" });
   return true;
 }
 
