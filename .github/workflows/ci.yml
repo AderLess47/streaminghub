@@ -134,6 +134,10 @@ jobs:
       - name: Support ticket tests
         run: npm run test:support-tickets
 
+      # Widerruf und Kuendigung inklusive Bestaetigung und Admin-Vermerk.
+      - name: Withdrawal and cancellation tests
+        run: npm run test:withdrawal-cancellation
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
