@@ -117,6 +117,10 @@ export async function POST(request: Request) {
           notification.transaction.revocationDate === null
             ? receipt.renewal_date
             : new Date(notification.transaction.revocationDate).toISOString(),
+        coversPeriodEnd:
+          notification.transaction.expiresDate === null
+            ? receipt.renewal_date
+            : new Date(notification.transaction.expiresDate).toISOString(),
         reason: "refunded",
       });
     }
