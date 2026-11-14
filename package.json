@@ -36,7 +36,7 @@
     "test:subscription-mails": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/subscription-mails.test.ts",
     "test:api": "node scripts/run-api-tests.mjs",
     "test:store-api": "node scripts/run-store-api-tests.mjs",
-    "test:stripe-webhook": "node scripts/run-stripe-webhook-tests.mjs"
+    "test:stripe-webhook": "node scripts/run-stripe-webhook-tests.mjs && node scripts/run-stripe-webhook-unconfigured.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",
