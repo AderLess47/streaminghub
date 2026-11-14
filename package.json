@@ -51,7 +51,8 @@
     "test:change-password": "node scripts/run-change-password-tests.mjs",
     "test:support-tickets": "node scripts/run-support-tickets-tests.mjs",
     "test:withdrawal-cancellation": "node scripts/run-withdrawal-cancellation-tests.mjs",
-    "test:contact-form": "node scripts/run-contact-form-tests.mjs"
+    "test:contact-form": "node scripts/run-contact-form-tests.mjs",
+    "test:admin-contacts": "node scripts/run-admin-contacts-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

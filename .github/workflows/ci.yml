@@ -142,6 +142,10 @@ jobs:
       - name: Contact form tests
         run: npm run test:contact-form
 
+      # Admin-Posteingang fuer Kontaktanfragen.
+      - name: Admin contact inbox tests
+        run: npm run test:admin-contacts
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
