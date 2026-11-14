@@ -2,7 +2,7 @@ import { apiError, clientIp, json, parseBody, tooManyRequests } from "@/lib/api"
 import {
   AMAZON_ERROR_MESSAGES,
   decideReceiptApplication,
-  isReplayable,
+  isReplayableReceipt,
   receiptState,
   verifyReceipt,
 } from "@/lib/amazon-iap";
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   if (known && known.user_id !== auth.userId) {
     return apiError("conflict", "Dieser Kaufbeleg ist bereits mit einem anderen Konto verknüpft.");
   }
-  if (known && isReplayable(known.verified_at)) {
+  if (known && isReplayableReceipt(known)) {
     return json({ ok: true, subscription: subscriptionView(auth.userId) });
   }
 
