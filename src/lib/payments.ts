@@ -1,7 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { get, nowIso, run } from "./db";
 import { env, isBillingConfigured } from "./env";
-import { paymentFailedMail, sendMail } from "./mail";
+import { paymentFailedMail, paymentRecoveredMail, sendMail } from "./mail";
 
 export const PREMIUM_PRICE_EUR = 2.49;
 export const PREMIUM_PLAN_ID = "premium_monthly";
@@ -361,6 +361,9 @@ export async function applyStripeEvent(event: StripeEvent) {
       const lines = object.lines as
         | { data?: { period?: { end?: number } }[] }
         | undefined;
+      // Nur eine Nachzahlung verdient eine Bestätigung; die monatliche
+      // Verlängerung läuft ohne Mail weiter.
+      const wasPastDue = effectiveStatus(getSubscription(userId)) === "past_due";
       status = "active";
       patchSubscription(userId, {
         status,
@@ -368,6 +371,16 @@ export async function applyStripeEvent(event: StripeEvent) {
         periodEnd: isoFromSeconds(lines?.data?.[0]?.period?.end) ?? undefined,
         cancelAtPeriodEnd: false,
       });
+      if (wasPastDue) {
+        const user = userContact(userId);
+        if (user) {
+          await sendMail({
+            to: user.email,
+            ...paymentRecoveredMail({ name: user.display_name, locale: user.locale }),
+            kind: "subscription",
+          });
+        }
+      }
       break;
     }
     case "invoice.payment_failed": {
@@ -378,10 +391,7 @@ export async function applyStripeEvent(event: StripeEvent) {
       });
       // Ohne Mail merkt der Kunde den Ausfall erst, wenn Premium-Funktionen
       // fehlen. Der Status steht zu diesem Zeitpunkt schon auf past_due.
-      const user = get<{ email: string; display_name: string; locale: string }>(
-        `SELECT email, display_name, locale FROM users WHERE id = ?`,
-        userId,
-      );
+      const user = userContact(userId);
       if (user) {
         await sendMail({
           to: user.email,
@@ -397,6 +407,13 @@ export async function applyStripeEvent(event: StripeEvent) {
 
   run(`UPDATE subscription_events SET user_id = ? WHERE provider_event_id = ?`, userId, event.id);
   return { handled: true, duplicate: false as const, status };
+}
+
+function userContact(userId: string) {
+  return get<{ email: string; display_name: string; locale: string }>(
+    `SELECT email, display_name, locale FROM users WHERE id = ?`,
+    userId,
+  );
 }
 
 function findUserByCustomerId(customerId: string | undefined) {
