@@ -102,6 +102,10 @@ jobs:
       - name: Password reset flow tests
         run: npm run test:password-reset
 
+      # E-Mail-Verifizierung: Registrierung, Link, erneuter Versand, Login.
+      - name: Email verification flow tests
+        run: npm run test:email-verification
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
