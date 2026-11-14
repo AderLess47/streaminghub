@@ -8,6 +8,7 @@ export type MailKind =
   | "contact_message"
   | "ticket_update"
   | "contract_request"
+  | "subscription"
   | "system";
 
 type QueuedMail = {
@@ -345,6 +346,23 @@ export function contractRequestNotice(input: {
   return {
     subject: `[${title}] ${input.reference}`.slice(0, 160),
     text: `Neue Erklärung über streaminghub.org\n\nArt: ${title}\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nStatus: ${input.status}\nName: ${input.name || "-"}\nE-Mail: ${input.email}\nHinweis: ${input.note ?? "-"}\nIP: ${input.ip}`,
+  };
+}
+
+/**
+ * Hinweis bei fehlgeschlagener Abbuchung. Der Status steht schon auf past_due,
+ * Premium ruht also; die Mail nennt Zahlungsmethode und den Weg zum Konto.
+ */
+export function paymentFailedMail(input: { name: string; locale: string }): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Zahlung fehlgeschlagen – bitte Zahlungsmethode prüfen"
+      : "Payment failed – please check your payment method",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndie letzte Zahlung für dein StreamingHub-Premium-Abo ist fehlgeschlagen. Premium ruht deshalb vorerst.\n\nBitte prüfe die Zahlungsmethode, die du beim Abschluss hinterlegt hast, oder schreib dem Support – wir helfen beim Aktualisieren. Sobald die Zahlung erfolgreich ist, wird Premium automatisch wieder freigeschaltet.\n\nDein Abo und den aktuellen Status siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nthe last payment for your StreamingHub Premium subscription failed, so Premium is paused for now.\n\nPlease check the payment method you used at checkout or contact support – we can help you update it. Premium is switched back on automatically once the payment succeeds.\n\nYou can see your subscription and its current status here:\n${link}${signature(false)}`,
   };
 }
 
