@@ -34,7 +34,8 @@
     "stripe:live-test": "node scripts/stripe-live-test.mjs",
     "test:apple-iap": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/apple-iap.test.ts src/lib/apple-subscriptions.test.ts",
     "test:subscription-mails": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/subscription-mails.test.ts",
-    "test:api": "node scripts/run-api-tests.mjs"
+    "test:api": "node scripts/run-api-tests.mjs",
+    "test:store-api": "node scripts/run-store-api-tests.mjs"
   },
   "dependencies": {
     "next": "^15.5.7",

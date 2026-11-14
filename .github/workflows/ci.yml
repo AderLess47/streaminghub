@@ -74,6 +74,10 @@ jobs:
       - name: API route tests
         run: npm run test:api
 
+      # Store-Refresh-Routen mit Auslaufmail, Wiederkauf und Dedupe.
+      - name: Store refresh route tests
+        run: npm run test:store-api
+
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
   # Die SwiftUI-Oberflaeche selbst braucht Xcode und wird hier nicht gebaut.
