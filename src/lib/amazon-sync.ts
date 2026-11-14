@@ -75,6 +75,7 @@ export async function syncAmazonReceipts(options: SyncOptions): Promise<SyncResu
           userId: row.user_id,
           store: "amazon",
           subscriptionKey: `amazon:${row.receipt_id}`,
+          periodEnd: row.renewal_date ?? row.cancel_date,
         });
         result.canceled += 1;
         continue;
@@ -96,6 +97,7 @@ export async function syncAmazonReceipts(options: SyncOptions): Promise<SyncResu
         userId: row.user_id,
         store: "amazon",
         subscriptionKey: `amazon:${row.receipt_id}`,
+        periodEnd: state.currentPeriodEnd,
       });
       result.canceled += 1;
     } else {

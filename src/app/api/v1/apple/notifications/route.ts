@@ -96,6 +96,10 @@ export async function POST(request: Request) {
         userId: outcome.userId,
         store: "apple",
         subscriptionKey: `apple:${receipt.receipt_id}`,
+        periodEnd:
+          notification.transaction.expiresDate === null
+            ? receipt.renewal_date
+            : new Date(notification.transaction.expiresDate).toISOString(),
       });
     }
   }

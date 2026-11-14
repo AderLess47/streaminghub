@@ -468,16 +468,19 @@ function claimMailMarker(userId: string, key: string) {
 /**
  * Abschlussmail für ein Store-Abo. Wird von den Apple- und Amazon-Pfaden nach
  * dem Statuswechsel gerufen; die Markierung verhindert Doppelmails, wenn
- * Notification und Pull-Refresh denselben Ablauf feststellen.
+ * Notification und Pull-Refresh denselben Ablauf feststellen. Der Zeitraum
+ * gehört zum Schlüssel: Nach einem Wiederkauf endet derselbe Beleg später
+ * erneut, und dann soll es wieder eine Mail geben.
  */
 export async function notifyStoreSubscriptionEnded(input: {
   userId: string;
   store: "apple" | "amazon";
   subscriptionKey: string;
+  periodEnd?: string | null;
 }) {
   const user = userContact(input.userId);
   if (!user) return false;
-  const key = `mail:store-subscription-ended:${input.subscriptionKey}`;
+  const key = `mail:store-subscription-ended:${input.subscriptionKey}:${input.periodEnd ?? "unknown"}`;
   if (!claimMailMarker(input.userId, key)) return false;
   await sendMail({
     to: user.email,
