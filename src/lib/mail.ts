@@ -383,6 +383,23 @@ export function paymentFailedSupportNotice(input: {
   };
 }
 
+/**
+ * Abschlussmail, wenn ein Abo nach fehlgeschlagenen Zahlungen ausläuft. Die
+ * normale Kündigung bekommt ihre eigene Bestätigung.
+ */
+export function subscriptionEndedMail(input: { name: string; locale: string }): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Dein Premium-Abo ist ausgelaufen – Zahlung fehlgeschlagen"
+      : "Your Premium subscription has ended – payment failed",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo ist ausgelaufen, weil die offene Zahlung nicht eingegangen ist. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Du kannst Premium jederzeit neu abschließen:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription has ended because the outstanding payment did not arrive. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. You can subscribe to Premium again at any time:\n${link}${signature(false)}`,
+  };
+}
+
 /** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
 export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
   const de = input.locale !== "en";
