@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   if (
     outcome.handled &&
-    outcome.status === "canceled" &&
+    (outcome.status === "canceled" || outcome.status === "expired") &&
     notification.notificationType === "EXPIRED"
   ) {
     const receipt = getLatestAppleReceipt(outcome.userId);

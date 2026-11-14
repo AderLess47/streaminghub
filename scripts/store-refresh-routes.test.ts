@@ -54,6 +54,8 @@ const { POST: amazonRefresh } = await import("@/app/api/v1/amazon/refresh/route"
 const { POST: amazonPurchase } = await import("@/app/api/v1/amazon/purchase/route");
 const { applyVerifiedTransaction } = await import("@/lib/apple-subscriptions");
 const { transactionState } = await import("@/lib/apple-iap");
+const { POST: appleNotifications } = await import("@/app/api/v1/apple/notifications/route");
+const { buildNotification } = await import("@/lib/__fixtures__/apple/jws.ts");
 import type { AppleTransaction } from "@/lib/apple-iap";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -236,6 +238,45 @@ await check("apple/refresh: Wiederkauf mailt nichts, naechster Ablauf wieder", a
 
   await appleRefresh(call("/api/v1/apple/refresh", token));
   assert.equal(mailCount(), 2, "auch der zweite Ablauf wird dedupliziert");
+});
+
+await check("apple/notifications: EXPIRED mailt einmal, Refresh dedupliziert", async () => {
+  resetDb();
+  const expiredEnd = Date.now() - 3_600_000;
+  seedApple("apple-note", new Date(expiredEnd).toISOString());
+  const token = tokenFor("apple-note");
+
+  const signedPayload = buildNotification({
+    notificationType: "EXPIRED",
+    transaction: {
+      originalTransactionId: "orig-apple-note",
+      expiresDate: expiredEnd,
+    },
+  });
+
+  const response = await appleNotifications(
+    call("/api/v1/apple/notifications", token, { signedPayload }),
+  );
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { handled: boolean; status?: string };
+  assert.equal(body.handled, true);
+  assert.equal(mailCount(), 1);
+
+  // Der Pull-Refresh stellt denselben Ablauf fest und darf nicht erneut mailen.
+  const refreshed = await appleRefresh(call("/api/v1/apple/refresh", token));
+  assert.equal(refreshed.status, 200);
+  assert.equal(mailCount(), 1, "Notification und Refresh teilen sich die Markierung");
+
+  // Dieselbe Transaktion als zweite Meldung (neue UUID): weiterhin eine Mail.
+  const duplicate = buildNotification({
+    notificationType: "EXPIRED",
+    transaction: {
+      originalTransactionId: "orig-apple-note",
+      expiresDate: expiredEnd,
+    },
+  });
+  await appleNotifications(call("/api/v1/apple/notifications", token, { signedPayload: duplicate }));
+  assert.equal(mailCount(), 1);
 });
 
 /* ----------------------------- Amazon Refresh ----------------------------- */
