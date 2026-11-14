@@ -79,7 +79,6 @@ export default async function SettingsPage() {
 
         <section className="card p-5">
           <h2 className="text-base font-semibold">{t.dashboard.settings.privacyTitle}</h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.settings.exportNote}</p>
           <div className="mt-4 grid gap-3">
             <DataRequestForm
               action={dataRequestAction}
@@ -110,7 +109,6 @@ export default async function SettingsPage() {
             />
           </div>
           <p className="mt-3 text-[0.68rem] leading-relaxed text-muted">
-            {t.dashboard.settings.deleteNote}{" "}
             <Link href="/privacy" className="link">
               {t.footer.privacy}
             </Link>
