@@ -47,6 +47,7 @@ export async function POST(request: Request) {
         userId: auth.userId,
         store: "amazon",
         subscriptionKey: `amazon:${row.receipt_id}`,
+        periodEnd: row.renewal_date ?? row.cancel_date,
       });
       return json({ ok: true, subscription: subscriptionView(auth.userId) });
     }
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
       userId: auth.userId,
       store: "amazon",
       subscriptionKey: `amazon:${row.receipt_id}`,
+      periodEnd: state.currentPeriodEnd,
     });
   }
 

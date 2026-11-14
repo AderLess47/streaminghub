@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       userId: auth.userId,
       store: "apple",
       subscriptionKey: `apple:${receipt.receipt_id}`,
+      periodEnd: receipt.renewal_date,
     });
   }
   return json({ ok: true, subscription: appleSubscriptionView(auth.userId) });
