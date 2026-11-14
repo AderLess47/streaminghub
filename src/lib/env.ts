@@ -73,7 +73,11 @@ export const env = {
     Math.max(Number(process.env.CONTACT_RETENTION_DAYS ?? 730) || 730, 30),
     3650,
   ),
-
+  /** Sicherheitsprotokoll; die Datenschutzerklärung verspricht 90 Tage. */
+  auditRetentionDays: Math.min(
+    Math.max(Number(process.env.AUDIT_RETENTION_DAYS ?? 90) || 90, 90),
+    3650,
+  ),
 } as const;
 
 export const isEmailConfigured = () =>

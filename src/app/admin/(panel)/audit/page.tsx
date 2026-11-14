@@ -1,6 +1,7 @@
 import { ScrollRegion } from "@/components/scroll-region";
 import { PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
+import { purgeExpiredAuditLog } from "@/lib/audit";
 import { all } from "@/lib/db";
 import { requireStaff } from "@/lib/session";
 
@@ -16,6 +17,7 @@ function breakableMeta(meta: string) {
 
 export default async function AdminAuditPage() {
   await requireStaff();
+  purgeExpiredAuditLog();
   const { t, locale } = await getI18n();
 
   const entries = all<{

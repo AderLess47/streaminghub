@@ -24,6 +24,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/backup-db.mjs ./scripts/backup-db.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/contact-retention.mjs ./scripts/contact-retention.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/audit-retention.mjs ./scripts/audit-retention.mjs
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 USER nextjs

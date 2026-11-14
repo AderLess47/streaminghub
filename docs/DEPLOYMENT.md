@@ -273,6 +273,17 @@ which the admin inbox displays.
 | `RETENTION_INITIAL_DELAY_SECONDS` | `180` |
 | `RETENTION_INTERVAL_SECONDS` | `86400` |
 
+The security log (`audit_log`) follows the 90 days promised by the privacy
+policy: `scripts/audit-retention.mjs` runs in the same daily loop and deletes
+older rows, and opening **Admin → Sicherheitsprotokoll** purges as well. Each
+deletion is recorded as `audit.purged` with the number of removed rows. The
+period can be raised for an ongoing incident via `AUDIT_RETENTION_DAYS`
+(minimum 90, maximum 3650).
+
+| Variable | Default |
+| --- | --- |
+| `AUDIT_RETENTION_DAYS` | `90` |
+
 Run a backup manually in the container:
 
 ```bash
