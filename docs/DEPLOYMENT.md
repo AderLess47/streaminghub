@@ -263,7 +263,9 @@ months, clamped to 30–3650). `docker-entrypoint.sh` runs
 next to the backup loop; the same purge also runs when the admin inbox is opened
 and when a new contact request arrives. The scheduled run is independent of
 traffic, and deletions are audited as `contact_messages.purged`. Every run
-prints a JSON line (`deleted`, `retentionDays`, `cutoff`) to the container log.
+prints a JSON line (`deleted`, `retentionDays`, `cutoff`) to the container log
+and stores the last run under the `settings` key `contact_retention_last_run`,
+which the admin inbox displays.
 
 | Variable | Default |
 | --- | --- |

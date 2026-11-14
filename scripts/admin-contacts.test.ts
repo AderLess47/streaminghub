@@ -21,6 +21,7 @@ const { createSession } = await import("@/lib/session");
 const {
   CONTACT_RETENTION_DAYS,
   contactMessageStats,
+  lastContactRetentionRun,
   listContactMessages,
   purgeExpiredContactMessages,
 } = await import("@/lib/contact-messages");
@@ -217,11 +218,18 @@ await check("Taeglicher Container-Lauf loescht abgelaufene Anfragen", async () =
   const audit = latestAudit();
   assert.equal(audit?.action, "contact_messages.purged");
   assert.deepEqual(JSON.parse(audit?.meta ?? "{}").deleted, 1);
+
+  const lastRun = lastContactRetentionRun();
+  assert.equal(lastRun?.deleted, 1);
+  assert.equal(lastRun?.retentionDays, 730);
+  assert.equal(lastRun?.source, "cron");
+  assert.ok(Math.abs(Date.parse(lastRun?.at ?? "") - Date.now()) < 10_000);
 });
 
 await check("Taeglicher Lauf meldet beim zweiten Mal null", async () => {
   const output = runRetentionScript();
   assert.equal(output.deleted, 0);
+  assert.equal(lastContactRetentionRun()?.deleted, 0);
 });
 
 await check("Eigene Frist wird beachtet", async () => {

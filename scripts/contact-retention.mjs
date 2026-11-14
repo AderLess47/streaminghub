@@ -46,6 +46,15 @@ try {
     );
   }
 
+  // Für den Admin-Posteingang: auch Läufe ohne Löschung festhalten.
+  db.prepare(
+    `INSERT INTO settings (key, value, updated_at) VALUES ('contact_retention_last_run', ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  ).run(
+    JSON.stringify({ at: now.toISOString(), deleted, retentionDays, source: "cron" }),
+    now.toISOString(),
+  );
+
   console.log(
     JSON.stringify({ ok: true, deleted, retentionDays, cutoff, database: dbPath }),
   );
