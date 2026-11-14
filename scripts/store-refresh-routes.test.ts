@@ -356,6 +356,54 @@ await check("apple/notifications: EXPIRED nach REFUND mailt nicht erneut", async
   assert.equal(mailCount(), 1, "die Erstattung deckt den Ablauf derselben Periode ab");
 });
 
+await check("apple: Wiederkauf nach REFUND schaltet frei und mailt erst beim naechsten Ablauf", async () => {
+  resetDb();
+  const refundedPeriod = Date.now() - 86_400_000;
+  seedApple("apple-after-refund", new Date(refundedPeriod).toISOString());
+  const token = tokenFor("apple-after-refund");
+
+  await appleNotifications(
+    call("/api/v1/apple/notifications", token, {
+      signedPayload: buildNotification({
+        notificationType: "REFUND",
+        transaction: {
+          originalTransactionId: "orig-apple-after-refund",
+          expiresDate: refundedPeriod,
+          revocationDate: refundedPeriod - 3_600_000,
+        },
+      }),
+    }),
+  );
+  assert.equal(mailCount(), 1);
+
+  // Wiederkauf nach der Erstattung: neuer Zeitraum, Premium wieder aktiv.
+  const purchased = appleTransaction("apple-after-refund", future);
+  applyVerifiedTransaction({
+    userId: "apple-after-refund",
+    transaction: purchased,
+    state: transactionState(purchased),
+  });
+  const view = (await (
+    await appleRefresh(call("/api/v1/apple/refresh", token))
+  ).json()) as { subscription: { premiumActive: boolean } };
+  assert.equal(view.subscription.premiumActive, true);
+  assert.equal(mailCount(), 1, "der Wiederkauf darf keine Mail auslösen");
+
+  // Naechster Ablauf: die alte Erstattungsmarkierung blockiert ihn nicht.
+  const nextEnd = new Date(Date.now() - 60_000).toISOString();
+  run(`UPDATE iap_receipts SET status = 'active', renewal_date = ?, verified_at = ? WHERE receipt_id = ?`,
+    nextEnd, nowIso(), "orig-apple-after-refund");
+  run(`UPDATE subscriptions SET status = 'active', current_period_end = ? WHERE user_id = ?`,
+    nextEnd, "apple-after-refund");
+
+  await appleRefresh(call("/api/v1/apple/refresh", token));
+  assert.equal(mailCount(), 2, "der neue Ablauf braucht eine eigene Mail");
+  const subjects = all<{ subject: string }>(`SELECT subject FROM outbox_emails ORDER BY created_at`).map(
+    (row) => row.subject,
+  );
+  assert.match(subjects[1], /ausgelaufen/);
+});
+
 await check("apple/notifications: REFUND_REVERSED mailt nicht", async () => {
   resetDb();
   seedApple("apple-reversed", new Date(future).toISOString());
