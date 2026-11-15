@@ -4,11 +4,11 @@
  * Do not edit by hand.
  */
 export const androidRelease = {
-  version: "1.4.0",
-  versionCode: 11,
-  fileName: "streaminghub-1.4.0.apk",
-  path: "https://downloads.streaminghub.org/streaminghub-1.4.0.apk?v=8c707ce0760f73daf9de14ebcf6ded66d244b9535a11f770b5e7afa5926a1cdf",
+  version: "1.5.0",
+  versionCode: 12,
+  fileName: "streaminghub-1.5.0.apk",
+  path: "https://downloads.streaminghub.org/streaminghub-1.5.0.apk?v=ea3d43b0bb960c830d08ee181f802915792388f495a7cae093ef5cefa91db96a",
   sizeLabel: "14 MB",
-  sizeBytes: 14331194,
-  sha256: "8c707ce0760f73daf9de14ebcf6ded66d244b9535a11f770b5e7afa5926a1cdf",
+  sizeBytes: 14347681,
+  sha256: "ea3d43b0bb960c830d08ee181f802915792388f495a7cae093ef5cefa91db96a",
 } as const;
