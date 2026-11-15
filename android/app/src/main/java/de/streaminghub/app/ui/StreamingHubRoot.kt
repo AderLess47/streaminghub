@@ -31,6 +31,7 @@ private sealed interface Screen {
 fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
     val state = viewModel.uiState
+    val categories by viewModel.categories.collectAsState()
     val accountState = viewModel.accountState
     val epgState = viewModel.epgState
     val lowSpecMode = viewModel.lowSpecMode
@@ -81,6 +82,10 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
     when (val current = screen) {
         Screen.Home -> HomeScreen(
             state = state,
+            categories = categories,
+            channelPages = { category, kind, query ->
+                viewModel.channelPages(category, kind, query, lowSpecMode)
+            },
             onPlay = { channel -> screen = Screen.Player(channel) },
             onToggleFavorite = viewModel::toggleFavorite,
             onAddPlaylist = { showAddPlaylist = true },

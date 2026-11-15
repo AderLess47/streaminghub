@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
 import de.streaminghub.app.billing.BillingReceipt
 import de.streaminghub.app.billing.PremiumBillingProvider
 import de.streaminghub.app.billing.PremiumBillingState
@@ -32,10 +33,14 @@ import de.streaminghub.app.data.StreamingHubApiException
 import de.streaminghub.app.data.XmltvParser
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.EpgProgramme
+import de.streaminghub.app.model.MediaKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -115,6 +120,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = PlaylistRepository(application)
     private val playlistCache = PlaylistCache(application)
+
+    val categories: StateFlow<List<String>> = repository.observeCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val epgRepository = EpgRepository(application)
     private val secureStore = SecureTokenStore(application)
     private val settingsRepository = SettingsRepository(application)
@@ -229,6 +237,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val source = uiState.sourceUrl ?: return
         importFromUrl(source)
     }
+
+    fun channelPages(
+        category: String?,
+        kind: MediaKind?,
+        query: String,
+        lowSpecMode: Boolean,
+    ): Flow<PagingData<Channel>> = repository.pagedChannels(
+        category = category,
+        kind = kind,
+        query = query,
+        pageSize = if (lowSpecMode) LOW_SPEC_PAGE_SIZE else PAGE_SIZE,
+    )
 
     fun removePlaylist() {
         playlistRefreshJob?.cancel()
@@ -978,5 +998,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val MAX_PLAYLIST_CHARS = 50_000_000
         const val MAX_EPG_CHARS = 50_000_000
         const val CACHE_REFRESH_AFTER_MS = 15 * 60 * 1_000L
+        const val PAGE_SIZE = 80
+        const val LOW_SPEC_PAGE_SIZE = 40
     }
 }
