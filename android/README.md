@@ -23,6 +23,7 @@ Eine APK, ein gemeinsames Compose-Design, Media3/ExoPlayer-Wiedergabe.
 - Low-Spec-Modus mit kürzeren Listen, ohne Logo-Vorladen und kleineren Wiedergabepuffern
 - Dauerhafter Playlist-Cache: letzter Stand beim Start sofort verfügbar, Hintergrundaktualisierung nach 15 Minuten
 - Diagnose-Protokoll für Fehler und Hardware: ansehen, teilen, löschen (Einstellungen → Diagnose)
+- In-App-Update für die direkt verteilte APK: Prüfung, Download mit SHA-256-Prüfung und System-Installer (nur `direct`)
 
 ## Demo-Modus
 
@@ -42,6 +43,24 @@ Wiedergabedaten bleiben lokal. Eine vom Admin hinterlegte M3U-URL wird beim
 Kontoabruf empfangen und die Playlist anschließend lokal geladen. Zahlungen,
 VPN/Proxy, Profile und weitere Sprachpakete sind noch nicht Teil dieser
 Version.
+
+## In-App-Update (nur `direct`)
+
+Die direkt verteilte APK prüft beim Start `https://streaminghub.org/api/release`
+und bietet eine neuere Version in *Einstellungen → App-Update* sowie als Hinweis
+auf dem Startbildschirm an. Der Download läuft in den App-Cache, wird gegen die
+vom Server genannte SHA-256-Summe geprüft und erst dann an den Android-Installer
+übergeben. Es gibt **keine stille Installation**: Android zeigt die übliche
+Installationsabfrage, und beim ersten Mal muss die Installation aus dieser
+Quelle erlaubt werden. Playlist, Favoriten und Einstellungen bleiben beim
+Update erhalten, weil dieselbe Anwendungs-ID und derselbe Signaturschlüssel
+verwendet werden.
+
+Die Builds für Amazon und Google Play zeigen den Bereich nicht
+(`SELF_UPDATE=false`); dort übernehmen die Stores die Updates. Die Berechtigung
+`REQUEST_INSTALL_PACKAGES` und der FileProvider stehen deshalb nur im
+`direct`-Manifest. Ein Update von 1.5.0 auf 1.6.0 muss einmal manuell installiert
+werden – erst ab 1.6.0 ist der Updater enthalten.
 
 ## Diagnose
 
@@ -95,6 +114,9 @@ bestehende Installationen nicht aktualisiert werden.
 - **Android TV / Fire TV:** APK per Downloader-App oder Sideload übertragen,
   Installation aus unbekannten Quellen für die verwendete Datei-App erlauben.
 - **Smartphone / Tablet:** APK öffnen und Installation bestätigen.
+- Ab 1.6.0 kann die direkte APK weitere Updates selbst laden und den Installer
+  öffnen; die Freigabe „Unbekannte Apps installieren“ gilt dann für StreamingHub
+  und bleibt eine Systemeinstellung.
 
 Die App benötigt Internetzugriff. HTTP-Quellen sind aktiviert, damit auch
 ältere IPTV-Anbieter funktionieren.

@@ -29,6 +29,8 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
 | Erinnerungen an Sendungen | Systembenachrichtigung (`AlarmManager`) | nur in der laufenden App (Vega OS bietet Apps keinen Alarm) | echte lokale Benachrichtigung (`UNUserNotificationCenter`) |
 | HLS-Wiedergabe | Media3/ExoPlayer | MSE über Amazons Shaka-Player 4.8.5; Paket wird per `npm run setup:shaka` eingesetzt (proprietär, nicht im Repo). Ohne Paket baut die App, zeigt für HLS aber einen Hinweis | AVPlayer, ohne Zusatzpaket |
 | Diagnose-Protokoll für Fehler und Hardware | ja (neu) | ja (neu) | ja (neu) |
+| Protokoll direkt teilen | ja (Android-Share-Sheet) | nein – Anzeige in der App | ja auf iPhone/iPad/Mac; tvOS nur Anzeige |
+| In-App-Update | ja, nur direkte APK (`direct`); Amazon/Play über den Store | Store-Update | App Store |
 | Geräteklassen-Layout | vier Profile (TV, Phone, Tablet, Desktop) | TV-Fokus, Karten und Abstände über Layout-Helfer | adaptive Größenklassen, TV-Fokus-Stil |
 
 ## Was bewusst anders bleibt
@@ -76,6 +78,11 @@ lassen.
 | Android | `files/diagnostics/diagnostics.log` im privaten App-Verzeichnis |
 | Vega OS | AsyncStorage-Schlüssel `streaminghub.diagnostics` (JSON, gleiche Felder) |
 | Apple | `Application Support/StreamingHub/diagnostics.log` |
+
+**Abruf für den Support:** Android und Apple haben einen Teilen-Knopf in den
+Einstellungen; das Protokoll verlässt das Gerät nur, wenn der Nutzer ihn
+auslöst. Vega OS zeigt das Protokoll in der App an. Es gibt keinen automatischen
+Upload und keinen Server-Endpunkt, der Geräteprotokolle sammelt.
 
 **Grenzen und Datenschutz:**
 

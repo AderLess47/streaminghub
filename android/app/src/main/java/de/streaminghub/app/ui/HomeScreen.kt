@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
@@ -93,6 +94,8 @@ fun HomeScreen(
     demoMode: Boolean,
     onLoadDemo: () -> Unit,
     onExitDemo: () -> Unit,
+    updateVersion: String? = null,
+    onOpenUpdate: () -> Unit = {},
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("Alle") }
@@ -172,6 +175,12 @@ fun HomeScreen(
                     onOpenGuide = onOpenGuide,
                     onOpenSettings = onOpenSettings,
                 )
+            }
+
+            if (updateVersion != null) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    UpdateBanner(version = updateVersion, onOpen = onOpenUpdate)
+                }
             }
 
             if (demoMode) {
@@ -283,6 +292,41 @@ fun HomeScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun UpdateBanner(version: String, onOpen: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Cyan.copy(alpha = 0.08f))
+            .border(1.dp, Cyan.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Download,
+            contentDescription = null,
+            tint = Cyan,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Update verfügbar",
+                color = Foreground,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Text(
+                text = "Version $version ist bereit – vor der Installation geprüft.",
+                color = Muted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        SecondaryAction(text = "Ansehen", onClick = onOpen)
     }
 }
 

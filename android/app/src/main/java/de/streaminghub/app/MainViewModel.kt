@@ -2,6 +2,8 @@ package de.streaminghub.app
 
 import android.app.Application
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +15,8 @@ import de.streaminghub.app.billing.PremiumBillingState
 import de.streaminghub.app.billing.PremiumPurchaseController
 import de.streaminghub.app.billing.SubmissionResult
 import de.streaminghub.app.data.AccountInfo
+import de.streaminghub.app.data.AppUpdateInfo
+import de.streaminghub.app.data.AppUpdater
 import de.streaminghub.app.data.DemoLibrary
 import de.streaminghub.app.data.DeviceIdentity
 import de.streaminghub.app.data.EpgRepository
@@ -97,6 +101,15 @@ data class EpgUiState(
     val error: String? = null,
 )
 
+data class UpdateUiState(
+    val checking: Boolean = false,
+    val checked: Boolean = false,
+    val available: AppUpdateInfo? = null,
+    val downloadPercent: Int? = null,
+    val readyToInstall: Boolean = false,
+    val error: String? = null,
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = PlaylistRepository(application)
@@ -104,6 +117,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val secureStore = SecureTokenStore(application)
     private val settingsRepository = SettingsRepository(application)
     private val api = StreamingHubApi()
+    private val updater by lazy { AppUpdater(application) }
+    private var downloadedUpdate: java.io.File? = null
 
     private val premiumController by lazy {
         PremiumPurchaseController(
@@ -122,6 +137,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     var epgState by mutableStateOf(EpgUiState())
+        private set
+
+    var updateState by mutableStateOf(UpdateUiState())
         private set
 
     var lowSpecMode by mutableStateOf(settingsRepository.isLowSpecMode())
@@ -151,6 +169,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         refreshCachedPlaylistIfStale()
+
+        if (BuildConfig.SELF_UPDATE) checkForUpdate(silent = true)
     }
 
     fun importFromUrl(rawUrl: String) {
@@ -264,6 +284,116 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateLowSpecMode(enabled: Boolean) {
         lowSpecMode = enabled
         settingsRepository.saveLowSpecMode(enabled)
+    }
+
+    // ---- In-App-Update (nur direkte Sideload-APK) --------------------------------
+
+    fun checkForUpdate(silent: Boolean = false) {
+        if (!BuildConfig.SELF_UPDATE) return
+        if (updateState.checking || updateState.downloadPercent != null) return
+
+        updateState = updateState.copy(checking = true, error = null)
+        viewModelScope.launch {
+            val result = runCatching { updater.check(BuildConfig.VERSION_CODE) }
+            updateState = result.fold(
+                onSuccess = { info ->
+                    if (info != null) {
+                        AppLog.info("update", "Version ${info.version} (${info.versionCode}) verfügbar.")
+                    }
+                    updateState.copy(
+                        checking = false,
+                        checked = true,
+                        available = info,
+                        error = null,
+                    )
+                },
+                onFailure = { throwable ->
+                    AppLog.error("update", throwable)
+                    updateState.copy(
+                        checking = false,
+                        checked = true,
+                        error = if (silent) {
+                            null
+                        } else {
+                            throwable.message?.takeIf { it.isNotBlank() }
+                                ?: "Die Update-Prüfung ist fehlgeschlagen."
+                        },
+                    )
+                },
+            )
+        }
+    }
+
+    fun downloadUpdate() {
+        val info = updateState.available ?: return
+        if (updateState.downloadPercent != null) return
+
+        updateState = updateState.copy(downloadPercent = 0, error = null)
+        viewModelScope.launch {
+            val result = runCatching {
+                updater.download(info) { percent ->
+                    Handler(Looper.getMainLooper()).post {
+                        if (updateState.downloadPercent != null) {
+                            updateState = updateState.copy(downloadPercent = percent)
+                        }
+                    }
+                }
+            }
+            result.onSuccess { file ->
+                downloadedUpdate = file
+                updateState = updateState.copy(
+                    downloadPercent = null,
+                    readyToInstall = true,
+                    error = null,
+                )
+            }.onFailure { throwable ->
+                AppLog.error("update", throwable)
+                downloadedUpdate = null
+                updateState = updateState.copy(
+                    downloadPercent = null,
+                    readyToInstall = false,
+                    error = throwable.message?.takeIf { it.isNotBlank() }
+                        ?: "Das Update konnte nicht geladen werden.",
+                )
+            }
+        }
+    }
+
+    fun installUpdate() {
+        if (!BuildConfig.SELF_UPDATE) return
+        val file = downloadedUpdate
+        if (file == null || !file.isFile) {
+            updateState = updateState.copy(
+                readyToInstall = false,
+                error = "Bitte lade das Update erneut herunter.",
+            )
+            return
+        }
+
+        if (!updater.canRequestInstall()) {
+            val opened = updater.openInstallPermissionSettings()
+            updateState = updateState.copy(
+                error = if (opened) {
+                    "Erlaube StreamingHub die Installation unbekannter Apps und tippe danach erneut auf „Installation öffnen“."
+                } else {
+                    "Die Installationsfreigabe konnte nicht geöffnet werden. Erlaube sie in den Systemeinstellungen unter „Unbekannte Apps“."
+                },
+            )
+            return
+        }
+
+        updater.install(file).onSuccess {
+            updateState = updateState.copy(error = null)
+        }.onFailure { throwable ->
+            AppLog.error("update", throwable)
+            updateState = updateState.copy(
+                error = "Die Installation konnte nicht geöffnet werden: ${throwable.message.orEmpty()}",
+            )
+        }
+    }
+
+    fun dismissUpdateError() {
+        updateState = updateState.copy(error = null)
     }
 
     fun toggleFavorite(channel: Channel) {

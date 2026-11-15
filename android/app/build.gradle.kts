@@ -21,8 +21,8 @@ android {
         applicationId = "de.streaminghub.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.5.0"
+        versionCode = 13
+        versionName = "1.6.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -40,6 +40,9 @@ android {
             dimension = "distribution"
             buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"web\"")
+            // Nur die direkt verteilte APK bringt ihren eigenen Updater mit;
+            // Amazon und Google Play aktualisieren über ihren Store.
+            buildConfigField("boolean", "SELF_UPDATE", "true")
         }
         create("amazon") {
             dimension = "distribution"
@@ -47,6 +50,7 @@ android {
             // settings screen shows the purchase card (see docs/IAP-AMAZON.md).
             buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"amazon\"")
+            buildConfigField("boolean", "SELF_UPDATE", "false")
         }
         create("play") {
             dimension = "distribution"
@@ -55,6 +59,7 @@ android {
             // noch nicht angebunden (siehe docs/IAP-GOOGLE-PLAY.md).
             buildConfigField("boolean", "PREMIUM_SALES", "false")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"play\"")
+            buildConfigField("boolean", "SELF_UPDATE", "false")
         }
     }
 
