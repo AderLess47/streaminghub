@@ -188,30 +188,24 @@ tvOS-Zweige sind deshalb nur gelesen, nicht kompiliert.
 
 ## HTTP-Quellen und App Transport Security
 
-Apple blockiert mit App Transport Security (ATS) unverschlüsselte Verbindungen.
-Die App setzt **keine** ATS-Ausnahme: `http://`-Playlists, `http://`-XMLTV-Dateien
-und `http://`-Streams werden auf iPhone, iPad, Mac und Apple TV nicht geladen.
-Statt eines generischen Netzwerkfehlers prüft `SourceAddressRules` die Adresse
-vor dem Download und nennt den Grund; scheitert die Wiedergabe an ATS, erklärt
-`PlaybackFailureText` das im Player.
+Nutzer-Playlists liegen häufig nur als `http://`-Adresse vor. Die App erlaubt sie
+wie Android und Vega, damit dieselbe Quelle auf allen Geräten funktioniert.
+Dafür setzt `project.yml` `NSAppTransportSecurity → NSAllowsArbitraryLoads` auf
+`true`; `SourceAddressRules` akzeptiert HTTP und HTTPS und lehnt nur fremde
+Schemata ab. Der Player kennzeichnet unverschlüsselte Wiedergabe weiterhin mit
+`PlaybackFailureText.isInsecure`.
 
-Entscheidung und Begründung:
+Das ist eine bewusste Abwägung:
 
-- ATS-Ausnahmen lassen sich nur pro Domain setzen (`NSExceptionDomains`). Die
-  Quellen kommen vom Nutzer, die Hosts sind beliebig – eine Domainliste ist
-  deshalb nicht möglich.
-- `NSAllowsArbitraryLoadsForMedia` würde AVPlayer erlauben, unverschlüsselte
-  Streams zu laden, **nicht** aber den Playlist- und XMLTV-Download über
-  `URLSession`. Das Problem bliebe an der wichtigsten Stelle bestehen.
-- `NSAllowsArbitraryLoads` schaltet ATS für den gesamten Netzwerkverkehr ab,
-  also auch für die App-API, und muss im App-Store-Review begründet werden.
-  Das ist für ein Konto- und Abo-Produkt der falsche Handel.
-- Die App-API selbst ist ohnehin auf HTTPS festgelegt; die Regel gilt damit
-  einheitlich für alles, was die App lädt.
+- ATS-Ausnahmen pro Domain (`NSExceptionDomains`) helfen nicht, weil die Hosts
+  von den Nutzern kommen und beliebig sind.
+- `NSAllowsArbitraryLoadsForMedia` deckt nur AVPlayer ab, nicht den Playlist- und
+  XMLTV-Download über `URLSession`.
+- Die App-API selbst bleibt auf HTTPS festgelegt; die Ausnahme betrifft nur die
+  vom Nutzer eingetragenen Quellen.
+- Im App-Store-Review ist die Ausnahme zu begründen: Die App liefert keine
+  Inhalte, sie lädt ausschließlich die vom Nutzer gewählten Quellen, und viele
+  Anbieter stellen keine HTTPS-Adresse bereit.
 
-Bewusste Folge: Anders als die Android- und die Vega-App (dort sind HTTP-Quellen
-mit sichtbarem Hinweis erlaubt) braucht es auf Apple eine HTTPS-Adresse. Wer
-HTTP-Anbieter unterstützen will, muss das Produkt entscheiden und dann
-`NSAllowsArbitraryLoadsForMedia` plus eine HTTPS-Pflicht für Playlists in
-`project.yml` eintragen – das braucht einen Gerätetest und eine Begründung im
-App-Store-Review.
+Wer die Ausnahme nicht will, kann sie in `project.yml` entfernen; dann müssen
+Playlist und EPG als Datei importiert oder über HTTPS bereitgestellt werden.

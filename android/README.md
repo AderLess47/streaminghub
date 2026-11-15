@@ -68,12 +68,21 @@ versioniert.
 cd android
 ./gradlew assembleDirectDebug
 ./gradlew assembleDirectRelease
+./gradlew assembleAmazonRelease
+./gradlew bundlePlayRelease
 ```
 
 Die Release-APK liegt danach unter
-`app/build/outputs/apk/direct/release/app-direct-release.apk`.
-The Amazon build is `./gradlew assembleAmazonRelease` (same code, no premium
-surface; see `docs/IAP-AMAZON.md`).
+`app/build/outputs/apk/direct/release/app-direct-release.apk`, das Play-Bundle
+unter `app/build/outputs/bundle/playRelease/app-play-release.aab`.
+
+Drei Vertriebswege, ein Code:
+
+- `direct` – Sideload und Website, Premium über den Web-Checkout.
+- `amazon` – Amazon Appstore, Premium über Amazon In-App Purchasing
+  (`docs/IAP-AMAZON.md`).
+- `play` – Google Play, **ohne** Kaufweg und ohne Web-Checkout-Link; Google Play
+  Billing ist noch nicht angebunden (`docs/IAP-GOOGLE-PLAY.md`).
 
 Für Updates muss derselbe Release-Schlüssel verwendet werden. Der Schlüssel
 liegt lokal unter `android/keystore/`, die Zugangsdaten in

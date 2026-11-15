@@ -21,8 +21,8 @@ android {
         applicationId = "de.streaminghub.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.4.0"
+        versionCode = 12
+        versionName = "1.5.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -47,6 +47,14 @@ android {
             // settings screen shows the purchase card (see docs/IAP-AMAZON.md).
             buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"amazon\"")
+        }
+        create("play") {
+            dimension = "distribution"
+            // Google Play erlaubt keinen Verweis auf den Web-Checkout. Der
+            // Play-Build zeigt deshalb keinen Kaufweg; Google Play Billing ist
+            // noch nicht angebunden (siehe docs/IAP-GOOGLE-PLAY.md).
+            buildConfigField("boolean", "PREMIUM_SALES", "false")
+            buildConfigField("String", "PREMIUM_CHANNEL", "\"play\"")
         }
     }
 

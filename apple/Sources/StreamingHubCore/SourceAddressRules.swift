@@ -2,13 +2,13 @@ import Foundation
 
 /// Prüft Quelladressen (M3U-Playlist, XMLTV) für die Apple-App.
 ///
-/// App Transport Security (ATS) blockiert unverschlüsselte Verbindungen; die
-/// App setzt bewusst keine pauschale Ausnahme (siehe `README.md`). Statt den
-/// Nutzer mit einem generischen Netzwerkfehler allein zu lassen, nennt die App
-/// vor dem Download den Grund und den Ausweg.
+/// Nutzer-Playlists liegen häufig nur als `http://`-Adresse vor. Die App erlaubt
+/// deshalb HTTP-Quellen wie Android und Vega auch; App Transport Security ist
+/// dafür in `project.yml` für diese App geöffnet. Der Player kennzeichnet
+/// unverschlüsselte Wiedergabe weiterhin sichtbar (`isInsecure`).
 public enum SourceAddressRules {
 
-    /// Nur HTTPS ist auf Apple-Plattformen zulässig.
+    /// Erlaubt HTTP und HTTPS; lehnt alles andere ab.
     public static func problem(for rawAddress: String) -> String? {
         let trimmed = rawAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -19,10 +19,8 @@ public enum SourceAddressRules {
         }
 
         switch scheme {
-        case "https":
+        case "https", "http":
             return nil
-        case "http":
-            return "Auf Apple-Geräten sind nur HTTPS-Adressen möglich: App Transport Security blockiert unverschlüsselte Downloads. Frage deinen Anbieter nach einer HTTPS-Adresse oder importiere die Datei lokal."
         default:
             return "Nur HTTP(S)-Adressen werden unterstützt."
         }

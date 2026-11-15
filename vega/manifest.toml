@@ -10,7 +10,7 @@ schema-version = 1
 [package]
 id = "de.streaminghub.vega"
 title = "StreamingHub"
-version = "1.0.0"
+version = "1.5.0"
 
 [os.version]
 target = "2.0"

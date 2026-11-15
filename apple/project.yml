@@ -25,14 +25,24 @@ targets:
     platform: [iOS, macOS, tvOS]
     sources:
       - path: StreamingHub
+        excludes:
+          - Info.plist
+    # Nutzer-Playlists sind oft nur über HTTP erreichbar. Android und Vega
+    # erlauben das bereits; für den App-Store-Review ist die Ausnahme zu
+    # begründen (eigene Quellen des Nutzers, kein Inhaltsangebot von StreamingHub).
+    info:
+      path: StreamingHub/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     dependencies:
       - package: StreamingHubCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.streaminghub.app
         PRODUCT_NAME: StreamingHub
-        MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.5.0"
+        CURRENT_PROJECT_VERSION: "12"
         SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: StreamingHub

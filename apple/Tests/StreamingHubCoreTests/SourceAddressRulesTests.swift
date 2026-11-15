@@ -10,11 +10,9 @@ final class SourceAddressRulesTests: XCTestCase {
         XCTAssertNil(SourceAddressRules.problem(for: "  https://anbieter.example/guide.xml  "))
     }
 
-    func testHttpIsRejectedWithAtsExplanation() {
-        let problem = SourceAddressRules.problem(for: "http://anbieter.example/liste.m3u")
-        XCTAssertNotNil(problem)
-        XCTAssertTrue(problem?.contains("App Transport Security") == true)
-        XCTAssertTrue(problem?.contains("HTTPS") == true)
+    func testHttpIsAcceptedForUserSources() {
+        XCTAssertNil(SourceAddressRules.problem(for: "http://anbieter.example/liste.m3u"))
+        XCTAssertNil(SourceAddressRules.problem(for: "  http://anbieter.example/guide.xml  "))
     }
 
     func testMissingOrUnsupportedSchemesAreNamed() {
