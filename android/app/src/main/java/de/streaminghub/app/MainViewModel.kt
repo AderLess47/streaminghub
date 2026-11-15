@@ -23,6 +23,7 @@ import de.streaminghub.app.data.EpgRepository
 import de.streaminghub.app.data.M3uParser
 import de.streaminghub.app.data.ManagedPlaylist
 import de.streaminghub.app.data.PairingCodeData
+import de.streaminghub.app.data.PlaylistCache
 import de.streaminghub.app.data.PlaylistRepository
 import de.streaminghub.app.data.SecureTokenStore
 import de.streaminghub.app.data.SettingsRepository
@@ -113,6 +114,7 @@ data class UpdateUiState(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = PlaylistRepository(application)
+    private val playlistCache = PlaylistCache(application)
     private val epgRepository = EpgRepository(application)
     private val secureStore = SecureTokenStore(application)
     private val settingsRepository = SettingsRepository(application)
@@ -230,6 +232,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
         repository.clearPlaylist()
+        playlistCache.clear()
         uiState = AppUiState()
     }
 
@@ -765,6 +768,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
         repository.clearPlaylist()
+        playlistCache.clear()
         uiState = AppUiState()
     }
 
@@ -845,7 +849,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (code !in 200..299) {
                 throw IOException(httpErrorMessage(code, "Playlist"))
             }
-            connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+            val cached = playlistCache.store(connection.inputStream)
+            cached.bufferedReader(Charsets.UTF_8).use { reader ->
                 reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
             }
         } finally {
@@ -855,9 +860,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun readUri(uri: Uri): String = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
-        resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
+        val input = resolver.openInputStream(uri)
+            ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
+        playlistCache.store(input).bufferedReader(Charsets.UTF_8).use { reader ->
             reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
-        } ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
+        }
     }
 
     private suspend fun fetchEpg(url: String): String = withContext(Dispatchers.IO) {
