@@ -75,7 +75,7 @@ stehen nicht darin. Format und Grenzen: `docs/APP-PARITAET.md`.
 ## Voraussetzungen
 
 - JDK 17
-- Android SDK Platform 35 und Build-Tools 35.0.0
+- Android SDK Platform 36 und Build-Tools 36.0.0
 - Gradle 8.11.1 oder das mitgelieferte Wrapper-Skript
 
 `local.properties` mit `sdk.dir` muss lokal vorhanden sein. Sie wird nicht
