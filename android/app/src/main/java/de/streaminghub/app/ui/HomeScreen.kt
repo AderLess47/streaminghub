@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +62,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.paging.LoadState
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import de.streaminghub.app.AppUiState
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.MediaKind
@@ -74,14 +79,15 @@ import de.streaminghub.app.ui.theme.Muted
 import de.streaminghub.app.ui.theme.Panel
 import de.streaminghub.app.ui.theme.Panel2
 import kotlinx.coroutines.delay
-import java.util.Locale
+import kotlinx.coroutines.flow.Flow
 
 private val filters = listOf("Alle", "Live", "Filme", "Serien")
-private const val LOW_SPEC_PAGE_SIZE = 80
 
 @Composable
 fun HomeScreen(
     state: AppUiState,
+    categories: List<String>,
+    channelPages: (String?, MediaKind?, String) -> Flow<PagingData<Channel>>,
     onPlay: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
     onAddPlaylist: () -> Unit,
@@ -99,32 +105,24 @@ fun HomeScreen(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("Alle") }
-    var visibleLimit by rememberSaveable {
-        mutableStateOf(if (lowSpecMode) LOW_SPEC_PAGE_SIZE else Int.MAX_VALUE)
-    }
+    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
 
-    val filteredChannels = remember(state.channels, query, filter) {
-        val needle = query.trim().lowercase(Locale.ROOT)
-        state.channels.filter { channel ->
-            val matchesFilter = when (filter) {
-                "Live" -> channel.kind == MediaKind.LIVE
-                "Filme" -> channel.kind == MediaKind.MOVIE
-                "Serien" -> channel.kind == MediaKind.SERIES
-                else -> true
-            }
-            val matchesQuery = needle.isEmpty() ||
-                channel.name.lowercase(Locale.ROOT).contains(needle) ||
-                channel.group.lowercase(Locale.ROOT).contains(needle)
-            matchesFilter && matchesQuery
+    val selectedKind = when (filter) {
+        "Live" -> MediaKind.LIVE
+        "Filme" -> MediaKind.MOVIE
+        "Serien" -> MediaKind.SERIES
+        else -> null
+    }
+    val pagedChannels = remember(selectedCategory, filter, query, lowSpecMode) {
+        channelPages(selectedCategory, selectedKind, query.trim())
+    }.collectAsLazyPagingItems()
+
+    LaunchedEffect(categories) {
+        if (selectedCategory != null && selectedCategory !in categories) {
+            selectedCategory = null
         }
     }
-
-    LaunchedEffect(lowSpecMode, query, filter) {
-        visibleLimit = if (lowSpecMode) LOW_SPEC_PAGE_SIZE else Int.MAX_VALUE
-    }
-
-    val visibleChannels = filteredChannels.take(visibleLimit)
 
     LaunchedEffect(state.loading, state.channels.isEmpty()) {
         if (!state.loading) {
@@ -238,13 +236,16 @@ fun HomeScreen(
                         onQueryChange = { query = it },
                         filter = filter,
                         onFilterChange = { filter = it },
+                        categories = categories,
+                        selectedCategory = selectedCategory,
+                        onCategoryChange = { selectedCategory = it },
                     )
                 }
 
                 if (lowSpecMode) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
-                            text = "Sparmodus aktiv: Listen werden in kleineren Schritten geladen, Logos nicht vorgeladen.",
+                            text = "Sparmodus aktiv: Es werden kleinere Seiten geladen, Logos nicht vorgeladen.",
                             color = Muted,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(top = 2.dp),
@@ -252,38 +253,86 @@ fun HomeScreen(
                     }
                 }
 
-                if (filteredChannels.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        NoResults(
-                            onReset = {
-                                query = ""
-                                filter = "Alle"
-                            },
-                        )
-                    }
-                } else {
-                    items(visibleChannels, key = { it.url }) { channel ->
-                        ChannelCard(
-                            channel = channel,
-                            isFavorite = state.favorites.contains(channel.url),
-                            lowSpecMode = lowSpecMode,
-                            onPlay = { onPlay(channel) },
-                            onToggleFavorite = { onToggleFavorite(channel) },
-                        )
-                    }
-
-                    if (visibleChannels.size < filteredChannels.size) {
+                when {
+                    pagedChannels.loadState.refresh is LoadState.Loading && pagedChannels.itemCount == 0 -> {
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            SecondaryAction(
-                                text = "Weitere ${minOf(LOW_SPEC_PAGE_SIZE, filteredChannels.size - visibleChannels.size)} Einträge anzeigen",
-                                icon = Icons.Rounded.Add,
-                                onClick = {
-                                    visibleLimit = (visibleLimit + LOW_SPEC_PAGE_SIZE)
-                                        .coerceAtMost(filteredChannels.size)
-                                },
-                                modifier = Modifier.fillMaxWidth(),
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
+                                    .clipProgress(),
+                                color = Cyan,
+                                trackColor = Line,
                             )
                         }
+                    }
+
+                    pagedChannels.loadState.refresh is LoadState.Error -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            val error = pagedChannels.loadState.refresh as LoadState.Error
+                            ErrorBanner(
+                                message = error.error.localizedMessage
+                                    ?: "Die Sender konnten nicht geladen werden.",
+                                onDismiss = { pagedChannels.retry() },
+                            )
+                        }
+                    }
+
+                    pagedChannels.itemCount == 0 -> {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            NoResults(
+                                onReset = {
+                                    query = ""
+                                    filter = "Alle"
+                                    selectedCategory = null
+                                },
+                            )
+                        }
+                    }
+
+                    else -> {
+                        items(
+                            count = pagedChannels.itemCount,
+                            key = pagedChannels.itemKey { it.url },
+                        ) { index ->
+                            pagedChannels[index]?.let { channel ->
+                                ChannelCard(
+                                    channel = channel,
+                                    isFavorite = state.favorites.contains(channel.url),
+                                    lowSpecMode = lowSpecMode,
+                                    onPlay = { onPlay(channel) },
+                                    onToggleFavorite = { onToggleFavorite(channel) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (pagedChannels.loadState.append is LoadState.Loading) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 18.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Cyan,
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
+
+                if (pagedChannels.loadState.append is LoadState.Error) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        SecondaryAction(
+                            text = "Weitere Sender laden",
+                            icon = Icons.Rounded.Add,
+                            onClick = { pagedChannels.retry() },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
 
@@ -473,6 +522,9 @@ private fun SearchAndFilters(
     onQueryChange: (String) -> Unit,
     filter: String,
     onFilterChange: (String) -> Unit,
+    categories: List<String>,
+    selectedCategory: String?,
+    onCategoryChange: (String?) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -497,6 +549,42 @@ private fun SearchAndFilters(
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
         )
+        if (categories.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Kategorien",
+                color = Muted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(5.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = selectedCategory == null,
+                    onClick = { onCategoryChange(null) },
+                    label = { Text("Alle Kategorien") },
+                )
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { onCategoryChange(category) },
+                        label = {
+                            Text(
+                                text = category,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(10.dp))
         Row(
             modifier = Modifier
@@ -678,7 +766,7 @@ private fun NoResults(onReset: () -> Unit) {
         )
         Spacer(Modifier.height(5.dp))
         Text(
-            text = "Für deine Suche und den gewählten Filter gibt es keine Einträge.",
+            text = "Für deine Suche, Kategorie oder den gewählten Filter gibt es keine Einträge.",
             color = Muted,
             style = MaterialTheme.typography.bodyMedium,
         )

@@ -1,11 +1,17 @@
 package de.streaminghub.app.data
 
 import android.content.Context
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import androidx.room.withTransaction
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.ChannelDrm
 import de.streaminghub.app.model.DrmScheme
 import de.streaminghub.app.model.MediaKind
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -40,6 +46,24 @@ class PlaylistRepository(
             updatedAt = preferences.getLong(KEY_UPDATED_AT, 0L).takeIf { it > 0L },
         )
     }
+
+    fun pagedChannels(
+        category: String?,
+        kind: MediaKind?,
+        query: String,
+        pageSize: Int,
+    ): Flow<PagingData<Channel>> = Pager(
+        config = PagingConfig(
+            pageSize = pageSize.coerceAtLeast(1),
+            prefetchDistance = (pageSize / 2).coerceAtLeast(1),
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = {
+            channelDao.pagingSource(category, kind?.name, query.trim())
+        },
+    ).flow.map { pagingData -> pagingData.map(ChannelEntity::toChannel) }
+
+    fun observeCategories(): Flow<List<String>> = channelDao.observeCategories()
 
     suspend fun savePlaylist(
         channels: List<Channel>,
