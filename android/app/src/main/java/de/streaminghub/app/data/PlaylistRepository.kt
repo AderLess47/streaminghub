@@ -1,6 +1,7 @@
 package de.streaminghub.app.data
 
 import android.content.Context
+import androidx.room.withTransaction
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.ChannelDrm
 import de.streaminghub.app.model.DrmScheme
@@ -17,7 +18,7 @@ data class StoredPlaylist(
 
 class PlaylistRepository(
     context: Context,
-    database: PlaylistDatabase = PlaylistDatabase.get(context),
+    private val database: PlaylistDatabase = PlaylistDatabase.get(context),
 ) {
 
     private val preferences = context.applicationContext
@@ -45,7 +46,7 @@ class PlaylistRepository(
         sourceUrl: String?,
         sourceLabel: String,
     ) {
-        channelDao.replaceAll(channels.mapIndexed { index, channel -> channel.toEntity(index) })
+        replaceChannels(channels)
 
         preferences.edit()
             .remove(KEY_CHANNELS)
@@ -56,7 +57,7 @@ class PlaylistRepository(
     }
 
     suspend fun clearPlaylist() {
-        channelDao.clear()
+        database.withTransaction { channelDao.clear() }
         preferences.edit()
             .remove(KEY_CHANNELS)
             .remove(KEY_SOURCE_URL)
@@ -76,11 +77,16 @@ class PlaylistRepository(
         val legacyChannels = parseLegacyChannels(raw)
 
         if (legacyChannels.isNotEmpty() && channelDao.loadAll().isEmpty()) {
-            channelDao.replaceAll(
-                legacyChannels.mapIndexed { index, channel -> channel.toEntity(index) },
-            )
+            replaceChannels(legacyChannels)
         }
         preferences.edit().remove(KEY_CHANNELS).apply()
+    }
+
+    private suspend fun replaceChannels(channels: List<Channel>) {
+        database.withTransaction {
+            channelDao.clear()
+            channelDao.insertAll(channels.mapIndexed { index, channel -> channel.toEntity(index) })
+        }
     }
 
     private fun parseLegacyChannels(raw: String): List<Channel> = runCatching {
