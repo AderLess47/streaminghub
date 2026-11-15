@@ -328,6 +328,11 @@ struct SettingsView: View {
                 value: "\(DiagnosticsLog.shared.entryCount) Einträge · \(max(1, DiagnosticsLog.shared.sizeBytes / 1024)) KB"
             )
             Button("Protokoll anzeigen") { showingLog = true }
+            if DiagnosticsLog.shared.sizeBytes > 0 {
+                ShareLink(item: DiagnosticsLog.shared.text()) {
+                    Label("Protokoll teilen", systemImage: "square.and.arrow.up")
+                }
+            }
             Button("Protokoll löschen", role: .destructive) { DiagnosticsLog.shared.clear() }
         } header: {
             Text("Diagnose")

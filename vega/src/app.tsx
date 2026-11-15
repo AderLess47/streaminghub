@@ -44,7 +44,7 @@ import { PlayerScreen } from "./ui/screens/PlayerScreen";
 import { SearchScreen } from "./ui/screens/SearchScreen";
 import { SettingsScreen } from "./ui/screens/SettingsScreen";
 
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 
 /** Wie in der Android-App: Cache nach 15 Minuten im Hintergrund auffrischen. */
 const STALE_PLAYLIST_MS = 15 * 60_000;

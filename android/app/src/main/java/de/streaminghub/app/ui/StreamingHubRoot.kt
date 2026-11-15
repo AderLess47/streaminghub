@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.streaminghub.app.BuildConfig
 import de.streaminghub.app.MainViewModel
 import de.streaminghub.app.model.Channel
 
@@ -33,6 +34,7 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
     val accountState = viewModel.accountState
     val epgState = viewModel.epgState
     val lowSpecMode = viewModel.lowSpecMode
+    val updateState = viewModel.updateState
     val premiumState by viewModel.premiumState.collectAsState()
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
     var showAddPlaylist by rememberSaveable { mutableStateOf(false) }
@@ -91,6 +93,8 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
             demoMode = state.demoMode,
             onLoadDemo = viewModel::loadDemoLibrary,
             onExitDemo = viewModel::removeDemoLibrary,
+            updateVersion = if (BuildConfig.SELF_UPDATE) updateState.available?.version else null,
+            onOpenUpdate = { screen = Screen.Settings },
         )
 
         is Screen.Player -> PlayerScreen(
@@ -137,6 +141,11 @@ fun StreamingHubRoot(viewModel: MainViewModel = viewModel()) {
             premiumState = premiumState,
             onBuyPremium = { viewModel.buyPremium() },
             onRestorePremium = { viewModel.restorePremium() },
+            updateState = updateState,
+            onCheckUpdate = { viewModel.checkForUpdate() },
+            onDownloadUpdate = viewModel::downloadUpdate,
+            onInstallUpdate = viewModel::installUpdate,
+            onDismissUpdateError = viewModel::dismissUpdateError,
         )
 
         Screen.Pairing -> PairingScreen(
