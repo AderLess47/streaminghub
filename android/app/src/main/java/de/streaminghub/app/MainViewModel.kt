@@ -707,16 +707,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("Accept", "*/*")
-            setRequestProperty("User-Agent", "StreamingHub/1.2 (Android)")
+            setRequestProperty("User-Agent", "StreamingHub/${BuildConfig.VERSION_NAME} (Android)")
         }
 
         try {
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw IOException("Der Server antwortet mit HTTP $code.")
+                throw IOException(httpErrorMessage(code, "Playlist"))
             }
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
-                reader.readLimited(MAX_PLAYLIST_CHARS)
+                reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
             }
         } finally {
             connection.disconnect()
@@ -726,7 +726,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun readUri(uri: Uri): String = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
         resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-            reader.readLimited(MAX_PLAYLIST_CHARS)
+            reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
         } ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
     }
 
@@ -737,16 +737,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("Accept", "application/xml,text/xml,*/*")
-            setRequestProperty("User-Agent", "StreamingHub/1.2 (Android)")
+            setRequestProperty("User-Agent", "StreamingHub/${BuildConfig.VERSION_NAME} (Android)")
         }
 
         try {
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw IOException("Der EPG-Server antwortet mit HTTP $code.")
+                throw IOException(httpErrorMessage(code, "EPG"))
             }
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
-                reader.readLimited(MAX_EPG_CHARS)
+                reader.readLimited(MAX_EPG_CHARS, "EPG-Datei")
             }
         } finally {
             connection.disconnect()
@@ -756,11 +756,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun readEpgUri(uri: Uri): String = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
         resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-            reader.readLimited(MAX_EPG_CHARS)
+            reader.readLimited(MAX_EPG_CHARS, "EPG-Datei")
         } ?: throw IOException("Die ausgewählte EPG-Datei konnte nicht geöffnet werden.")
     }
 
-    private fun Reader.readLimited(maxChars: Int): String {
+    private fun Reader.readLimited(maxChars: Int, label: String): String {
         val builder = StringBuilder()
         val buffer = CharArray(8_192)
         var total = 0
@@ -769,11 +769,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (read < 0) break
             total += read
             if (total > maxChars) {
-                throw IOException("Die Playlist ist zu groß (maximal 20 MB).")
+                throw IOException("Die $label ist zu groß (maximal ${maxChars / 1_000_000} MB).")
             }
             builder.append(buffer, 0, read)
         }
         return builder.toString()
+    }
+
+    /**
+     * 884 ist kein Standard-HTTP-Code, sondern eine Ablehnung des Anbieters
+     * (häufig: Liste gesperrt oder an ein anderes Gerät gebunden). Ein
+     * generisches "HTTP 884" hilft niemandem; der Hinweis schon.
+     */
+    private fun httpErrorMessage(code: Int, kind: String): String = when (code) {
+        884 -> "Der Anbieter verweigert die Playlist (Code 884). Fordere eine neue M3U-URL an: Viele Anbieter sperren die Liste oder binden sie an ein bestimmtes Gerät."
+        401, 403 -> "Der Anbieter verweigert den Zugriff (HTTP $code). Prüfe die Zugangsdaten in der URL oder frage nach einer neuen Adresse."
+        in 400..499 -> "Der $kind-Server lehnt die Anfrage ab (HTTP $code). Prüfe die Adresse oder frage beim Anbieter nach einer neuen URL."
+        else -> "Der $kind-Server antwortet mit HTTP $code."
     }
 
     private fun sourceLabelFor(url: String): String {
@@ -807,8 +819,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
-        const val MAX_PLAYLIST_CHARS = 20_000_000
-        const val MAX_EPG_CHARS = 20_000_000
+        // 50 MB wie im Apple-Dateiimport; große Anbieterlisten liegen oft
+        // deutlich über den früheren 20 MB.
+        const val MAX_PLAYLIST_CHARS = 50_000_000
+        const val MAX_EPG_CHARS = 50_000_000
         const val CACHE_REFRESH_AFTER_MS = 15 * 60 * 1_000L
     }
 }

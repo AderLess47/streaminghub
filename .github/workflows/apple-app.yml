@@ -13,6 +13,7 @@ on:
     paths:
       - "apple/**"
       - ".github/workflows/apple-app.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read

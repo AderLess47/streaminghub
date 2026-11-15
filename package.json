@@ -14,6 +14,7 @@
     "start": "next start",
     "start:standalone": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
+    "check:app-versions": "node scripts/check-app-versions.mjs",
     "test:download-page": "node --test scripts/download-page.test.mjs",
     "test:release-sync": "node --test scripts/release-sync.test.mjs",
     "test:db-migration": "node --test scripts/db-migration.test.mjs",

@@ -151,6 +151,29 @@ jobs:
           path: android/app/build/outputs/apk/amazon/release/app-amazon-release.apk
           if-no-files-found: error
 
+      # Play erlaubt keinen Web-Checkout. Der Play-Build hat deshalb keinen
+      # Kaufweg (PREMIUM_SALES=false); Google Play Billing folgt separat.
+      - name: Build and verify the Google Play AAB
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew --no-daemon bundlePlayRelease
+          AAB="app/build/outputs/bundle/playRelease/app-play-release.aab"
+          test -f "$AAB"
+          grep -q 'PREMIUM_SALES = false' \
+            "app/build/generated/source/buildConfig/play/release/de/streaminghub/app/BuildConfig.java"
+          grep -q 'PREMIUM_CHANNEL = "play"' \
+            "app/build/generated/source/buildConfig/play/release/de/streaminghub/app/BuildConfig.java"
+          jarsigner -verify "$AAB"
+          echo "Play AAB: $(stat -c%s "$AAB") bytes, $(sha256sum "$AAB" | cut -d' ' -f1)"
+
+      - name: Attach the Google Play AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: streaminghub-play-aab
+          path: android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          if-no-files-found: error
+
       - name: Install flyctl
         run: |
           curl -fsSL https://fly.io/install.sh | sh
