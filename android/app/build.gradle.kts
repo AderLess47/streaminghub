@@ -15,12 +15,12 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "de.streaminghub.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.streaminghub.app"
         minSdk = 23
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 13
         versionName = "1.6.0"
 
