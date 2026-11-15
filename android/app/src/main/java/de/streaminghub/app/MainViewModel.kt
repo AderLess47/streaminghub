@@ -148,16 +148,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     init {
-        val stored = repository.loadPlaylist()
-        uiState = AppUiState(
-            channels = stored.channels,
-            favorites = repository.loadFavorites(),
-            sourceUrl = stored.sourceUrl,
-            sourceLabel = stored.sourceLabel,
-            updatedAt = stored.updatedAt,
-            managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
-            demoMode = stored.sourceLabel == DemoLibrary.SOURCE_LABEL,
-        )
+        viewModelScope.launch {
+            val stored = repository.loadPlaylist()
+            uiState = AppUiState(
+                channels = stored.channels,
+                favorites = repository.loadFavorites(),
+                sourceUrl = stored.sourceUrl,
+                sourceLabel = stored.sourceLabel,
+                updatedAt = stored.updatedAt,
+                managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
+                demoMode = stored.sourceLabel == DemoLibrary.SOURCE_LABEL,
+            )
+
+            if (secureStore.loadToken() != null) {
+                refreshAccount()
+            }
+
+            refreshCachedPlaylistIfStale()
+        }
 
         val storedEpg = epgRepository.load()
         epgState = EpgUiState(
@@ -165,12 +173,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             sourceUrl = storedEpg.sourceUrl,
             updatedAt = storedEpg.updatedAt,
         )
-
-        if (secureStore.loadToken() != null) {
-            refreshAccount()
-        }
-
-        refreshCachedPlaylistIfStale()
 
         if (BuildConfig.SELF_UPDATE) checkForUpdate(silent = true)
     }
@@ -231,9 +233,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun removePlaylist() {
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
-        repository.clearPlaylist()
         playlistCache.clear()
         uiState = AppUiState()
+        viewModelScope.launch {
+            runCatching { repository.clearPlaylist() }
+                .onFailure { throwable -> AppLog.error("playlist", throwable, "Room") }
+        }
     }
 
     // ---- Demo library -------------------------------------------------------------
@@ -767,9 +772,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!uiState.managedPlaylist) return
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
-        repository.clearPlaylist()
         playlistCache.clear()
         uiState = AppUiState()
+        viewModelScope.launch {
+            runCatching { repository.clearPlaylist() }
+                .onFailure { throwable -> AppLog.error("playlist", throwable, "Room") }
+        }
     }
 
     private fun refreshCachedPlaylistIfStale() {
@@ -820,9 +828,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val stored = withContext(Dispatchers.IO) {
-            repository.savePlaylist(channels, sourceUrl, sourceLabel)
-            repository.loadPlaylist()
+        val stored = runCatching {
+            withContext(Dispatchers.IO) {
+                repository.savePlaylist(channels, sourceUrl, sourceLabel)
+                repository.loadPlaylist()
+            }
+        }.getOrElse { throwable ->
+            AppLog.error("playlist", throwable, "Room")
+            uiState = uiState.copy(
+                loading = false,
+                error = "Die Playlist konnte nicht lokal gespeichert werden.",
+            )
+            return
         }
         uiState = AppUiState(
             channels = stored.channels,

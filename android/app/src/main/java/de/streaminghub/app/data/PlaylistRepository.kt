@@ -15,35 +15,21 @@ data class StoredPlaylist(
     val updatedAt: Long?,
 )
 
-class PlaylistRepository(context: Context) {
+class PlaylistRepository(
+    context: Context,
+    database: PlaylistDatabase = PlaylistDatabase.get(context),
+) {
 
     private val preferences = context.applicationContext
         .getSharedPreferences("streaminghub", Context.MODE_PRIVATE)
+    private val channelDao = database.channelDao()
 
-    fun loadPlaylist(): StoredPlaylist {
+    suspend fun loadPlaylist(): StoredPlaylist {
+        runCatching { migrateLegacyChannelsIfNeeded() }
+            .onFailure { throwable -> AppLog.error("playlist", throwable, "Room-Migration") }
+
         val channels = runCatching {
-            val raw = preferences.getString(KEY_CHANNELS, null) ?: return@runCatching emptyList()
-            val array = JSONArray(raw)
-            buildList(array.length()) {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val name = item.optString("name").takeIf { it.isNotBlank() } ?: continue
-                    val url = item.optString("url").takeIf { it.isNotBlank() } ?: continue
-                    add(
-                        Channel(
-                            name = name,
-                            url = url,
-                            logo = item.optString("logo").takeIf { it.isNotBlank() },
-                            group = item.optString("group").ifBlank { "Ohne Kategorie" },
-                            tvgId = item.optString("tvgId").takeIf { it.isNotBlank() },
-                            kind = runCatching {
-                                MediaKind.valueOf(item.optString("kind"))
-                            }.getOrDefault(MediaKind.LIVE),
-                            drm = readDrm(item.optJSONObject("drm")),
-                        ),
-                    )
-                }
-            }
+            channelDao.loadAll().map(ChannelEntity::toChannel)
         }.getOrDefault(emptyList())
 
         return StoredPlaylist(
@@ -54,44 +40,72 @@ class PlaylistRepository(context: Context) {
         )
     }
 
-    fun savePlaylist(
+    suspend fun savePlaylist(
         channels: List<Channel>,
         sourceUrl: String?,
         sourceLabel: String,
     ) {
-        val array = JSONArray()
-        channels.forEach { channel ->
-            array.put(
-                JSONObject().apply {
-                    put("name", channel.name)
-                    put("url", channel.url)
-                    put("logo", channel.logo ?: "")
-                    put("group", channel.group)
-                    put("tvgId", channel.tvgId ?: "")
-                    put("kind", channel.kind.name)
-                    channel.drm?.let { drm ->
-                        put(
-                            "drm",
-                            JSONObject().apply {
-                                put("scheme", drm.scheme.kodipropName)
-                                put("licenseUrl", drm.licenseUrl)
-                                if (drm.headers.isNotEmpty()) {
-                                    put("headers", JSONObject(drm.headers as Map<*, *>))
-                                }
-                            },
-                        )
-                    }
-                },
-            )
-        }
+        channelDao.replaceAll(channels.mapIndexed { index, channel -> channel.toEntity(index) })
 
         preferences.edit()
-            .putString(KEY_CHANNELS, array.toString())
+            .remove(KEY_CHANNELS)
             .putString(KEY_SOURCE_URL, sourceUrl)
             .putString(KEY_SOURCE_LABEL, sourceLabel)
             .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
             .apply()
     }
+
+    suspend fun clearPlaylist() {
+        channelDao.clear()
+        preferences.edit()
+            .remove(KEY_CHANNELS)
+            .remove(KEY_SOURCE_URL)
+            .remove(KEY_SOURCE_LABEL)
+            .remove(KEY_UPDATED_AT)
+            .remove(KEY_FAVORITES)
+            .apply()
+    }
+
+    /**
+     * Ältere App-Versionen haben die Kanäle als JSON in den Preferences
+     * gespeichert. Beim ersten Start nach dem Update werden sie einmalig in
+     * Room übernommen und der alte JSON-String entfernt.
+     */
+    private suspend fun migrateLegacyChannelsIfNeeded() {
+        val raw = preferences.getString(KEY_CHANNELS, null) ?: return
+        val legacyChannels = parseLegacyChannels(raw)
+
+        if (legacyChannels.isNotEmpty() && channelDao.loadAll().isEmpty()) {
+            channelDao.replaceAll(
+                legacyChannels.mapIndexed { index, channel -> channel.toEntity(index) },
+            )
+        }
+        preferences.edit().remove(KEY_CHANNELS).apply()
+    }
+
+    private fun parseLegacyChannels(raw: String): List<Channel> = runCatching {
+        val array = JSONArray(raw)
+        buildList(array.length()) {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val name = item.optString("name").takeIf { it.isNotBlank() } ?: continue
+                val url = item.optString("url").takeIf { it.isNotBlank() } ?: continue
+                add(
+                    Channel(
+                        name = name,
+                        url = url,
+                        logo = item.optString("logo").takeIf { it.isNotBlank() },
+                        group = item.optString("group").ifBlank { "Ohne Kategorie" },
+                        tvgId = item.optString("tvgId").takeIf { it.isNotBlank() },
+                        kind = runCatching {
+                            MediaKind.valueOf(item.optString("kind"))
+                        }.getOrDefault(MediaKind.LIVE),
+                        drm = readDrm(item.optJSONObject("drm")),
+                    ),
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
 
     private fun readDrm(item: JSONObject?): ChannelDrm? {
         if (item == null) return null
@@ -103,16 +117,6 @@ class PlaylistRepository(context: Context) {
             }
         } ?: emptyMap()
         return ChannelDrm(scheme = scheme, licenseUrl = licenseUrl, headers = headers)
-    }
-
-    fun clearPlaylist() {
-        preferences.edit()
-            .remove(KEY_CHANNELS)
-            .remove(KEY_SOURCE_URL)
-            .remove(KEY_SOURCE_LABEL)
-            .remove(KEY_UPDATED_AT)
-            .remove(KEY_FAVORITES)
-            .apply()
     }
 
     fun loadFavorites(): Set<String> =
