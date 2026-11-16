@@ -34,6 +34,16 @@ test("malformed canary recipients are rejected before registration", () => {
   }
 });
 
+test("queued mail is rejected as a passing state", () => {
+  const result = spawnSync(process.execPath, [canaryScript], {
+    cwd: root,
+    env: { ...baseEnv(), CANARY_EXPECT_MAIL: "queued" },
+    encoding: "utf8",
+  });
+  assert.notEqual(result.status, 0, "queued mail must not pass the canary");
+  assert.match(result.stderr, /CANARY_EXPECT_MAIL must be sent/);
+});
+
 test("early checkout failure cleans up the synthetic user and rows", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "streaminghub-canary-early-"));
   const dbPath = path.join(dir, "canary.db");
