@@ -143,7 +143,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Setze DNS testweise auf einen öffentlichen Resolver und starte die App neu.",
         "Vergleiche das Verhalten mit einem zweiten Gerät im selben Netzwerk.",
       ],
-      note: "Die in Entwicklung befindliche VPN-/Proxy-Funktion ist noch nicht aktiv. Sie kann daher derzeit nicht zur Fehlerbehebung verwendet werden.",
+      note: "StreamingHub kann die Wiedergabe optimieren, nicht die Qualität der Quelle. Wenn nur ein Anbieter betroffen ist, liegt die Ursache meist dort.",
     },
     en: {
       intro:
@@ -154,7 +154,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
         "Try a public DNS resolver and restart the app.",
         "Compare behaviour with a second device on the same network.",
       ],
-      note: "The VPN/proxy feature under development is not active yet and cannot be used for troubleshooting at this time.",
+      note: "StreamingHub can optimise playback, not the quality of the source. If only one provider is affected, the cause is usually there.",
     },
   },
   account: {

@@ -47,7 +47,9 @@ Stand: November 2026 (`main` nach der Paritäts- und Protokoll-Änderung).
   keinen Dokumentendialog, dort bleibt der URL-Import. Importierte Dateien
   ersetzen die URL als Quelle; die 15-Minuten-Auffrischung entfällt dann, weil
   es keine Adresse zum Nachladen gibt. Gelesen wird über den Security-Scope der
-  gewählten Datei, mit 50-MB-Grenze und UTF-8-/ISO-8859-1-Fallback.
+  gewählten Datei, mit 100-MB-Grenze, zeilenweisem Lesen und
+  UTF-8-/ISO-8859-1-Fallback. Die Kanalliste selbst liegt anschließend im
+  Speicher.
 - **HLS auf Vega.** Der Adapter und die Surface-Wiedergabe sind eingebaut; der
   Shaka-Player selbst muss wegen Amazons Lizenzhinweis einmalig lokal ergänzt
   werden (`npm run setup:shaka`). Siehe `vega/README.md`, Abschnitt „HLS und DASH“.

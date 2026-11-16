@@ -169,7 +169,7 @@ starts building.
 | App ↔ website API | Endpoints live and tested | Client implementation in the StreamingHub app |
 | Transactional email | Provider adapter, outbox, retry, delivery webhook and bounce/complaint suppression implemented and stub-tested | `EMAIL_API_KEY`, verified sending domain, `EMAIL_WEBHOOK_SECRET` |
 | Appme account SSO | **Not integrated** | Appme issuer URL, client ID/secret, scopes, redirect URI and API documentation |
-| VPN / proxy premium feature | Labelled "in development" | Product implementation, privacy review, activation |
+| VPN / proxy premium feature | **Not offered** | Removed from the premium copy; would need product implementation, privacy review and activation |
 | Cross-device resume | **Live for premium devices** | Positions sync through `/api/v1/progress`: Android resumes when a channel opens, Apple and Vega OS merge at app start; clearing the local history also removes it from the account |
 
 Payment UI never reports success without a server-side provider confirmation;
