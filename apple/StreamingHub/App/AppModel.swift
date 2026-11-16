@@ -290,7 +290,7 @@ final class AppModel {
             case .notText:
                 return "Die Datei ist kein lesbarer Text. Erwartet wird eine M3U-Liste in UTF-8 oder ISO-8859-1."
             case .tooLarge:
-                return "Die Datei ist größer als 50 MB. Bitte eine kleinere Quelle wählen."
+                return "Die Datei ist größer als 100 MB. Bitte eine kleinere Quelle wählen."
             }
         }
     }
@@ -307,7 +307,7 @@ final class AppModel {
     private func readData(at url: URL) throws -> Data {
         try withSecurityScope(url) { scoped in
             let values = try scoped.resourceValues(forKeys: [.fileSizeKey])
-            if let size = values.fileSize, size > 50 * 1024 * 1024 {
+            if let size = values.fileSize, size > 100 * 1024 * 1024 {
                 throw FileImportError.tooLarge
             }
             return try Data(contentsOf: scoped)
