@@ -218,6 +218,7 @@ production server those two checks are skipped, since dev links are withheld.
 - `vega/README.md` – Vega-OS-App (React Native 0.83, Fire TV mit Vega)
 - `apple/README.md` – iOS/iPadOS/macOS/Apple-TV-App (SwiftUI, ein Multiplatform-Target)
 - `docs/DEPLOYMENT.md` – hosting, HTTPS, DNS, environment, provider setup, backups
+- `docs/STAGING.md` – isolated staging app, deploy workflow, purchase-canary fallback and backup freshness gate
 - `docs/API.md` – app integration contract
 - `docs/BFSG-ANWENDUNGSBEREICH.md` – whether the accessibility act applies, with the operator's figures and the recorded decision
 - `docs/BFSG-PFLICHTEN-CHECKLISTE.md` – what to do if the micro-enterprise threshold is exceeded

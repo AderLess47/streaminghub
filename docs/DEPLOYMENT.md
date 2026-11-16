@@ -312,6 +312,15 @@ a maintenance window. Logs/audit retention: 90 days for `audit_log`, 30 days for
 server logs, support tickets 24 months, contact messages 24 months (see above);
 admin-managed M3U URLs until account deletion or removal. The privacy policy documents these periods.
 
+### 7.1 Off-site backup freshness gate
+
+An off-site copy is accepted only after the forced backup has been checked
+against the source: the remote modification time must be recent, the remote and
+local SHA-256 must match, the sizes must match, and `PRAGMA integrity_check` and
+`PRAGMA foreign_key_check` must pass. A stale or mismatched download is never
+uploaded and never causes older snapshots to be pruned. The exact commands,
+time limits and abort rules are in [`STAGING.md`](STAGING.md) §6.
+
 ## 8. Scaling
 
 The rate limiter and sessions live in SQLite, so run **one** app instance.
