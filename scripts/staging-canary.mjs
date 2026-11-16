@@ -59,6 +59,7 @@ const password = `Canary-${randomBytes(18).toString("base64url")}!`;
 
 let checks = 0;
 let failures = 0;
+let cleanupRuns = 0;
 
 function ok(condition, label, detail = "") {
   checks += 1;
@@ -522,6 +523,7 @@ async function main() {
           stripeRequest("POST", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {}),
         );
       }
+      cleanupRuns += 1;
       try {
         const cleanupResult = runAssert({ cleanup: true });
         if (cleanupResult.cleaned !== true) {
@@ -543,6 +545,6 @@ try {
   console.error(`  ✗ canary failed: ${error.message}`);
 } finally {
   const total = Math.max(checks, failures);
-  console.log(`\n${Math.max(0, checks - failures)}/${total} checks passed.`);
+  console.log(`\n${Math.max(0, checks - failures)}/${total} checks passed (cleanup calls: ${cleanupRuns}).`);
   if (failures > 0) process.exitCode = 1;
 }
