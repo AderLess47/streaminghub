@@ -369,10 +369,33 @@ async function main() {
     const session = await stripeRequest("GET", sessionRoute);
     const sessionPrice = session.line_items?.data?.[0]?.price;
     ok(session.livemode === false, "Stripe reports livemode=false");
+    ok(session.status === "open", `checkout session is open (${session.status})`);
     ok(session.mode === "subscription", `checkout mode is subscription (${session.mode})`);
     ok(session.currency === "eur", `checkout currency is EUR (${session.currency})`);
     ok(session.amount_total === 249, `checkout amount is 249 cents (${session.amount_total})`);
+    ok(sessionPrice?.id === PRICE_ID, `checkout uses configured price (${sessionPrice?.id})`);
+    ok(sessionPrice?.livemode === false, "checkout price is test-mode");
+    ok(sessionPrice?.active === true, "checkout price is active");
+    ok(
+      session.metadata?.userId === userId,
+      "checkout metadata is bound to the canary user",
+    );
+    ok(
+      session.client_reference_id === userId,
+      "checkout client_reference_id is bound to the canary user",
+    );
     ok(sessionPrice?.recurring?.interval === "month", `price interval is monthly (${sessionPrice?.recurring?.interval})`);
+    if (
+      session.livemode !== false ||
+      session.status !== "open" ||
+      session.metadata?.userId !== userId ||
+      session.client_reference_id !== userId ||
+      sessionPrice?.id !== PRICE_ID ||
+      sessionPrice?.livemode !== false ||
+      sessionPrice?.active !== true
+    ) {
+      fail("checkout session does not match the configured test price or canary user");
+    }
 
     const paymentMethod = await stripeRequest("POST", "/v1/payment_methods", {
       type: "card",
