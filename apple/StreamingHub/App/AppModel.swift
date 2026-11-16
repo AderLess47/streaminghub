@@ -129,8 +129,7 @@ final class AppModel {
         busy = "playlist"
         defer { busy = nil }
         do {
-            let text = try await download(url)
-            let parsed = M3UParser.parse(text)
+            let parsed = try await downloadAndParse(url)
             guard !parsed.isEmpty else {
                 errorMessage = "Die Datei enthielt keine lesbaren Einträge."
                 return
@@ -230,8 +229,9 @@ final class AppModel {
         busy = "playlist"
         defer { busy = nil }
         do {
-            let text = try readText(at: fileURL)
-            let parsed = M3UParser.parse(text)
+            let parsed = try withSecurityScope(fileURL) { scoped in
+                try M3UParser.parse(fileURL: scoped)
+            }
             guard !parsed.isEmpty else {
                 errorMessage = "Die Datei enthielt keine lesbaren Einträge."
                 return
@@ -282,26 +282,14 @@ final class AppModel {
     }
 
     enum FileImportError: LocalizedError {
-        case notText
         case tooLarge
 
         var errorDescription: String? {
             switch self {
-            case .notText:
-                return "Die Datei ist kein lesbarer Text. Erwartet wird eine M3U-Liste in UTF-8 oder ISO-8859-1."
             case .tooLarge:
                 return "Die Datei ist größer als 100 MB. Bitte eine kleinere Quelle wählen."
             }
         }
-    }
-
-    private func readText(at url: URL) throws -> String {
-        let data = try readData(at: url)
-        guard let text = String(data: data, encoding: .utf8)
-            ?? String(data: data, encoding: .isoLatin1) else {
-            throw FileImportError.notText
-        }
-        return text
     }
 
     private func readData(at url: URL) throws -> Data {
@@ -443,8 +431,7 @@ final class AppModel {
         }
         guard let url = Self.normalizedURL(address) else { return }
         do {
-            let text = try await download(url)
-            let parsed = M3UParser.parse(text)
+            let parsed = try await downloadAndParse(url)
             guard !parsed.isEmpty else { return }
             let cache = PlaylistCache(
                 channels: parsed,
@@ -471,8 +458,7 @@ final class AppModel {
         guard SourceAddressRules.problem(for: address) == nil else { return }
         guard let url = Self.normalizedURL(address) else { return }
         do {
-            let text = try await download(url)
-            let parsed = M3UParser.parse(text)
+            let parsed = try await downloadAndParse(url)
             guard !parsed.isEmpty else {
                 DiagnosticsLog.shared.record(
                     "Leere Antwort beim Auffrischen.",
@@ -615,17 +601,30 @@ final class AppModel {
 
     // MARK: - Hilfen
 
-    private func download(_ url: URL) async throws -> String {
+    /// Lädt die Playlist in eine temporäre Datei und parst sie zeilenweise.
+    /// Die Datei wird nach dem Parsen wieder entfernt.
+    private func downloadAndParse(_ url: URL) async throws -> [Channel] {
         var request = URLRequest(url: url, timeoutInterval: 30)
         request.setValue("StreamingHub/1.0 (Apple)", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (fileURL, response) = try await URLSession.shared.download(for: request)
+
+        func removeTemporaryFile() {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            removeTemporaryFile()
             throw URLError(.badServerResponse)
         }
-        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else {
-            throw URLError(.cannotDecodeContentData)
+
+        do {
+            let parsed = try M3UParser.parse(fileURL: fileURL)
+            removeTemporaryFile()
+            return parsed
+        } catch {
+            removeTemporaryFile()
+            throw error
         }
-        return text
     }
 
     private static func normalizedURL(_ address: String) -> URL? {

@@ -1,12 +1,36 @@
 package de.streaminghub.app.data
 
 import de.streaminghub.app.model.MediaKind
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class M3uParserTest {
+
+    @Test
+    fun parsesLargePlaylistFromFile() {
+        val file = File.createTempFile("streaminghub-large", ".m3u")
+        try {
+            file.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.appendLine("#EXTM3U")
+                repeat(20_000) { index ->
+                    writer.appendLine("#EXTINF:-1 group-title=\"Kategorie ${index % 20}\",Sender $index")
+                    writer.appendLine("https://example.com/live/$index.m3u8")
+                }
+            }
+
+            val channels = M3uParser.parse(file)
+
+            assertEquals(20_000, channels.size)
+            assertEquals("Sender 0", channels.first().name)
+            assertEquals("Sender 19999", channels.last().name)
+            assertEquals("Kategorie 19", channels.last().group)
+        } finally {
+            file.delete()
+        }
+    }
 
     @Test
     fun parsesMetadataAndInfersCategories() {

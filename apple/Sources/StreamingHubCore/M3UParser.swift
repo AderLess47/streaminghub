@@ -8,6 +8,18 @@ import Foundation
 public enum M3UParser {
 
     static let maxChannels = 50_000
+    static let maxBytes = 100 * 1024 * 1024
+
+    public enum ParseError: LocalizedError {
+        case fileTooLarge
+
+        public var errorDescription: String? {
+            switch self {
+            case .fileTooLarge:
+                return "Die Datei ist größer als 100 MB. Bitte eine kleinere Quelle wählen."
+            }
+        }
+    }
 
     private struct PendingInfo {
         var name: String
@@ -16,21 +28,19 @@ public enum M3UParser {
         var tvgID: String?
     }
 
-    private static let attributeRegex = try! NSRegularExpression(
-        pattern: #"([A-Za-z0-9_-]+)\s*=\s*"([^"]*)""#
-    )
-
-    public static func parse(_ content: String) -> [Channel] {
+    private struct LineParser {
         var channels: [Channel] = []
         var seen = Set<String>()
         var pending: PendingInfo?
         var extGroup = ""
 
-        for rawLine in content.split(separator: "\n", omittingEmptySubsequences: false) {
+        mutating func consume(_ rawLine: String) -> Bool {
+            if channels.count >= M3UParser.maxChannels { return false }
+
             let line = rawLine
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\u{FEFF}", with: "")
-            if line.isEmpty { continue }
+            if line.isEmpty { return true }
 
             if line.uppercased().hasPrefix("#EXTINF") {
                 let info = line.drop(while: { $0 != ":" }).dropFirst()
@@ -41,28 +51,27 @@ public enum M3UParser {
                         group: extGroup,
                         tvgID: nil
                     )
-                    continue
+                    return true
                 }
                 let metadata = String(info[info.startIndex..<comma])
                 let title = String(info[info.index(after: comma)...]).trimmingCharacters(in: .whitespaces)
-                let attributes = parseAttributes(metadata)
+                let attributes = M3UParser.parseAttributes(metadata)
                 pending = PendingInfo(
                     name: title.isEmpty ? "Unbenannter Eintrag" : title,
                     logo: attributes["tvg-logo"].flatMap { $0.isEmpty ? nil : $0 },
-                    group: nonEmpty(attributes["group-title"]) ?? extGroup,
-                    tvgID: nonEmpty(attributes["tvg-id"])
+                    group: M3UParser.nonEmpty(attributes["group-title"]) ?? extGroup,
+                    tvgID: M3UParser.nonEmpty(attributes["tvg-id"])
                 )
-                continue
+                return true
             }
 
             if line.uppercased().hasPrefix("#EXTGRP:") {
                 extGroup = String(line.dropFirst("#EXTGRP:".count)).trimmingCharacters(in: .whitespaces)
-                continue
+                return true
             }
 
-            if line.hasPrefix("#") { continue }
-            guard line.contains("://") || line.hasPrefix("/") else { continue }
-            guard channels.count < maxChannels else { break }
+            if line.hasPrefix("#") { return true }
+            guard line.contains("://") || line.hasPrefix("/") else { return true }
 
             let fallbackName = line
                 .split(separator: "/").last
@@ -70,8 +79,8 @@ public enum M3UParser {
                 .split(separator: "?").first
                 .map(String.init)?
                 .trimmingCharacters(in: .whitespaces) ?? ""
-            let name = nonEmpty(pending?.name) ?? (fallbackName.isEmpty ? "Sender" : fallbackName)
-            let group = nonEmpty(pending?.group) ?? (extGroup.isEmpty ? "Ohne Kategorie" : extGroup)
+            let name = M3UParser.nonEmpty(pending?.name) ?? (fallbackName.isEmpty ? "Sender" : fallbackName)
+            let group = M3UParser.nonEmpty(pending?.group) ?? (extGroup.isEmpty ? "Ohne Kategorie" : extGroup)
 
             let channel = Channel(
                 name: name,
@@ -79,15 +88,71 @@ public enum M3UParser {
                 logo: pending?.logo,
                 group: group,
                 tvgID: pending?.tvgID,
-                kind: inferKind(name: name, group: group, url: line)
+                kind: M3UParser.inferKind(name: name, group: group, url: line)
             )
             if seen.insert(channel.url).inserted {
                 channels.append(channel)
             }
             pending = nil
+            return channels.count < M3UParser.maxChannels
         }
 
-        return channels
+        mutating func consume(_ data: Data) -> Bool {
+            let line = String(data: data, encoding: .utf8)
+                ?? String(data: data, encoding: .isoLatin1)
+                ?? ""
+            return consume(line)
+        }
+    }
+
+    /// Parst bereits vollständig geladenen Text (Demo-Daten und Tests).
+    public static func parse(_ content: String) -> [Channel] {
+        var parser = LineParser()
+        for rawLine in content.split(separator: "\n", omittingEmptySubsequences: false) {
+            if !parser.consume(String(rawLine)) { break }
+        }
+        return parser.channels
+    }
+
+    /// Liest die M3U zeilenweise aus einer Datei, ohne sie komplett in den
+    /// Speicher zu laden. Der Aufrufer muss bei security-scoped URLs den Scope
+    /// selbst geöffnet halten.
+    public static func parse(fileURL: URL) throws -> [Channel] {
+        let values = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+        if let size = values.fileSize, size > maxBytes {
+            throw ParseError.fileTooLarge
+        }
+
+        let handle = try FileHandle(forReadingFrom: fileURL)
+        defer { try? handle.close() }
+
+        var parser = LineParser()
+        var pending = Data()
+        var total = 0
+
+        while true {
+            let chunk = try handle.read(upToCount: 64 * 1024) ?? Data()
+            if chunk.isEmpty { break }
+            total += chunk.count
+            if total > maxBytes { throw ParseError.fileTooLarge }
+
+            pending.append(chunk)
+            var start = pending.startIndex
+            while let newline = pending[start...].firstIndex(of: 0x0A) {
+                if !parser.consume(Data(pending[start..<newline])) {
+                    return parser.channels
+                }
+                start = pending.index(after: newline)
+            }
+            if start > pending.startIndex {
+                pending.removeSubrange(pending.startIndex..<start)
+            }
+        }
+
+        if !pending.isEmpty {
+            _ = parser.consume(pending)
+        }
+        return parser.channels
     }
 
     public static func inferKind(name: String, group: String, url: String) -> MediaKind {
@@ -130,6 +195,10 @@ public enum M3UParser {
         }
         return result
     }
+
+    private static let attributeRegex = try! NSRegularExpression(
+        pattern: #"([A-Za-z0-9_-]+)\s*=\s*"([^"]*)""#
+    )
 
     private static func parseAttributes(_ metadata: String) -> [String: String] {
         let range = NSRange(metadata.startIndex..., in: metadata)
