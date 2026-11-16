@@ -97,6 +97,8 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
   let canaryEmail = "";
   let failCustomerCleanup = false;
   let providerCancel = false;
+  let sessionPriceId = "price_dummy";
+  let sessionUserId = "canary-success-user";
   let providerSubscriptionGets = 0;
   let server;
 
@@ -157,10 +159,24 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
       if (request.method === "GET" && url.startsWith("/v1/checkout/sessions/")) {
         return send(200, {
           livemode: false,
+          status: "open",
+          metadata: { userId: sessionUserId },
+          client_reference_id: sessionUserId,
           mode: "subscription",
           currency: "eur",
           amount_total: 249,
-          line_items: { data: [{ price: { id: "price_dummy", recurring: { interval: "month" } } }] },
+          line_items: {
+            data: [
+              {
+                price: {
+                  id: sessionPriceId,
+                  livemode: false,
+                  active: true,
+                  recurring: { interval: "month" },
+                },
+              },
+            ],
+          },
         });
       }
       if (request.method === "POST" && url === "/v1/payment_methods") {
@@ -256,6 +272,8 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
     });
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /checkout uses configured price/);
+    assert.match(result.stdout, /bound to the canary user/);
     assert.match(result.stdout, /Stripe reports cancel_at_period_end=true/);
     assert.equal(providerSubscriptionGets, 1, "the canary must query Stripe after cancellation");
 
@@ -282,6 +300,24 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
     assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
     assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
     afterCleanupFailure.close();
+
+    sessionPriceId = "price_other";
+    sessionUserId = "other-user";
+    const bindingFailure = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+      DATABASE_PATH: dbPath,
+    });
+    assert.notEqual(bindingFailure.status, 0, "a mismatched checkout session must fail the canary");
+    assert.match(bindingFailure.stderr, /checkout session does not match/);
+
+    const afterBindingFailure = new DatabaseSync(dbPath);
+    assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM users").get().c, 0);
+    assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM subscriptions").get().c, 0);
+    assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
+    assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
+    afterBindingFailure.close();
   } finally {
     if (server) {
       server.closeAllConnections?.();

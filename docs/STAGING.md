@@ -97,8 +97,10 @@ test event alone would not reveal.
 
 The canary creates a real Stripe test-mode Checkout Session through the app,
 creates a test subscription with a test payment method, and sends the signed
-`checkout.session.completed` and `customer.subscription.deleted` events. It then
-checks inside the staging container that:
+`checkout.session.completed` and `customer.subscription.deleted` events. It
+first checks that the session is open and test-mode, uses the configured active
+`STRIPE_PRICE_ID`, and binds both `metadata.userId` and `client_reference_id`
+to the canary user. It then checks inside the staging container that:
 
 - `subscriptions.status = 'active'` after the purchase event;
 - `current_period_end` is stored;
