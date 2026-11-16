@@ -5,6 +5,7 @@ import {
   paymentFailedMail,
   paymentFailedSupportNotice,
   paymentRecoveredMail,
+  purchaseConfirmationMail,
   sendMail,
   storeSubscriptionEndedMail,
   storeSubscriptionRefundedMail,
@@ -326,19 +327,24 @@ export async function applyStripeEvent(event: StripeEvent) {
 
   switch (event.type) {
     case "checkout.session.completed": {
+      const sessionId = typeof object.id === "string" ? object.id : null;
       const subscriptionId = idOf(object.subscription);
       const customerId = idOf(object.customer);
       // Payment methods such as SEPA may complete later; the subscription event
       // is authoritative. Fetch it when possible so the UI is not stuck.
       const subscription = subscriptionId ? await fetchSubscription(subscriptionId) : null;
       status = subscription ? mapStripeStatus(subscription.status) : "pending";
+      const periodEnd = isoFromSeconds(subscription?.current_period_end) ?? null;
       patchSubscription(userId, {
         status,
         customerId,
         subscriptionId,
-        periodEnd: isoFromSeconds(subscription?.current_period_end) ?? undefined,
+        periodEnd: periodEnd ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
       });
+      if (status === "active" && sessionId) {
+        await sendPurchaseConfirmation({ userId, sessionId, subscriptionId, periodEnd });
+      }
       break;
     }
     case "customer.subscription.created":
@@ -522,6 +528,33 @@ export async function notifyStoreSubscriptionEnded(input: {
   return true;
 }
 
+/**
+ * Erzeugt die Kaufbestätigung genau einmal pro Checkout. Der Marker liegt in
+ * subscription_events und schützt sowohl gegen Stripe-Retries als auch gegen
+ * das Zusammentreffen von Webhook und serverseitiger Success-Bestätigung.
+ */
+async function sendPurchaseConfirmation(params: {
+  userId: string;
+  sessionId: string;
+  subscriptionId: string | null;
+  periodEnd: string | null;
+}) {
+  const user = userContact(params.userId);
+  if (!user) return;
+  const key = `mail:purchase-confirmation:${params.subscriptionId ?? params.sessionId}`;
+  if (!claimMailMarker(params.userId, key)) return;
+  await sendMail({
+    to: user.email,
+    ...purchaseConfirmationMail({
+      name: user.display_name,
+      locale: user.locale,
+      priceEur: PREMIUM_PRICE_EUR,
+      periodEnd: params.periodEnd,
+    }),
+    kind: "subscription",
+  });
+}
+
 async function mailSubscriptionEnded(
   userId: string,
   subscriptionId: string | null,
@@ -637,13 +670,17 @@ export async function reconcileCheckoutSession(
     typeof subscriptionValue === "string" ? subscriptionValue : idOf(subscriptionValue);
 
   const status = subscription ? mapStripeStatus(subscription.status) : "pending";
+  const periodEnd = isoFromSeconds(subscription?.current_period_end) ?? null;
   patchSubscription(userId, {
     status,
     customerId: idOf(session.customer),
     subscriptionId,
-    periodEnd: isoFromSeconds(subscription?.current_period_end) ?? undefined,
+    periodEnd: periodEnd ?? undefined,
     cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
   });
+  if (status === "active" && session.id) {
+    await sendPurchaseConfirmation({ userId, sessionId: session.id, subscriptionId, periodEnd });
+  }
 
   return { ok: true, status };
 }

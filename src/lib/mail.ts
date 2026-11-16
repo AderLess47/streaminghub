@@ -384,6 +384,53 @@ export function paymentFailedSupportNotice(input: {
 }
 
 /**
+ * Bestätigung des ersten erfolgreichen Checkouts. Der Preis und das
+ * Verlängerungsdatum kommen aus dem serverseitig geprüften Stripe-Zustand;
+ * die Mail wird pro Checkout-Session nur einmal erzeugt.
+ */
+export function purchaseConfirmationMail(input: {
+  name: string;
+  locale: string;
+  priceEur: number;
+  periodEnd?: string | null;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+  const renewal = input.periodEnd ? new Date(input.periodEnd) : null;
+  const renewalDate =
+    renewal && Number.isFinite(renewal.getTime())
+      ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
+          dateStyle: "long",
+          timeZone: "Europe/Berlin",
+        }).format(renewal)
+      : null;
+  const details = de
+    ? [
+        `Preis: ${price} / Monat (Endpreis; keine USt. gemäß § 19 UStG)`,
+        renewalDate ? `Nächste Verlängerung: ${renewalDate}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : [
+        `Price: ${price} / month (final price; no VAT under the German small business regulation)`,
+        renewalDate ? `Next renewal: ${renewalDate}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+  return {
+    subject: de ? "Willkommen bei StreamingHub Premium" : "Welcome to StreamingHub Premium",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein Kauf von StreamingHub Premium war erfolgreich. Dein Abo ist ab jetzt aktiv.\n\n${details}\n\nAbo und Kündigung:\n${link}\n\nDu kannst dein Abo jederzeit zum Ende des Abrechnungszeitraums kündigen.${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of StreamingHub Premium was successful. Your subscription is active now.\n\n${details}\n\nSubscription and cancellation:\n${link}\n\nYou can cancel your subscription at any time at the end of the billing period.${signature(false)}`,
+  };
+}
+
+/**
  * Abschlussmail, wenn ein Abo nach fehlgeschlagenen Zahlungen ausläuft. Die
  * normale Kündigung bekommt ihre eigene Bestätigung.
  */
