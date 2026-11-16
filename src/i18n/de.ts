@@ -158,7 +158,7 @@ export const de = {
         premium: {
           title: "Premium-Zusatzfunktionen",
           description:
-            "Erweiterte Optimierung, geräteübergreifende Kontoverwaltung und zukünftige Erweiterungen.",
+            "Geräteübergreifende Kontoverwaltung, Weiterschauen auf allen Geräten und zukünftige Erweiterungen.",
         },
         continueWatching: {
           title: "Geräteübergreifendes Weiterschauen",
@@ -220,7 +220,7 @@ export const de = {
         "2,49 € pro Monat. Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.",
       ctaPrimary: "Premium entdecken",
       ctaSecondary: "Mein Abonnement verwalten",
-      note: "Einige Premiumfunktionen sind noch in Entwicklung. Wir kennzeichnen den Status transparent; Zahlungen werden über Stripe abgewickelt.",
+      note: "Premium umfasst derzeit Weiterschauen auf allen Geräten und die geräteübergreifende Kontoverwaltung. Zahlungen werden erst nach serverseitiger Bestätigung abgewickelt.",
     },
     transparency: {
       title: "Was StreamingHub nicht ist",
@@ -239,7 +239,7 @@ export const de = {
   premium: {
     title: "StreamingHub Premium",
     subtitle:
-      "Ein Abonnement, das die Verwaltung deiner Geräte und die Verbindungsoptimierung ergänzt.",
+      "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
     price: "2,49 €",
     period: "pro Monat",
     vat: "Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
@@ -261,18 +261,6 @@ export const de = {
         description:
           "Die Wiedergabeposition wird im Konto gespeichert: im Wohnzimmer angefangen, im Schlafzimmer an derselben Stelle weiter.",
         status: "Verfügbar",
-      },
-      {
-        title: "Integrierte VPN-/Proxy-Funktion",
-        description:
-          "Automatisch konfigurierte Verbindung zur Unterstützung geeigneter Streaming-Verbindungen – direkt in der App.",
-        status: "In Entwicklung",
-      },
-      {
-        title: "Erweiterte Streaming-Optimierung",
-        description:
-          "Zusätzliche Puffer- und Verbindungsstrategien für instabile Netzwerke.",
-        status: "In Entwicklung",
       },
       {
         title: "Geräteübergreifende Kontoverwaltung",
@@ -562,7 +550,7 @@ export const de = {
       amazonNotice:
         "Dieses Abonnement wird über den Amazon Appstore verwaltet. Kündigung und Änderungen erfolgen in deinem Amazon-Konto.",
       noSubscription:
-        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifende Verwaltung und Optimierungsfunktionen.",
+        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
       priceNote: "2,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
     },
     support: {

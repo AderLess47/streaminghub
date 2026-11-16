@@ -40,10 +40,10 @@ const FAQ_SEED = [
   },
   {
     category: "premium",
-    q_de: "Ist die VPN-Funktion bereits verfügbar?",
-    a_de: "Die integrierte VPN-/Proxy-Funktion ist in Entwicklung und noch nicht produktiv aktiviert. Wir kennzeichnen sie auf der Premium-Seite transparent als „In Entwicklung“ und informieren vor einer Aktivierung über Funktionen, Kosten und Datenschutz.",
-    q_en: "Is the VPN feature available yet?",
-    a_en: "The integrated VPN/proxy capability is in development and not active in production. It is labelled clearly as “In development” on the premium page and we will explain functionality, cost and privacy before activation.",
+    q_de: "Welche Funktionen umfasst Premium?",
+    a_de: "Premium umfasst derzeit geräteübergreifendes Weiterschauen und die geräteübergreifende Kontoverwaltung. Weitere Funktionen werden erst angeboten, wenn sie produktiv verfügbar sind.",
+    q_en: "Which features does Premium include?",
+    a_en: "Premium currently includes cross-device continue watching and cross-device account management. Further features are offered only once they are available in production.",
   },
   {
     category: "troubleshooting",
@@ -117,6 +117,43 @@ const PREVIOUS_SELECTED_DEVICE_FAQ_DE =
 const PREVIOUS_SELECTED_DEVICE_FAQ_EN =
   "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. The app stores the playlist and its credentials locally on the device. If you expressly ask us to store an M3U URL that you provided yourself for your account, that URL is stored on the server and sent only to active linked devices; playlist content remains local. Please only use sources you are licensed to access.";
 
+const RETIRED_VPN_FAQ_DE =
+  "Die integrierte VPN-/Proxy-Funktion ist in Entwicklung und noch nicht produktiv aktiviert. Wir kennzeichnen sie auf der Premium-Seite transparent als „In Entwicklung“ und informieren vor einer Aktivierung über Funktionen, Kosten und Datenschutz.";
+const RETIRED_VPN_FAQ_EN =
+  "The integrated VPN/proxy capability is in development and not active in production. It is labelled clearly as “In development” on the premium page and we will explain functionality, cost and privacy before activation.";
+
+/**
+ * Replaces the retired VPN FAQ only when the row still matches the seeded copy,
+ * so manual admin edits are never overwritten.
+ */
+function syncRetiredVpnFaqCopy() {
+  const target = FAQ_SEED.find(
+    (item) => item.q_de === "Welche Funktionen umfasst Premium?",
+  );
+  if (!target) return;
+
+  const current = get<{ answer_de: string; answer_en: string }>(
+    `SELECT answer_de, answer_en FROM faq_items WHERE question_de = ?`,
+    "Ist die VPN-Funktion bereits verfügbar?",
+  );
+  if (!current) return;
+  if (current.answer_de !== RETIRED_VPN_FAQ_DE || current.answer_en !== RETIRED_VPN_FAQ_EN) {
+    return;
+  }
+
+  run(
+    `UPDATE faq_items
+     SET question_de = ?, question_en = ?, answer_de = ?, answer_en = ?, updated_at = ?
+     WHERE question_de = ?`,
+    target.q_de,
+    target.q_en,
+    target.a_de,
+    target.a_en,
+    nowIso(),
+    "Ist die VPN-Funktion bereits verfügbar?",
+  );
+}
+
 function syncLegacyPlaylistFaqCopy() {
   const target = FAQ_SEED.find(
     (item) => item.q_de === "Wie füge ich meine eigene Playlist hinzu?",
@@ -152,6 +189,7 @@ function syncLegacyPlaylistFaqCopy() {
 }
 
 function seedFaq() {
+  syncRetiredVpnFaqCopy();
   syncLegacyPlaylistFaqCopy();
   const count = get<{ c: number }>(`SELECT COUNT(*) AS c FROM faq_items`)?.c ?? 0;
   if (count > 0) return;

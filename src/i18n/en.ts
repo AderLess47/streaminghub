@@ -157,7 +157,7 @@ export const en: Dictionary = {
         premium: {
           title: "Premium extras",
           description:
-            "Advanced optimisation, cross-device account management and future extensions.",
+            "Cross-device account management, continue watching on every device and future extensions.",
         },
         continueWatching: {
           title: "Cross-device resume",
@@ -218,7 +218,7 @@ export const en: Dictionary = {
         "€2.49 per month. Final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Cancel monthly.",
       ctaPrimary: "Discover Premium",
       ctaSecondary: "Manage my subscription",
-      note: "Some premium features are still in development. We label their status transparently; payments are processed via Stripe.",
+      note: "Premium currently includes continue watching on every device and cross-device account management. Payments are processed only after server-side confirmation.",
     },
     transparency: {
       title: "What StreamingHub is not",
@@ -237,7 +237,7 @@ export const en: Dictionary = {
   premium: {
     title: "StreamingHub Premium",
     subtitle:
-      "A subscription that complements device management and connection optimisation.",
+      "A subscription for cross-device continue watching and managing your devices.",
     price: "€2.49",
     period: "per month",
     vat: "Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
@@ -259,18 +259,6 @@ export const en: Dictionary = {
         description:
           "Playback positions are stored in your account: start in the living room and pick up at the same spot in the bedroom.",
         status: "Available",
-      },
-      {
-        title: "Integrated VPN/proxy capability",
-        description:
-          "Automatically configured connection supporting suitable streaming connections – inside the app.",
-        status: "In development",
-      },
-      {
-        title: "Advanced streaming optimisation",
-        description:
-          "Additional buffering and connection strategies for unstable networks.",
-        status: "In development",
       },
       {
         title: "Cross-device account management",
@@ -559,7 +547,7 @@ export const en: Dictionary = {
       amazonNotice:
         "This subscription is managed through the Amazon Appstore. Cancellations and changes happen in your Amazon account.",
       noSubscription:
-        "No premium subscription is stored yet. Premium adds cross-device management and optimisation features.",
+        "No premium subscription is stored yet. Premium adds cross-device continue watching and device management.",
       priceNote: "€2.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
     },
     support: {

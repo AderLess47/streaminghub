@@ -169,9 +169,10 @@ tvOS-Zweige sind deshalb nur gelesen, nicht kompiliert.
   sie als App Store Server Notifications an `/api/v1/apple/notifications`.
   Meldet die App zusätzlich eine Transaktion, gilt derselbe Zustand –
   Duplikate erkennt der Server.
-- Die Playlist wird vollständig im Speicher gehalten. Bei sehr großen Listen
-  (Zehntausende Einträge) wäre eine seitenweise Ablage nötig; der Low-Spec-Modus
-  ist bisher nur ein Schalter ohne eigene Grenze.
+- Die M3U-Datei wird zeilenweise gelesen; die daraus aufgebaute Kanalliste
+  liegt weiterhin im Speicher. Bei sehr großen Listen (Zehntausende Einträge)
+  wäre eine seitenweise Ablage nötig; der Low-Spec-Modus ist bisher nur ein
+  Schalter ohne eigene Grenze.
 - Der Fortschritt wird beim Verlassen und alle zehn Sekunden gespeichert, nicht
   bei jedem Sprung.
 - Für VoiceOver, Dynamic Type und Kontrast gibt es sprechende Labels, 44-pt-Ziele

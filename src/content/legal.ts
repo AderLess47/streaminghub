@@ -20,7 +20,7 @@ export type LegalDoc = {
   clausesEn: Clause[];
 };
 
-const UPDATED = "2026-11-10";
+const UPDATED = "2026-11-16";
 
 export const legalDocs: Record<string, LegalDoc> = {
   privacy: {
@@ -84,9 +84,9 @@ export const legalDocs: Record<string, LegalDoc> = {
         ],
       },
       {
-        heading: "8. VPN-/Proxy-Funktion",
+        heading: "8. Premiumfunktionen",
         paragraphs: [
-          "Die integrierte VPN-/Proxy-Funktion befindet sich in Entwicklung und ist nicht aktiv. Sollte sie aktiviert werden, informieren wir vorab über verarbeitete Verbindungsdaten, Serverstandorte, Speicherdauer und Auftragsverarbeiter und holen, soweit erforderlich, eine Einwilligung ein.",
+          "Premium umfasst derzeit das geräteübergreifende Weiterschauen und die geräteübergreifende Kontoverwaltung. Weitere Funktionen werden erst angeboten, wenn sie produktiv verfügbar sind. Führt eine neue Funktion zur Verarbeitung personenbezogener Daten, informieren wir vor der Aktivierung über Zwecke, Daten, Speicherdauer und Empfänger und holen, soweit erforderlich, eine Einwilligung ein.",
         ],
       },
       {
@@ -192,9 +192,9 @@ export const legalDocs: Record<string, LegalDoc> = {
         ],
       },
       {
-        heading: "8. VPN/proxy capability",
+        heading: "8. Premium features",
         paragraphs: [
-          "The integrated VPN/proxy capability is in development and not active. If it is activated, we will explain in advance which connection data is processed, the server locations, retention periods and processors, and obtain consent where required.",
+          "Premium currently includes cross-device continue watching and cross-device account management. Further features are offered only once they are available in production. If a new feature processes personal data, we will explain the purposes, data, retention periods and recipients before activation and obtain consent where required.",
         ],
       },
       {
@@ -447,7 +447,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "4. Leistungsumfang und Entwicklung",
         paragraphs: [
-          "Premium umfasst die zum jeweiligen Zeitpunkt produktiv verfügbaren Premiumfunktionen. Als „in Entwicklung“ gekennzeichnete Funktionen (insbesondere VPN-/Proxy-Funktion und erweiterte Streaming-Optimierung) sind nicht geschuldet, bis sie ausdrücklich als verfügbar gekennzeichnet werden.",
+          "Premium umfasst die zum jeweiligen Zeitpunkt produktiv verfügbaren Premiumfunktionen. Künftige, noch nicht ausdrücklich als verfügbar gekennzeichnete Funktionen sind nicht geschuldet.",
           "Der Ausfall einzelner Premiumfunktionen berechtigt nicht zur Minderung, solange die übrigen Leistungen nutzbar bleiben; gesetzliche Rechte bleiben unberührt.",
         ],
       },
@@ -494,7 +494,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "4. Scope and development",
         paragraphs: [
-          "Premium covers the premium features productively available at the relevant time. Features marked “in development” (in particular the VPN/proxy capability and advanced streaming optimisation) are not owed until explicitly marked available.",
+          "Premium covers the premium features productively available at the relevant time. Future features that are not explicitly marked as available are not owed.",
           "Unavailability of individual premium features does not entitle to a price reduction while the remaining services remain usable; statutory rights remain unaffected.",
         ],
       },

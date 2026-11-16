@@ -4,7 +4,7 @@ Diese Datei hält fest, was im Code umgesetzt ist, was geprüft wurde und was nu
 der Betreiber erledigen kann. Sie ist **keine Rechtsberatung** und ersetzt die
 anwaltliche Prüfung von AGB, Widerrufsbelehrung und Datenschutzerklärung nicht.
 
-Stand: 13. November 2026.
+Stand: 16. November 2026.
 
 ## 1. Widerruf über die Website (§ 356a BGB)
 
@@ -38,13 +38,13 @@ technisch nicht kündigen; die Bestätigung sagt das ausdrücklich.
 
 ## 3. Premium-Funktionsangaben
 
-Abgeglichen am 13. November 2026:
+Abgeglichen am 16. November 2026:
 
 | Aussage | Wo | Stand |
 | --- | --- | --- |
 | Geräteübergreifendes Weiterschauen | Premium-Seite („Verfügbar“), i18n, README | **stimmt**: Android holt den Stand beim Öffnen des Senders, Apple und Vega beim Start |
-| VPN-/Proxy-Funktion | Premium-Seite, Hilfe, Datenschutz, AGB § 4 | „In Entwicklung“ – nicht implementiert, aus dem Leistungsumfang ausgenommen |
-| Erweiterte Streaming-Optimierung | Premium-Seite, AGB § 4 | „In Entwicklung“ |
+| VPN-/Proxy-Funktion | früher Premium-Seite, Hilfe, Datenschutz, AGB § 4 | **entfernt** – wird nicht mehr beworben oder zugesagt |
+| Erweiterte Streaming-Optimierung | früher Premium-Seite, AGB § 4 | **entfernt** – wird nicht mehr beworben oder zugesagt |
 | Amazon-Kauf | Premium-Seite, AGB § 3, Datenschutz § 5 | **korrigiert**: vorher „nicht erhältlich“, tatsächlich ist `PREMIUM_SALES = true` und Amazon IAP vorgesehen |
 | Geräteverwaltung | Premium-Seite | stimmt (Dashboard, Kopplung, Entkopplung) |
 
@@ -112,4 +112,4 @@ Es sind keine Kampagnen, Pixel oder Werbekonten im Projekt aktiv. Vor dem Start
 sind die Aussagen zu prüfen, die die Seite selbst macht: „kein Inhalt, nur
 Player“, „2,49 € Endpreis“, „jederzeit kündbar“, „14 Tage Widerruf“. Alle drei
 sind jetzt durch Funktion und Text gedeckt. Nicht verwendet werden dürfen
-Aussagen zu VPN, Optimierung oder „unbegrenzten“ Geräten.
+Aussagen zu VPN, nicht zugesagter Optimierung oder „unbegrenzten“ Geräten.
