@@ -33,6 +33,49 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Sweep preflight (dry run)
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          # Explicitly keep the preflight non-destructive even if a repository
+          # variable or caller environment tries to enable apply.
+          CANARY_SWEEP_APPLY: "0"
+        run: |
+          set -euo pipefail
+          : "${STRIPE_SECRET_KEY:?STRIPE_TEST_SECRET_KEY is missing}"
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "::error::STRIPE_TEST_SECRET_KEY must start with sk_test_."
+              exit 1
+              ;;
+          esac
+          output="$(node scripts/staging-canary-sweep.mjs)"
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" > "$RUNNER_TEMP/staging-canary-sweep.json"
+          node -e '
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const lines = [
+              "### Canary orphan sweep preflight",
+              "",
+              "- mode: dry run (no deletions)",
+              "- cutoff: `" + plan.cutoff + "`",
+              "- old subscriptions: **" + plan.subscriptions.length + "**",
+              "- old customers: **" + plan.customers.length + "**",
+            ];
+            if (plan.subscriptions.length) {
+              lines.push("- subscription IDs: " + plan.subscriptions.map((id) => "`" + id + "`").join(", "));
+            }
+            if (plan.customers.length) {
+              lines.push("- customer IDs: " + plan.customers.map((id) => "`" + id + "`").join(", "));
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            const total = plan.subscriptions.length + plan.customers.length;
+            if (total) {
+              console.log("::warning::" + total + " old canary Stripe object(s) found; dry run only, nothing deleted.");
+            }
+          ' "$RUNNER_TEMP/staging-canary-sweep.json"
+
       - name: Install flyctl
         run: |
           set -euo pipefail
