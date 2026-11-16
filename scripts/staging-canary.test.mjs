@@ -107,7 +107,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
   const stripeCreates = [];
   let canaryEmail = "";
   let failCustomerCleanup = false;
-  let failPaymentMethod = false;
+  let failSubscriptionCreate = false;
   let providerCancel = false;
   let sessionPriceId = "price_dummy";
   let sessionUserId = "canary-success-user";
@@ -133,7 +133,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
 
       if (
         request.method === "POST" &&
-        ["/v1/payment_methods", "/v1/customers", "/v1/subscriptions"].includes(url)
+        ["/v1/customers", "/v1/subscriptions"].includes(url)
       ) {
         stripeCreates.push({
           path: url,
@@ -202,16 +202,13 @@ test("canary success and failure paths keep cleanup single and complete", async 
           },
         });
       }
-      if (request.method === "POST" && url === "/v1/payment_methods") {
-        if (failPaymentMethod) {
-          return send(500, { error: { message: "payment method failed" } });
-        }
-        return send(200, { id: "pm_canary" });
-      }
       if (request.method === "POST" && url === "/v1/customers") {
         return send(200, { id: "cus_canary" });
       }
       if (request.method === "POST" && url === "/v1/subscriptions") {
+        if (failSubscriptionCreate) {
+          return send(500, { error: { message: "subscription failed" } });
+        }
         return send(200, {
           id: "sub_canary",
           status: "active",
@@ -298,17 +295,22 @@ test("canary success and failure paths keep cleanup single and complete", async 
     });
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.equal(stripeCreates.length, 3, "the success run must create three Stripe resources");
+    assert.equal(stripeCreates.length, 2, "the success run must create two Stripe resources");
     assert.deepEqual(
       stripeCreates.map((create) => create.path),
-      ["/v1/payment_methods", "/v1/customers", "/v1/subscriptions"],
+      ["/v1/customers", "/v1/subscriptions"],
     );
-    assert.equal(new Set(stripeCreates.map((create) => create.idempotencyKey)).size, 3);
+    assert.equal(new Set(stripeCreates.map((create) => create.idempotencyKey)).size, 2);
     for (const create of stripeCreates) {
       assert.match(create.idempotencyKey, /^canary-/);
       assert.equal(create.form.get("metadata[canary]"), "staging-billing-canary");
       assert.match(create.form.get("metadata[canary_run_id]") ?? "", /^\d+-[0-9a-f]+$/);
     }
+    const customerCreate = stripeCreates.find((create) => create.path === "/v1/customers");
+    const subscriptionCreate = stripeCreates.find((create) => create.path === "/v1/subscriptions");
+    assert.equal(customerCreate.form.get("payment_method"), "pm_card_visa");
+    assert.equal(customerCreate.form.get("invoice_settings[default_payment_method]"), "pm_card_visa");
+    assert.equal(subscriptionCreate.form.get("default_payment_method"), "pm_card_visa");
     assert.match(result.stdout, /checkout uses configured price/);
     assert.match(result.stdout, /bound to the canary user/);
     assert.match(result.stdout, /Stripe reports cancel_at_period_end=true/);
@@ -360,7 +362,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
     sessionPriceId = "price_dummy";
     sessionUserId = "canary-success-user";
     failCustomerCleanup = false;
-    failPaymentMethod = true;
+    failSubscriptionCreate = true;
     const lateFailure = await runCanary({
       ...baseEnv(),
       STAGING_BASE_URL: base,
@@ -368,7 +370,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
       DATABASE_PATH: dbPath,
     });
     assert.notEqual(lateFailure.status, 0, "a failure after session creation must fail the canary");
-    assert.match(lateFailure.stderr, /payment method failed/);
+    assert.match(lateFailure.stderr, /subscription failed/);
     assert.match(lateFailure.stdout, /cleanup calls: 1/);
 
     const afterLateFailure = new DatabaseSync(dbPath);

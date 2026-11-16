@@ -55,6 +55,7 @@ const REQUIRED_WEBHOOK_EVENTS = [
 const TIMEOUT_MS = Number(process.env.CANARY_TIMEOUT_MS ?? 90_000);
 const runId = `${Date.now()}-${randomBytes(4).toString("hex")}`;
 const CANARY_MARKER = "staging-billing-canary";
+const SHARED_TEST_PAYMENT_METHOD = "pm_card_visa";
 const RAW_CANARY_EMAIL =
   process.env.STAGING_CANARY_EMAIL ?? "delivered+staging-canary@resend.dev";
 let email = "";
@@ -424,19 +425,6 @@ async function main() {
       fail("checkout session does not match the configured test price or canary user");
     }
 
-    const paymentMethod = await stripeRequest(
-      "POST",
-      "/v1/payment_methods",
-      {
-        type: "card",
-        "card[token]": "tok_visa",
-        "billing_details[name]": "Staging Canary",
-        "billing_details[email]": email,
-        "metadata[canary]": CANARY_MARKER,
-        "metadata[canary_run_id]": runId,
-      },
-      { idempotencyKey: `canary-${runId}-payment-method` },
-    );
     const customer = await stripeRequest(
       "POST",
       "/v1/customers",
@@ -445,8 +433,8 @@ async function main() {
         "metadata[userId]": userId,
         "metadata[canary]": CANARY_MARKER,
         "metadata[canary_run_id]": runId,
-        payment_method: paymentMethod.id,
-        "invoice_settings[default_payment_method]": paymentMethod.id,
+        payment_method: SHARED_TEST_PAYMENT_METHOD,
+        "invoice_settings[default_payment_method]": SHARED_TEST_PAYMENT_METHOD,
       },
       { idempotencyKey: `canary-${runId}-customer` },
     );
@@ -461,7 +449,7 @@ async function main() {
         "metadata[userId]": userId,
         "metadata[canary]": CANARY_MARKER,
         "metadata[canary_run_id]": runId,
-        default_payment_method: paymentMethod.id,
+        default_payment_method: SHARED_TEST_PAYMENT_METHOD,
         payment_behavior: "error_if_incomplete",
         "expand[]": "latest_invoice",
       },
