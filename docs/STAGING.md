@@ -95,6 +95,12 @@ exactly one enabled test-mode webhook endpoint for
 events. This catches a missing or misconfigured endpoint that the locally signed
 test event alone would not reveal.
 
+The `/status` page exposes its deployed environment and commit as
+`data-deployment-environment` and `data-deployment-commit`. The canary requires
+`CANARY_EXPECT_ENV=staging` (the default) and the commit from `GITHUB_SHA` or
+`CANARY_EXPECT_COMMIT`; a stale or incorrectly targeted staging image fails
+before a synthetic user is created.
+
 The canary creates a real Stripe test-mode Checkout Session through the app,
 creates a test subscription with a test payment method, and sends the signed
 `checkout.session.completed` and `customer.subscription.deleted` events. It
@@ -120,6 +126,7 @@ configured:
 
 ```bash
 STAGING_BASE_URL=https://streaminghub-staging.fly.dev \
+CANARY_EXPECT_COMMIT=$(git rev-parse HEAD) \
 STRIPE_SECRET_KEY=sk_test_... \
 STRIPE_PRICE_ID=price_... \
 STRIPE_WEBHOOK_SECRET=whsec_... \

@@ -13,7 +13,8 @@ RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production \
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0

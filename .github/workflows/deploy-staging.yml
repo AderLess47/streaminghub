@@ -66,7 +66,8 @@ jobs:
             --remote-only \
             --config fly.staging.toml \
             --app streaminghub-staging \
-            --ha=false
+            --ha=false \
+            --build-arg "GIT_COMMIT=${GITHUB_SHA}"
 
       - name: Verify staging health
         run: |

@@ -19,6 +19,7 @@
  *   STRIPE_PRICE_ID         test price, 2.49 EUR / month
  *   STRIPE_WEBHOOK_SECRET   test webhook signing secret
  *   FLY_API_TOKEN           app-scoped token for the staging app
+ *   CANARY_EXPECT_COMMIT    commit deployed to staging (or GITHUB_SHA)
  *
  * Optional:
  *   STAGING_APP             default streaminghub-staging
@@ -41,6 +42,8 @@ const PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 const FLY_APP = process.env.STAGING_APP ?? "streaminghub-staging";
 const EXPECT_MAIL = process.env.CANARY_EXPECT_MAIL ?? "sent";
+const EXPECTED_ENV = process.env.CANARY_EXPECT_ENV ?? "staging";
+const EXPECTED_COMMIT = process.env.CANARY_EXPECT_COMMIT ?? process.env.GITHUB_SHA ?? "";
 const REQUIRED_WEBHOOK_EVENTS = [
   "checkout.session.completed",
   "customer.subscription.created",
@@ -117,6 +120,9 @@ function assertConfiguration() {
     fail("STRIPE_SECRET_KEY must be a test-mode key (sk_test_...)");
   }
   email = buildCanaryEmail();
+  if (!EXPECTED_COMMIT) {
+    fail("CANARY_EXPECT_COMMIT or GITHUB_SHA is required to verify the deployed commit");
+  }
   if (EXPECT_MAIL !== "sent") {
     fail("CANARY_EXPECT_MAIL must be sent; queued is not a passing state");
   }
@@ -151,6 +157,12 @@ async function fetchWithTimeout(url, init, timeoutMs) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+function parseDeployment(html) {
+  const environment = /data-deployment-environment="([^"]*)"/.exec(html)?.[1];
+  const commit = /data-deployment-commit="([^"]*)"/.exec(html)?.[1];
+  return { environment, commit };
 }
 
 async function request(method, route, body, cookieOverride) {
@@ -334,6 +346,18 @@ async function main() {
   try {
     const health = await request("GET", "/status", undefined, false);
     ok(health.status === 200, `staging /status is reachable (${health.status})`);
+    const deployment = parseDeployment(health.text);
+    ok(
+      deployment.environment === EXPECTED_ENV,
+      `deployed environment is ${EXPECTED_ENV} (${deployment.environment})`,
+    );
+    ok(
+      deployment.commit === EXPECTED_COMMIT,
+      `deployed commit is ${EXPECTED_COMMIT} (${deployment.commit})`,
+    );
+    if (deployment.environment !== EXPECTED_ENV || deployment.commit !== EXPECTED_COMMIT) {
+      fail("deployed environment or commit does not match the canary");
+    }
 
     cleanupNeeded = true;
     const registration = await request(
