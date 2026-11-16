@@ -1,0 +1,32 @@
+name: Backup check
+
+# Read-only operational check. It lists the daily backups on the production
+# volume and never prints the database or any secrets.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: List production backups
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Install flyctl
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: List backup files
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          flyctl ssh console \
+            --app streaminghub-org \
+            --user nextjs \
+            -C "sh -lc 'date -u; echo; ls -lt /app/data/backups | head -10; echo; du -sh /app/data/backups'"
