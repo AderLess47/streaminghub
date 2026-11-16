@@ -127,17 +127,21 @@ the Stripe API. Complete the payment manually with test card
 unless `ALLOW_LIVE_STRIPE=1` is set.
 
 Without any keys, the full flow can be exercised locally against a Stripe API
-stub: start the app with `STRIPE_SECRET_KEY=sk_test_stub`,
-`STRIPE_PRICE_ID=price_stub`, `STRIPE_WEBHOOK_SECRET=whsec_stub_secret` and
-`STRIPE_API_BASE=http://127.0.0.1:4026`, then run:
+stub and an email stub: start the app with `STRIPE_SECRET_KEY=sk_test_stub`,
+`STRIPE_PRICE_ID=price_stub`, `STRIPE_WEBHOOK_SECRET=whsec_stub_secret`,
+`STRIPE_API_BASE=http://127.0.0.1:4026`, `EMAIL_API_KEY=test` and
+`EMAIL_API_BASE=http://127.0.0.1:4025`, then run:
 
 ```bash
 STRIPE_WEBHOOK_SECRET=whsec_stub_secret STRIPE_PRICE_ID=price_stub npm run stripe:smoke
 ```
 
-It
-covers checkout creation, signed webhooks, past-due mapping, invoice payment,
-cancellation, idempotency, forged signatures and session-ownership checks.
+The command starts both stubs. It covers checkout creation, signed webhooks,
+past-due mapping, invoice payment, cancellation, idempotency, forged signatures
+and session-ownership checks. It also verifies that the localized purchase
+confirmation is accepted by the email stub and stored as `sent`, that the
+success confirmation before the webhook does not duplicate it, and that an
+inactive subscription receives no purchase confirmation.
 
 **Amazon Appstore:** external payment prompts are not allowed in the app. The
 `subscriptions.channel` field separates `amazon` from `web`; Amazon purchases
