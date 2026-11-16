@@ -43,9 +43,10 @@ const FLY_APP = process.env.STAGING_APP ?? "streaminghub-staging";
 const EXPECT_MAIL = process.env.CANARY_EXPECT_MAIL ?? "sent";
 const TIMEOUT_MS = Number(process.env.CANARY_TIMEOUT_MS ?? 90_000);
 const runId = `${Date.now()}-${randomBytes(4).toString("hex")}`;
-const baseEmail = process.env.STAGING_CANARY_EMAIL ?? "delivered+staging-canary@resend.dev";
-const [localPart, domain] = baseEmail.split("@");
-const email = `${localPart}+${runId}@${domain}`;
+const RAW_CANARY_EMAIL =
+  process.env.STAGING_CANARY_EMAIL ?? "delivered+staging-canary@resend.dev";
+let email = "";
+let cleanupNeeded = false;
 const password = `Canary-${randomBytes(18).toString("base64url")}!`;
 
 let checks = 0;
@@ -65,6 +66,31 @@ function fail(message) {
   throw new Error(message);
 }
 
+/**
+ * The canary may only use a well-formed @resend.dev recipient. A malformed
+ * value must fail before registration or any shell command is built from it.
+ */
+function buildCanaryEmail() {
+  const value = RAW_CANARY_EMAIL.trim();
+  const parts = value.split("@");
+  if (parts.length !== 2) {
+    fail("STAGING_CANARY_EMAIL must contain exactly one @");
+  }
+  const [localPart, domain] = parts;
+  if (domain.toLowerCase() !== "resend.dev") {
+    fail("STAGING_CANARY_EMAIL must use the @resend.dev test domain");
+  }
+  if (!localPart || !/^[A-Za-z0-9._+-]+$/.test(localPart)) {
+    fail("STAGING_CANARY_EMAIL has an invalid local part");
+  }
+  if (localPart.startsWith(".") || localPart.endsWith(".") || localPart.includes("..")) {
+    fail("STAGING_CANARY_EMAIL has an invalid local part");
+  }
+  const generated = `${localPart}+${runId}@resend.dev`;
+  if (generated.length > 254) fail("STAGING_CANARY_EMAIL is too long");
+  return generated;
+}
+
 function assertConfiguration() {
   let host;
   try {
@@ -81,6 +107,7 @@ function assertConfiguration() {
   if (!STRIPE_KEY.startsWith("sk_test_")) {
     fail("STRIPE_SECRET_KEY must be a test-mode key (sk_test_...)");
   }
+  email = buildCanaryEmail();
   if (!EXPECT_MAIL || !["sent", "queued"].includes(EXPECT_MAIL)) {
     fail("CANARY_EXPECT_MAIL must be sent or queued");
   }
@@ -106,18 +133,32 @@ function cookieHeader() {
   return [...cookies.entries()].map(([key, value]) => `${key}=${value}`).join("; ");
 }
 
+async function fetchWithTimeout(url, init, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  timer.unref?.();
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function request(method, route, body, cookieOverride) {
   const headers = { origin: BASE };
   if (body !== undefined) headers["content-type"] = "application/json";
   const cookie = cookieOverride === false ? "" : (cookieOverride ?? cookieHeader());
   if (cookie) headers.cookie = cookie;
-  const response = await fetch(`${BASE}${route}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    redirect: "manual",
-    signal: AbortSignal.timeout(15_000),
-  });
+  const response = await fetchWithTimeout(
+    `${BASE}${route}`,
+    {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      redirect: "manual",
+    },
+    15_000,
+  );
   storeCookies(response);
   const text = await response.text();
   let json = null;
@@ -131,15 +172,18 @@ async function request(method, route, body, cookieOverride) {
 
 async function stripeRequest(method, route, form) {
   const body = form === undefined ? undefined : new URLSearchParams(form).toString();
-  const response = await fetch(`${STRIPE_API_BASE}${route}`, {
-    method,
-    headers: {
-      authorization: `Bearer ${STRIPE_KEY}`,
-      ...(body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+  const response = await fetchWithTimeout(
+    `${STRIPE_API_BASE}${route}`,
+    {
+      method,
+      headers: {
+        authorization: `Bearer ${STRIPE_KEY}`,
+        ...(body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+      },
+      body,
     },
-    body,
-    signal: AbortSignal.timeout(20_000),
-  });
+    20_000,
+  );
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
     const message = payload?.error?.message ?? "request failed";
@@ -158,15 +202,18 @@ function signWebhook(body) {
 
 async function sendEvent(event) {
   const body = JSON.stringify(event);
-  const response = await fetch(`${BASE}/api/webhooks/stripe`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "stripe-signature": signWebhook(body),
+  const response = await fetchWithTimeout(
+    `${BASE}/api/webhooks/stripe`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "stripe-signature": signWebhook(body),
+      },
+      body,
     },
-    body,
-    signal: AbortSignal.timeout(15_000),
-  });
+    15_000,
+  );
   const json = await response.json().catch(() => null);
   return { status: response.status, json };
 }
@@ -180,6 +227,7 @@ function runAssert({ cleanup = false } = {}) {
       cwd: ROOT,
       encoding: "utf8",
       env: process.env,
+      timeout: 30_000,
     });
   } else {
     const flyctl = process.env.FLYCTL_BIN ?? "flyctl";
@@ -195,7 +243,7 @@ function runAssert({ cleanup = false } = {}) {
         "-C",
         `node /app/scripts/staging-canary-assert.mjs ${args.join(" ")}`,
       ],
-      { cwd: ROOT, encoding: "utf8", env: process.env },
+      { cwd: ROOT, encoding: "utf8", env: process.env, timeout: 30_000 },
     );
   }
   const line = stdout
@@ -234,6 +282,7 @@ async function main() {
   const health = await request("GET", "/status", undefined, false);
   ok(health.status === 200, `staging /status is reachable (${health.status})`);
 
+  cleanupNeeded = true;
   const registration = await request(
     "POST",
     "/api/auth/register",
@@ -407,6 +456,13 @@ try {
 } catch (error) {
   failures += 1;
   console.error(`  ✗ canary failed: ${error.message}`);
+  if (cleanupNeeded) {
+    try {
+      runAssert({ cleanup: true });
+    } catch (cleanupError) {
+      console.error(`  ! early cleanup failed: ${cleanupError.message}`);
+    }
+  }
 } finally {
   const total = Math.max(checks, failures);
   console.log(`\n${Math.max(0, checks - failures)}/${total} checks passed.`);
