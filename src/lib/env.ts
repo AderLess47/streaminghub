@@ -11,6 +11,9 @@ const bool = (value: string | undefined) => value === "1" || value?.toLowerCase(
 
 export const env = {
   appUrl: (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  deployEnv:
+    process.env.DEPLOY_ENV ?? (process.env.NODE_ENV === "production" ? "production" : "development"),
+  commit: process.env.GIT_COMMIT ?? process.env.COMMIT_SHA ?? "unknown",
   isProduction: process.env.NODE_ENV === "production",
   databasePath:
     process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "streaminghub.db"),

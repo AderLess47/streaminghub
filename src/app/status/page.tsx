@@ -152,6 +152,26 @@ export default async function StatusPage() {
             </div>
           )}
 
+          <div
+            className="card p-5"
+            data-deployment-environment={env.deployEnv}
+            data-deployment-commit={env.commit}
+          >
+            <h2 className="text-sm font-semibold">Deployment</h2>
+            <dl className="mt-3 grid gap-2 text-xs text-muted">
+              <div className="flex items-center justify-between gap-3">
+                <dt>{locale === "de" ? "Umgebung" : "Environment"}</dt>
+                <dd className="font-mono text-slate-300">{env.deployEnv}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>{locale === "de" ? "Commit" : "Commit"}</dt>
+                <dd className="truncate font-mono text-slate-300" title={env.commit}>
+                  {env.commit}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
           <div className="card p-5">
             <h2 className="text-sm font-semibold">{t.help.stillNeedHelp}</h2>
             <Link href="/contact" className="btn btn-outline btn-sm mt-3 btn-block">

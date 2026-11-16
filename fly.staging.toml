@@ -8,6 +8,7 @@ primary_region = "fra"
 
 [env]
   NODE_ENV = "production"
+  DEPLOY_ENV = "staging"
   APP_URL = "https://streaminghub-staging.fly.dev"
   DATABASE_PATH = "/app/data/streaminghub.db"
   SESSION_DAYS = "30"

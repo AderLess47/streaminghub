@@ -44,6 +44,7 @@ jobs:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
           STAGING_APP: streaminghub-staging
           STAGING_CANARY_EMAIL: ${{ vars.STAGING_CANARY_EMAIL }}
+          CANARY_EXPECT_COMMIT: ${{ github.sha }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           STRIPE_PRICE_ID: ${{ vars.STRIPE_PRICE_ID }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}

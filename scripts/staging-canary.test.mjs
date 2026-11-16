@@ -11,6 +11,15 @@ const root = path.resolve(import.meta.dirname, "..");
 const canaryScript = path.join(root, "scripts", "staging-canary.mjs");
 const initScript = path.join(root, "scripts", "init-db.mjs");
 
+function deploymentHtml({ environment = "staging", commit = "commit-test" } = {}) {
+  return `<div data-deployment-environment="${environment}" data-deployment-commit="${commit}"></div>`;
+}
+
+function sendHtml(response, html) {
+  response.writeHead(200, { "content-type": "text/html; charset=utf-8", connection: "close" });
+  response.end(html);
+}
+
 function runCanary(env) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [canaryScript], { cwd: root, env });
@@ -32,6 +41,7 @@ function baseEnv() {
     STRIPE_PRICE_ID: "price_dummy",
     STRIPE_WEBHOOK_SECRET: "whsec_dummy",
     CANARY_LOCAL_ASSERT: "1",
+    CANARY_EXPECT_COMMIT: "commit-test",
     STAGING_CANARY_EMAIL: "delivered+staging-canary@resend.dev",
   };
 }
@@ -141,7 +151,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
         });
       }
       if (request.method === "GET" && url === "/status") {
-        return send(200, { ok: true });
+        return sendHtml(response, deploymentHtml());
       }
       if (request.method === "POST" && url === "/api/auth/register") {
         const parsed = JSON.parse(body || "{}");
@@ -353,6 +363,61 @@ test("canary success and failure paths keep cleanup single and complete", async 
   }
 });
 
+test("deployed environment or commit mismatch fails before registration", async () => {
+  const server = createServer((request, response) => {
+    if (request.method === "GET" && request.url?.startsWith("/v1/webhook_endpoints")) {
+      response.writeHead(200, { "content-type": "application/json", connection: "close" });
+      response.end(
+        JSON.stringify({
+          data: [
+            {
+              url: `http://${request.headers.host}/api/webhooks/stripe`,
+              livemode: false,
+              status: "enabled",
+              enabled_events: [
+                "checkout.session.completed",
+                "customer.subscription.created",
+                "customer.subscription.updated",
+                "customer.subscription.deleted",
+                "invoice.paid",
+                "invoice.payment_failed",
+              ],
+            },
+          ],
+          has_more: false,
+        }),
+      );
+      return;
+    }
+    if (request.method === "GET" && request.url === "/status") {
+      return sendHtml(response, deploymentHtml({ environment: "production", commit: "other-commit" }));
+    }
+    response.writeHead(404, { "content-type": "application/json", connection: "close" });
+    response.end(JSON.stringify({ error: { message: "unexpected request" } }));
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const { port } = server.address();
+    const base = `http://127.0.0.1:${port}`;
+
+    const result = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+    });
+
+    assert.notEqual(result.status, 0, "a deployment metadata mismatch must fail the canary");
+    assert.match(result.stderr, /deployed environment or commit does not match/);
+  } finally {
+    server.closeAllConnections?.();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("early checkout failure cleans up the synthetic user and rows", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "streaminghub-canary-early-"));
   const dbPath = path.join(dir, "canary.db");
@@ -395,7 +460,7 @@ test("early checkout failure cleans up the synthetic user and rows", async () =>
         });
       }
       if (request.method === "GET" && request.url === "/status") {
-        return send(200, { ok: true });
+        return sendHtml(response, deploymentHtml());
       }
       if (request.method === "POST" && request.url === "/api/auth/register") {
         registerCalls += 1;
