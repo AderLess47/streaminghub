@@ -203,7 +203,18 @@ function subscriptionRow(userId) {
     .get(userId);
 }
 
-async function register(label) {
+function purchaseMails(userId) {
+  return db
+    .prepare(
+      `SELECT subject, body_text, status FROM outbox_emails
+       WHERE kind = 'subscription'
+         AND to_email = (SELECT email FROM users WHERE id = ?)
+       ORDER BY created_at`,
+    )
+    .all(userId);
+}
+
+async function register(label, locale = "de") {
   const stamp = Date.now();
   const response = await post(
     "/api/auth/register",
@@ -211,7 +222,7 @@ async function register(label) {
       displayName: `Stripe ${label}`,
       email: `stripe-${label}-${stamp}@example.com`,
       password: "StripeTest-2026!Ab",
-      locale: "de",
+      locale,
       acceptTerms: true,
     },
     false,
@@ -272,6 +283,45 @@ ok(row?.status === "active", `subscription active after confirmation (${row?.sta
 ok(row?.provider_subscription_id === subA, "subscription id stored");
 ok(row?.provider_customer_id === cusA, "customer id stored");
 ok(Boolean(row?.current_period_end), "period end stored");
+
+const confirmationA = purchaseMails(userAId);
+ok(confirmationA.length === 1, `purchase confirmation created once (${confirmationA.length})`);
+ok(/Willkommen bei StreamingHub Premium/.test(confirmationA[0]?.subject ?? ""), "purchase confirmation is German");
+ok(
+  /2,49/.test(confirmationA[0]?.body_text ?? "") &&
+    String(confirmationA[0]?.body_text ?? "").includes("/dashboard/subscription"),
+  "purchase confirmation contains price and management link",
+);
+
+const confirmA = await post("/api/subscription/confirm", {
+  sessionId: checkoutA.json?.sessionId,
+});
+ok(
+  confirmA.status === 200 && confirmA.json?.status === "active",
+  `success confirmation is idempotent (${confirmA.status})`,
+);
+ok(purchaseMails(userAId).length === 1, "success redirect does not duplicate the confirmation mail");
+
+const duplicateCompleted = await sendEvent({
+  id: `evt_completed_again_${runId}`,
+  type: "checkout.session.completed",
+  data: {
+    object: {
+      id: checkoutA.json?.sessionId,
+      object: "checkout.session",
+      payment_status: "paid",
+      customer: cusA,
+      subscription: subA,
+      metadata: { userId: userAId },
+      client_reference_id: userAId,
+    },
+  },
+});
+ok(
+  duplicateCompleted.status === 200 && duplicateCompleted.json?.handled === true,
+  "duplicate checkout completion accepted",
+);
+ok(purchaseMails(userAId).length === 1, "purchase confirmation is idempotent across webhook retries");
 
 const pastDue = await sendEvent({
   id: `evt_past_due_${runId}`,
@@ -349,7 +399,7 @@ ok(forged.status === 400, `forged signature rejected (${forged.status})`);
 ok(subscriptionRow(userAId)?.status === "canceled", "forged event does not change state");
 
 console.log("\nServer-side success confirmation and ownership");
-const userB = await register("b");
+const userB = await register("b", "en");
 ok(userB.status === 200, "second test customer created");
 const userBId = userB.json?.userId;
 const checkoutB = await post("/api/subscription/checkout");
@@ -357,6 +407,15 @@ ok(checkoutB.status === 200, "second checkout created");
 const confirmB = await post("/api/subscription/confirm", { sessionId: checkoutB.json?.sessionId });
 ok(confirmB.status === 200 && confirmB.json?.status === "active", `session confirmed server-side (${confirmB.status})`);
 ok(subscriptionRow(userBId)?.status === "active", "confirmation activates the subscription");
+
+const confirmationB = purchaseMails(userBId);
+ok(confirmationB.length === 1, `localised purchase confirmation created once (${confirmationB.length})`);
+ok(/Welcome to StreamingHub Premium/.test(confirmationB[0]?.subject ?? ""), "purchase confirmation follows the customer locale");
+ok(
+  /2[.,]49/.test(confirmationB[0]?.body_text ?? "") &&
+    String(confirmationB[0]?.body_text ?? "").includes("/dashboard/subscription"),
+  "English purchase confirmation contains price and management link",
+);
 
 const foreign = await post(
   "/api/subscription/confirm",
