@@ -1,0 +1,82 @@
+name: Staging billing canary
+
+# Manual until the staging Stripe test key, webhook secret and email key are
+# configured. Once that is done, add a schedule here; do not silently skip a
+# scheduled run when a secret is missing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    name: Run the staging billing canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install flyctl
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Run canary
+        env:
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          STAGING_APP: streaminghub-staging
+          STAGING_CANARY_EMAIL: ${{ vars.STAGING_CANARY_EMAIL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          STRIPE_PRICE_ID: ${{ vars.STRIPE_PRICE_ID }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+          CANARY_EXPECT_MAIL: sent
+        run: |
+          set -euo pipefail
+          : "${STAGING_BASE_URL:?STAGING_BASE_URL is missing}"
+          : "${STRIPE_SECRET_KEY:?STRIPE_TEST_SECRET_KEY is missing}"
+          : "${STRIPE_PRICE_ID:?STRIPE_PRICE_ID is missing}"
+          : "${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is missing}"
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          case "$STAGING_BASE_URL" in
+            https://streaminghub.org|https://streaminghub.org/*)
+              echo "::error::Refusing to run the canary against production."
+              exit 1
+              ;;
+          esac
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "::error::STRIPE_TEST_SECRET_KEY must start with sk_test_."
+              exit 1
+              ;;
+          esac
+          node scripts/staging-canary.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Staging billing canary"
+            echo
+            echo "- target: \`${{ vars.STAGING_BASE_URL }}\`"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
