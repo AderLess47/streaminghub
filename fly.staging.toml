@@ -1,0 +1,42 @@
+app = "streaminghub-staging"
+primary_region = "fra"
+
+# Separate app and volume. Never point this file at the production app or the
+# production volume, and never add live Stripe keys here.
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  APP_URL = "https://streaminghub-staging.fly.dev"
+  DATABASE_PATH = "/app/data/streaminghub.db"
+  SESSION_DAYS = "30"
+  BACKUP_DIR = "/app/data/backups"
+  BACKUP_RETENTION_DAYS = "30"
+  EMAIL_FROM = "StreamingHub Staging <service@streaminghub.org>"
+  EMAIL_REPLY_TO = "delivered+staging-reply@resend.dev"
+  SUPPORT_EMAIL = "delivered+staging-support@resend.dev"
+  CONTACT_TO_EMAIL = "delivered+staging-contact@resend.dev"
+  SHOW_DEV_EMAIL_LINKS = "0"
+  AMAZON_STORE_URL = ""
+  # Billing and email credentials are Fly secrets, not repository content.
+  # Use only sk_test_... and a test-mode webhook secret in this app.
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Keep one machine available while the purchase canary is being built. A
+  # sleeping machine makes the Stripe webhook and browser test less reliable.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[mounts]]
+  source = "streaminghub_staging_data"
+  destination = "/app/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
