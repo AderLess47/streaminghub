@@ -108,6 +108,8 @@ test("canary success and failure paths keep cleanup single and complete", async 
   let canaryEmail = "";
   let failCustomerCleanup = false;
   let failSubscriptionCreate = false;
+  let omitCustomerMetadata = false;
+  let omitSubscriptionMetadata = false;
   let providerCancel = false;
   let sessionPriceId = "price_dummy";
   let sessionUserId = "canary-success-user";
@@ -125,6 +127,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
       let body = "";
       for await (const chunk of request) body += chunk;
       const url = request.url ?? "";
+      const form = new URLSearchParams(body);
       const send = (status, payload) => {
         response.writeHead(status, { "content-type": "application/json", connection: "close" });
         response.end(JSON.stringify(payload));
@@ -138,7 +141,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
         stripeCreates.push({
           path: url,
           idempotencyKey: request.headers["idempotency-key"],
-          form: new URLSearchParams(body),
+          form,
         });
       }
 
@@ -203,7 +206,17 @@ test("canary success and failure paths keep cleanup single and complete", async 
         });
       }
       if (request.method === "POST" && url === "/v1/customers") {
-        return send(200, { id: "cus_canary" });
+        return send(200, {
+          id: "cus_canary",
+          ...(omitCustomerMetadata
+            ? {}
+            : {
+                metadata: {
+                  canary: form.get("metadata[canary]"),
+                  canary_run_id: form.get("metadata[canary_run_id]"),
+                },
+              }),
+        });
       }
       if (request.method === "POST" && url === "/v1/subscriptions") {
         if (failSubscriptionCreate) {
@@ -213,6 +226,14 @@ test("canary success and failure paths keep cleanup single and complete", async 
           id: "sub_canary",
           status: "active",
           current_period_end: Math.floor(Date.now() / 1000) + 30 * 86_400,
+          ...(omitSubscriptionMetadata
+            ? {}
+            : {
+                metadata: {
+                  canary: form.get("metadata[canary]"),
+                  canary_run_id: form.get("metadata[canary_run_id]"),
+                },
+              }),
         });
       }
       if (request.method === "GET" && url === "/v1/subscriptions/sub_canary") {
@@ -379,6 +400,44 @@ test("canary success and failure paths keep cleanup single and complete", async 
     assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
     assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
     afterLateFailure.close();
+
+    failSubscriptionCreate = false;
+    omitSubscriptionMetadata = true;
+    const metadataFailure = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+      DATABASE_PATH: dbPath,
+    });
+    assert.notEqual(metadataFailure.status, 0, "missing Stripe metadata must fail the canary");
+    assert.match(metadataFailure.stderr, /subscription metadata is missing/);
+    assert.match(metadataFailure.stdout, /cleanup calls: 1/);
+
+    const afterMetadataFailure = new DatabaseSync(dbPath);
+    assert.equal(afterMetadataFailure.prepare("SELECT COUNT(*) AS c FROM users").get().c, 0);
+    assert.equal(afterMetadataFailure.prepare("SELECT COUNT(*) AS c FROM subscriptions").get().c, 0);
+    assert.equal(afterMetadataFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
+    assert.equal(afterMetadataFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
+    afterMetadataFailure.close();
+
+    omitSubscriptionMetadata = false;
+    omitCustomerMetadata = true;
+    const customerMetadataFailure = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+      DATABASE_PATH: dbPath,
+    });
+    assert.notEqual(customerMetadataFailure.status, 0, "missing customer metadata must fail the canary");
+    assert.match(customerMetadataFailure.stderr, /customer metadata is missing/);
+    assert.match(customerMetadataFailure.stdout, /cleanup calls: 1/);
+
+    const afterCustomerMetadataFailure = new DatabaseSync(dbPath);
+    assert.equal(afterCustomerMetadataFailure.prepare("SELECT COUNT(*) AS c FROM users").get().c, 0);
+    assert.equal(afterCustomerMetadataFailure.prepare("SELECT COUNT(*) AS c FROM subscriptions").get().c, 0);
+    assert.equal(afterCustomerMetadataFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
+    assert.equal(afterCustomerMetadataFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
+    afterCustomerMetadataFailure.close();
   } finally {
     if (server) {
       server.closeAllConnections?.();

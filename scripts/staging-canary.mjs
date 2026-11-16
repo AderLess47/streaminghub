@@ -439,6 +439,20 @@ async function main() {
       { idempotencyKey: `canary-${runId}-customer` },
     );
     customerId = customer.id;
+    ok(
+      customer.metadata?.canary === CANARY_MARKER,
+      `customer returns canary metadata (${customer.metadata?.canary})`,
+    );
+    ok(
+      customer.metadata?.canary_run_id === runId,
+      `customer returns canary run id (${customer.metadata?.canary_run_id})`,
+    );
+    if (
+      customer.metadata?.canary !== CANARY_MARKER ||
+      customer.metadata?.canary_run_id !== runId
+    ) {
+      fail("customer metadata is missing the canary marker or run id");
+    }
 
     const subscription = await stripeRequest(
       "POST",
@@ -458,6 +472,20 @@ async function main() {
     subscriptionId = subscription.id;
     ok(subscription.status === "active", `test subscription is active (${subscription.status})`);
     if (subscription.status !== "active") fail("test subscription did not become active");
+    ok(
+      subscription.metadata?.canary === CANARY_MARKER,
+      `subscription returns canary metadata (${subscription.metadata?.canary})`,
+    );
+    ok(
+      subscription.metadata?.canary_run_id === runId,
+      `subscription returns canary run id (${subscription.metadata?.canary_run_id})`,
+    );
+    if (
+      subscription.metadata?.canary !== CANARY_MARKER ||
+      subscription.metadata?.canary_run_id !== runId
+    ) {
+      fail("subscription metadata is missing the canary marker or run id");
+    }
 
     const periodEnd =
       subscription.current_period_end ??
