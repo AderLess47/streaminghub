@@ -2,6 +2,7 @@ package de.streaminghub.app.data
 
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.MediaKind
+import java.io.File
 import java.util.Locale
 
 /**
@@ -22,14 +23,20 @@ object M3uParser {
         val tvgId: String?,
     )
 
-    fun parse(content: String): List<Channel> {
+    fun parse(content: String): List<Channel> = parse(content.lineSequence())
+
+    /** Liest die Datei zeilenweise und hält nie die komplette M3U im Speicher. */
+    fun parse(file: File): List<Channel> =
+        file.bufferedReader(Charsets.UTF_8).useLines { lines -> parse(lines) }
+
+    private fun parse(lines: Sequence<String>): List<Channel> {
         val channels = LinkedHashMap<String, Channel>()
         var pending: PendingInfo? = null
         var extGroup = ""
         // `#KODIPROP` gilt für den nächsten Eintrag und wird danach geleert.
         val properties = LinkedHashMap<String, String>()
 
-        content.lineSequence().forEach { rawLine ->
+        for (rawLine in lines) {
             val line = rawLine.trim().removePrefix("\uFEFF")
             when {
                 line.isEmpty() -> Unit
@@ -66,7 +73,7 @@ object M3uParser {
                 line.startsWith("#") -> Unit
 
                 line.contains("://") || line.startsWith("/") -> {
-                    if (channels.size >= MAX_CHANNELS) return@forEach
+                    if (channels.size >= MAX_CHANNELS) break
 
                     val info = pending
                     val title = info?.name?.takeIf { it.isNotBlank() }

@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import StreamingHubCore
 
@@ -55,6 +56,37 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels[0].name, "a.m3u8")
         XCTAssertEqual(channels[0].group, "Ohne Kategorie")
+    }
+
+    func testParsesLargePlaylistFromFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("streaminghub-large-\(UUID().uuidString).m3u")
+        _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        defer {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        var buffer = Data("#EXTM3U\n".utf8)
+        for index in 0..<20_000 {
+            buffer.append(Data("#EXTINF:-1 group-title=\"Kategorie \(index % 20)\",Sender \(index)\n".utf8))
+            buffer.append(Data("https://example.test/live/\(index).m3u8\n".utf8))
+            if buffer.count >= 64 * 1024 {
+                try handle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
+        }
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
+        try handle.close()
+
+        let channels = try M3UParser.parse(fileURL: url)
+        XCTAssertEqual(channels.count, 20_000)
+        XCTAssertEqual(channels.first?.name, "Sender 0")
+        XCTAssertEqual(channels.last?.name, "Sender 19999")
+        XCTAssertEqual(channels.last?.group, "Kategorie 19")
     }
 
     func testPlaybackURLRejectsUnknownSchemes() {

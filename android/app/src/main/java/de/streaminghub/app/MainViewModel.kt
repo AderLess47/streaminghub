@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 import java.io.Reader
 import java.net.HttpURLConnection
@@ -197,7 +198,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+            val file = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
                 AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
@@ -206,7 +207,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = url,
                 sourceLabel = sourceLabelFor(url),
             )
@@ -217,7 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { readUri(uri) }.getOrElse { throwable ->
+            val file = runCatching { readUri(uri) }.getOrElse { throwable ->
                 AppLog.error("playlist", throwable, "Datei-Import")
                 uiState = uiState.copy(
                     loading = false,
@@ -226,7 +227,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = null,
                 sourceLabel = "M3U-Datei",
             )
@@ -757,7 +758,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+            val file = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
                 AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
@@ -766,7 +767,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = url,
                 sourceLabel = MANAGED_PLAYLIST_LABEL,
             )
@@ -810,10 +811,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val label = uiState.sourceLabel ?: sourceLabelFor(source)
         playlistRefreshJob?.cancel()
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(source) }.getOrNull() ?: return@launch
+            val file = runCatching { fetchPlaylist(source) }.getOrNull() ?: return@launch
             if (uiState.sourceUrl != source || uiState.updatedAt != cachedAt) return@launch
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = source,
                 sourceLabel = label,
                 silent = true,
@@ -822,13 +823,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun applyPlaylist(
-        content: String,
+        file: File,
         sourceUrl: String?,
         sourceLabel: String,
         silent: Boolean = false,
     ) {
-        val channels = withContext(Dispatchers.Default) {
-            runCatching { M3uParser.parse(content) }
+        val channels = withContext(Dispatchers.IO) {
+            runCatching { M3uParser.parse(file) }
         }.getOrElse { throwable ->
             uiState = uiState.copy(
                 loading = false,
@@ -871,7 +872,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    private suspend fun fetchPlaylist(url: String): String = withContext(Dispatchers.IO) {
+    private suspend fun fetchPlaylist(url: String): File = withContext(Dispatchers.IO) {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 20_000
             readTimeout = 45_000
@@ -886,22 +887,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (code !in 200..299) {
                 throw IOException(httpErrorMessage(code, "Playlist"))
             }
-            val cached = playlistCache.store(connection.inputStream)
-            cached.bufferedReader(Charsets.UTF_8).use { reader ->
-                reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
-            }
+            playlistCache.store(connection.inputStream)
         } finally {
             connection.disconnect()
         }
     }
 
-    private suspend fun readUri(uri: Uri): String = withContext(Dispatchers.IO) {
+    private suspend fun readUri(uri: Uri): File = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
         val input = resolver.openInputStream(uri)
             ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
-        playlistCache.store(input).bufferedReader(Charsets.UTF_8).use { reader ->
-            reader.readLimited(MAX_PLAYLIST_CHARS, "Playlist")
-        }
+        playlistCache.store(input)
     }
 
     private suspend fun fetchEpg(url: String): String = withContext(Dispatchers.IO) {
@@ -993,9 +989,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
-        // 100 MB wie im Apple-Dateiimport; große Anbieterlisten liegen oft
-        // deutlich über den früheren 20 MB.
-        const val MAX_PLAYLIST_CHARS = 100_000_000
         const val MAX_EPG_CHARS = 50_000_000
         const val CACHE_REFRESH_AFTER_MS = 15 * 60 * 1_000L
         const val PAGE_SIZE = 80
