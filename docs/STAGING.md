@@ -123,6 +123,11 @@ manual until the test secrets exist; add the daily `schedule` only after a green
 manual run. The database assertion helper is covered by
 `npm run test:staging-canary`.
 
+The canary removes the synthetic account, subscription, outbox rows, event rows
+and canary audit rows even when registration, checkout or a later assertion
+fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
+30-second command timeout.
+
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. Without `EMAIL_API_KEY`, the outbox remains `queued`
 and the canary fails; that is intentional, not a skipped check.
