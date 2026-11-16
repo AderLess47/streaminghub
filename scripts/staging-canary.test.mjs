@@ -90,12 +90,13 @@ test("missing Stripe webhook endpoint fails before registration", async () => {
   }
 });
 
-test("successful canary verifies Stripe cancellation and cleans up", async () => {
+test("canary success and failure paths keep cleanup single and complete", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "streaminghub-canary-success-"));
   const dbPath = path.join(dir, "canary.db");
   const seenEvents = new Set();
   let canaryEmail = "";
   let failCustomerCleanup = false;
+  let failPaymentMethod = false;
   let providerCancel = false;
   let sessionPriceId = "price_dummy";
   let sessionUserId = "canary-success-user";
@@ -180,6 +181,9 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
         });
       }
       if (request.method === "POST" && url === "/v1/payment_methods") {
+        if (failPaymentMethod) {
+          return send(500, { error: { message: "payment method failed" } });
+        }
         return send(200, { id: "pm_canary" });
       }
       if (request.method === "POST" && url === "/v1/customers") {
@@ -275,6 +279,7 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
     assert.match(result.stdout, /checkout uses configured price/);
     assert.match(result.stdout, /bound to the canary user/);
     assert.match(result.stdout, /Stripe reports cancel_at_period_end=true/);
+    assert.match(result.stdout, /cleanup calls: 1/);
     assert.equal(providerSubscriptionGets, 1, "the canary must query Stripe after cancellation");
 
     const db = new DatabaseSync(dbPath);
@@ -318,6 +323,27 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
     assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
     assert.equal(afterBindingFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
     afterBindingFailure.close();
+
+    sessionPriceId = "price_dummy";
+    sessionUserId = "canary-success-user";
+    failCustomerCleanup = false;
+    failPaymentMethod = true;
+    const lateFailure = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+      DATABASE_PATH: dbPath,
+    });
+    assert.notEqual(lateFailure.status, 0, "a failure after session creation must fail the canary");
+    assert.match(lateFailure.stderr, /payment method failed/);
+    assert.match(lateFailure.stdout, /cleanup calls: 1/);
+
+    const afterLateFailure = new DatabaseSync(dbPath);
+    assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM users").get().c, 0);
+    assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM subscriptions").get().c, 0);
+    assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
+    assert.equal(afterLateFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
+    afterLateFailure.close();
   } finally {
     if (server) {
       server.closeAllConnections?.();
