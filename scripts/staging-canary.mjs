@@ -279,54 +279,54 @@ async function main() {
   assertConfiguration();
   console.log(`Staging billing canary → ${BASE}`);
 
-  const health = await request("GET", "/status", undefined, false);
-  ok(health.status === 200, `staging /status is reachable (${health.status})`);
-
-  cleanupNeeded = true;
-  const registration = await request(
-    "POST",
-    "/api/auth/register",
-    {
-      displayName: "Staging Canary",
-      email,
-      password,
-      locale: "de",
-      acceptTerms: true,
-      marketingOptIn: false,
-    },
-    false,
-  );
-  const userId = registration.json?.userId;
-  ok(
-    registration.status === 200 && Boolean(userId),
-    `staging canary account created (${registration.status})`,
-    registration.text.slice(0, 160),
-  );
-  if (registration.status !== 200 || !userId) fail("could not create the staging canary account");
-
-  const checkout = await request("POST", "/api/subscription/checkout", undefined);
-  const sessionId = checkout.json?.sessionId;
-  ok(
-    checkout.status === 200 && Boolean(sessionId),
-    `checkout session created (${checkout.status})`,
-    checkout.text.slice(0, 200),
-  );
-  if (checkout.status !== 200 || !sessionId) fail("could not create the checkout session");
-
-  const sessionRoute = `/v1/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=line_items.data.price`;
-  const session = await stripeRequest("GET", sessionRoute);
-  const sessionPrice = session.line_items?.data?.[0]?.price;
-  ok(session.livemode === false, "Stripe reports livemode=false");
-  ok(session.mode === "subscription", `checkout mode is subscription (${session.mode})`);
-  ok(session.currency === "eur", `checkout currency is EUR (${session.currency})`);
-  ok(session.amount_total === 249, `checkout amount is 249 cents (${session.amount_total})`);
-  ok(sessionPrice?.recurring?.interval === "month", `price interval is monthly (${sessionPrice?.recurring?.interval})`);
-
   let customerId = null;
   let subscriptionId = null;
-  let subscription = null;
+  let sessionId = null;
 
   try {
+    const health = await request("GET", "/status", undefined, false);
+    ok(health.status === 200, `staging /status is reachable (${health.status})`);
+
+    cleanupNeeded = true;
+    const registration = await request(
+      "POST",
+      "/api/auth/register",
+      {
+        displayName: "Staging Canary",
+        email,
+        password,
+        locale: "de",
+        acceptTerms: true,
+        marketingOptIn: false,
+      },
+      false,
+    );
+    const userId = registration.json?.userId;
+    ok(
+      registration.status === 200 && Boolean(userId),
+      `staging canary account created (${registration.status})`,
+      registration.text.slice(0, 160),
+    );
+    if (registration.status !== 200 || !userId) fail("could not create the staging canary account");
+
+    const checkout = await request("POST", "/api/subscription/checkout", undefined);
+    sessionId = checkout.json?.sessionId;
+    ok(
+      checkout.status === 200 && Boolean(sessionId),
+      `checkout session created (${checkout.status})`,
+      checkout.text.slice(0, 200),
+    );
+    if (checkout.status !== 200 || !sessionId) fail("could not create the checkout session");
+
+    const sessionRoute = `/v1/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=line_items.data.price`;
+    const session = await stripeRequest("GET", sessionRoute);
+    const sessionPrice = session.line_items?.data?.[0]?.price;
+    ok(session.livemode === false, "Stripe reports livemode=false");
+    ok(session.mode === "subscription", `checkout mode is subscription (${session.mode})`);
+    ok(session.currency === "eur", `checkout currency is EUR (${session.currency})`);
+    ok(session.amount_total === 249, `checkout amount is 249 cents (${session.amount_total})`);
+    ok(sessionPrice?.recurring?.interval === "month", `price interval is monthly (${sessionPrice?.recurring?.interval})`);
+
     const paymentMethod = await stripeRequest("POST", "/v1/payment_methods", {
       type: "card",
       "card[token]": "tok_visa",
@@ -341,7 +341,7 @@ async function main() {
     });
     customerId = customer.id;
 
-    subscription = await stripeRequest("POST", "/v1/subscriptions", {
+    const subscription = await stripeRequest("POST", "/v1/subscriptions", {
       customer: customerId,
       "items[0][price]": PRICE_ID,
       default_payment_method: paymentMethod.id,
@@ -423,30 +423,34 @@ async function main() {
     );
     await waitFor("subscription ends as canceled", (state) => state.subscriptionStatus === "canceled");
   } finally {
-    if (subscriptionId) {
-      try {
-        await stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
-      } catch {
-        /* already canceled */
+    if (cleanupNeeded) {
+      if (subscriptionId) {
+        try {
+          await stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
+        } catch {
+          /* already canceled */
+        }
       }
-    }
-    if (customerId) {
-      try {
-        await stripeRequest("DELETE", `/v1/customers/${encodeURIComponent(customerId)}`);
-      } catch {
-        /* best-effort test-mode cleanup */
+      if (customerId) {
+        try {
+          await stripeRequest("DELETE", `/v1/customers/${encodeURIComponent(customerId)}`);
+        } catch {
+          /* best-effort test-mode cleanup */
+        }
       }
-    }
-    try {
-      await stripeRequest("POST", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {});
-    } catch {
-      /* already completed or expired */
-    }
-    try {
-      runAssert({ cleanup: true });
-    } catch (error) {
-      failures += 1;
-      console.error(`  ! cleanup failed: ${error.message}`);
+      if (sessionId) {
+        try {
+          await stripeRequest("POST", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {});
+        } catch {
+          /* already completed or expired */
+        }
+      }
+      try {
+        runAssert({ cleanup: true });
+      } catch (error) {
+        failures += 1;
+        console.error(`  ! cleanup failed: ${error.message}`);
+      }
     }
   }
 }
@@ -456,13 +460,6 @@ try {
 } catch (error) {
   failures += 1;
   console.error(`  ✗ canary failed: ${error.message}`);
-  if (cleanupNeeded) {
-    try {
-      runAssert({ cleanup: true });
-    } catch (cleanupError) {
-      console.error(`  ! early cleanup failed: ${cleanupError.message}`);
-    }
-  }
 } finally {
   const total = Math.max(checks, failures);
   console.log(`\n${Math.max(0, checks - failures)}/${total} checks passed.`);
