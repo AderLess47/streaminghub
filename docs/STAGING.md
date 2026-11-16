@@ -63,8 +63,10 @@ GitHub environment `staging` needs:
 | --- | --- |
 | `FLY_STAGING_API_TOKEN` | App-scoped Fly token for `streaminghub-staging` |
 | `STAGING_BASE_URL` | `https://streaminghub-staging.fly.dev` |
-| `STRIPE_TEST_SECRET_KEY` | Test key for canary cleanup and direct test cancellation |
-| `STAGING_CANARY_EMAIL` | Test recipient used by the canary |
+| `STRIPE_TEST_SECRET_KEY` | Test key for the canary's Stripe API calls and cleanup |
+| `STRIPE_WEBHOOK_SECRET` | Test-mode webhook signing secret |
+| `STRIPE_PRICE_ID` | Test price, 2.49 EUR / month (variable) |
+| `STAGING_CANARY_EMAIL` | Test recipient used by the canary (variable) |
 
 ## 4. Deploy
 
@@ -79,54 +81,78 @@ The workflow is deliberately manual for the first rollout. Once staging secrets
 and the canary are stable, a `push` trigger on `main` can be added without
 changing the isolation rules.
 
-## 5. Planned purchase canary
+## 5. Billing canary
 
-The canary creates a synthetic account, opens a real Stripe test-mode Checkout
-session with Playwright, pays with `4242 4242 4242 4242`, waits for the redirect
-and webhook, and checks inside the staging container that:
+The implemented canary is a deterministic **provider-contract** check. It is
+not a browser automation: Stripe's own automated-testing documentation says
+hosted Checkout and Payment Element have security measures that prevent
+automated testing. A Playwright test of the hosted card form would be an
+unsupported selector race, not a trustworthy release gate.
 
-- `subscriptions.status = 'active'`;
-- `current_period_end` is in the future;
-- exactly one purchase confirmation was stored in `outbox_emails`;
-- its status is `sent`;
+The canary creates a real Stripe test-mode Checkout Session through the app,
+creates a test subscription with a test payment method, and sends the signed
+`checkout.session.completed` and `customer.subscription.deleted` events. It then
+checks inside the staging container that:
+
+- `subscriptions.status = 'active'` after the purchase event;
+- `current_period_end` is stored;
+- exactly one purchase confirmation is in `outbox_emails`;
+- its status is the expected `sent`;
 - the marker `mail:purchase-confirmation:<subscriptionId>` exists exactly once;
-- a duplicate webhook or repeated confirmation does not create a second mail;
+- a duplicate webhook does not create a second mail;
 - cancellation sets `cancel_at_period_end = 1`;
 - `customer.subscription.deleted` ends the subscription as `canceled`.
 
 The canary refuses to run if the base URL is production, the Stripe key does not
-start with `sk_test_`, or Stripe reports `livemode: true`.
+start with `sk_test_`, or the session reports `livemode: true`.
 
-### Fallback if Playwright becomes too flaky
+Run it manually after the staging app, Stripe test webhook and email key are
+configured:
 
-Flaky means: two failures in three scheduled runs, or more than 10% failed runs
-over the last 20 runs. Business assertions are never retried automatically.
+```bash
+STAGING_BASE_URL=https://streaminghub-staging.fly.dev \
+STRIPE_SECRET_KEY=sk_test_... \
+STRIPE_PRICE_ID=price_... \
+STRIPE_WEBHOOK_SECRET=whsec_... \
+FLY_API_TOKEN=... \
+npm run staging:canary
+```
 
-**Level 1 — reduce cadence, keep coverage.** Keep the full Playwright canary but
-run it weekly and manually before a release. Remove it from the automatic
-production gate until it is stable again. Document each skipped day.
+Or use **Actions → Staging billing canary → Run workflow**. The workflow is
+manual until the test secrets exist; add the daily `schedule` only after a green
+manual run. The database assertion helper is covered by
+`npm run test:staging-canary`.
 
-**Level 2 — provider-contract canary with reduced coverage.** Replace the
-browser step with a deterministic contract test:
+The canary requires a configured staging email provider, because `sent` is the
+only passing mail state. Without `EMAIL_API_KEY`, the outbox remains `queued`
+and the canary fails; that is intentional, not a skipped check.
 
-1. create a Checkout Session through the app in Stripe test mode;
-2. verify mode, currency, amount, price and `livemode: false`;
-3. replay a signed `checkout.session.completed` fixture;
-4. assert subscription state, one purchase mail and the idempotency marker;
-5. replay `customer.subscription.deleted` and assert the final state.
+**What it does not cover:** the hosted Stripe card form itself. A human must
+still complete one test-mode purchase with `4242 4242 4242 4242` before a
+production release. This is documented as a manual release check, not an
+automated pass.
 
-This is explicitly **not** a full purchase canary: it does not prove that the
-hosted Checkout page completes a payment. The workflow name and summary must say
-"provider-contract, reduced coverage". The production gate stays disabled until
-a manual test purchase has passed.
+### Fallback if a Playwright canary is added later
+
+If Stripe later exposes a stable, supported test interface and a Playwright
+canary is added, flakiness means two failures in three scheduled runs or more
+than 10% failed runs over the last 20 runs. Business assertions are never
+retried automatically.
+
+**Level 1 — reduce cadence, keep coverage.** Run the browser check weekly and
+manually before a release. Remove it from the automatic production gate until it
+is stable again.
+
+**Level 2 — keep the provider-contract canary.** The deterministic script in
+this repository remains the gate. The browser check is additional evidence only;
+it never replaces the contract checks.
 
 **Level 3 — manual release check.** Before a production release, a human
-completes one test-mode purchase with the official test card and checks the
-dashboard, webhook and outbox. This is the last resort, not an automated pass.
+completes one test-mode purchase and checks the dashboard, webhook and outbox.
 
 Never fix flakiness by using live keys, weakening assertions, hiding failures or
-retrying the business checks. If the canary cannot be made reliable, the correct
-outcome is "no automated purchase gate", not a green check with unknown coverage.
+retrying the business checks. If browser automation cannot be made reliable, the
+correct outcome is "no browser gate", not a green check with unknown coverage.
 
 ## 6. Off-site backup freshness gate
 

@@ -55,6 +55,8 @@
     "test:contact-form": "node scripts/run-contact-form-tests.mjs",
     "test:admin-contacts": "node scripts/run-admin-contacts-tests.mjs",
     "test:audit-retention": "node scripts/run-audit-retention-tests.mjs",
+    "test:staging-canary": "node --test scripts/staging-canary-assert.test.mjs",
+    "staging:canary": "node scripts/staging-canary.mjs",
     "retention:purge": "node scripts/contact-retention.mjs",
     "retention:audit": "node scripts/audit-retention.mjs"
   },

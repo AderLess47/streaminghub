@@ -155,6 +155,10 @@ jobs:
       - name: Audit log retention tests
         run: npm run test:audit-retention
 
+      # Staging canary: DB-/Outbox-Auswertung und Cleanup-Schutz.
+      - name: Staging canary assert tests
+        run: npm run test:staging-canary
+
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
   # erst beim next build auf. Der Build braucht keine Secrets.
