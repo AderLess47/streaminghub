@@ -54,6 +54,7 @@ const REQUIRED_WEBHOOK_EVENTS = [
 ];
 const TIMEOUT_MS = Number(process.env.CANARY_TIMEOUT_MS ?? 90_000);
 const runId = `${Date.now()}-${randomBytes(4).toString("hex")}`;
+const CANARY_MARKER = "staging-billing-canary";
 const RAW_CANARY_EMAIL =
   process.env.STAGING_CANARY_EMAIL ?? "delivered+staging-canary@resend.dev";
 let email = "";
@@ -191,7 +192,7 @@ async function request(method, route, body, cookieOverride) {
   return { status: response.status, text, json };
 }
 
-async function stripeRequest(method, route, form) {
+async function stripeRequest(method, route, form, { idempotencyKey } = {}) {
   const body = form === undefined ? undefined : new URLSearchParams(form).toString();
   const response = await fetchWithTimeout(
     `${STRIPE_API_BASE}${route}`,
@@ -200,6 +201,7 @@ async function stripeRequest(method, route, form) {
       headers: {
         authorization: `Bearer ${STRIPE_KEY}`,
         ...(body ? { "content-type": "application/x-www-form-urlencoded" } : {}),
+        ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
       },
       body,
     },
@@ -422,27 +424,49 @@ async function main() {
       fail("checkout session does not match the configured test price or canary user");
     }
 
-    const paymentMethod = await stripeRequest("POST", "/v1/payment_methods", {
-      type: "card",
-      "card[token]": "tok_visa",
-      "billing_details[name]": "Staging Canary",
-      "billing_details[email]": email,
-    });
-    const customer = await stripeRequest("POST", "/v1/customers", {
-      email,
-      "metadata[userId]": userId,
-      payment_method: paymentMethod.id,
-      "invoice_settings[default_payment_method]": paymentMethod.id,
-    });
+    const paymentMethod = await stripeRequest(
+      "POST",
+      "/v1/payment_methods",
+      {
+        type: "card",
+        "card[token]": "tok_visa",
+        "billing_details[name]": "Staging Canary",
+        "billing_details[email]": email,
+        "metadata[canary]": CANARY_MARKER,
+        "metadata[canary_run_id]": runId,
+      },
+      { idempotencyKey: `canary-${runId}-payment-method` },
+    );
+    const customer = await stripeRequest(
+      "POST",
+      "/v1/customers",
+      {
+        email,
+        "metadata[userId]": userId,
+        "metadata[canary]": CANARY_MARKER,
+        "metadata[canary_run_id]": runId,
+        payment_method: paymentMethod.id,
+        "invoice_settings[default_payment_method]": paymentMethod.id,
+      },
+      { idempotencyKey: `canary-${runId}-customer` },
+    );
     customerId = customer.id;
 
-    const subscription = await stripeRequest("POST", "/v1/subscriptions", {
-      customer: customerId,
-      "items[0][price]": PRICE_ID,
-      default_payment_method: paymentMethod.id,
-      payment_behavior: "error_if_incomplete",
-      "expand[]": "latest_invoice",
-    });
+    const subscription = await stripeRequest(
+      "POST",
+      "/v1/subscriptions",
+      {
+        customer: customerId,
+        "items[0][price]": PRICE_ID,
+        "metadata[userId]": userId,
+        "metadata[canary]": CANARY_MARKER,
+        "metadata[canary_run_id]": runId,
+        default_payment_method: paymentMethod.id,
+        payment_behavior: "error_if_incomplete",
+        "expand[]": "latest_invoice",
+      },
+      { idempotencyKey: `canary-${runId}-subscription` },
+    );
     subscriptionId = subscription.id;
     ok(subscription.status === "active", `test subscription is active (${subscription.status})`);
     if (subscription.status !== "active") fail("test subscription did not become active");

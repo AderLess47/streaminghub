@@ -146,6 +146,26 @@ fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
 or checkout session) count as canary failures, and the cleanup assertion must
 report `cleaned=true`; a green run therefore means cleanup completed.
 
+### Orphaned Stripe object sweeper
+
+If a canary process dies before it can run cleanup, older Stripe test objects can
+remain. The canary stamps its creations with `metadata.canary` and a run-specific
+`metadata.canary_run_id`, and create calls use idempotency keys. A separate
+sweeper handles leftovers:
+
+```bash
+# Safe dry run: prints what would be deleted
+npm run staging:canary:sweep
+
+# Delete only old, exactly marked test-mode subscriptions and customers
+CANARY_SWEEP_APPLY=1 npm run staging:canary:sweep
+```
+
+The sweeper refuses non-`sk_test_` keys, requires the exact
+`metadata.canary=staging-billing-canary` marker, defaults to a 24-hour minimum
+age, caps the number of objects, and uses Stripe's test-mode data only. It is
+not run automatically by the canary gate.
+
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. `queued` is rejected by configuration, not treated as
 a slow success. Without `EMAIL_API_KEY`, the outbox remains `queued` and the
