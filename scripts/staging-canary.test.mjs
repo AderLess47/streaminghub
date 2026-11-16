@@ -95,6 +95,7 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
   const dbPath = path.join(dir, "canary.db");
   const seenEvents = new Set();
   let canaryEmail = "";
+  let failCustomerCleanup = false;
   let providerCancel = false;
   let providerSubscriptionGets = 0;
   let server;
@@ -187,6 +188,9 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
         return send(200, { id: "sub_canary", status: "canceled" });
       }
       if (request.method === "DELETE" && url === "/v1/customers/cus_canary") {
+        if (failCustomerCleanup) {
+          return send(500, { error: { message: "customer cleanup failed" } });
+        }
         return send(200, { id: "cus_canary", deleted: true });
       }
       if (request.method === "POST" && url === "/v1/checkout/sessions/cs_test_canary/expire") {
@@ -261,6 +265,23 @@ test("successful canary verifies Stripe cancellation and cleans up", async () =>
     assert.equal(db.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
     assert.equal(db.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
     db.close();
+
+    failCustomerCleanup = true;
+    const cleanupFailure = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+      DATABASE_PATH: dbPath,
+    });
+    assert.notEqual(cleanupFailure.status, 0, "failed Stripe cleanup must fail the canary");
+    assert.match(cleanupFailure.stderr, /cleanup failed \(customer\)/);
+
+    const afterCleanupFailure = new DatabaseSync(dbPath);
+    assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM users").get().c, 0);
+    assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM subscriptions").get().c, 0);
+    assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 0);
+    assert.equal(afterCleanupFailure.prepare("SELECT COUNT(*) AS c FROM subscription_events").get().c, 0);
+    afterCleanupFailure.close();
   } finally {
     if (server) {
       server.closeAllConnections?.();

@@ -311,6 +311,15 @@ async function waitFor(label, predicate) {
   throw new Error(`timeout waiting for: ${label}`);
 }
 
+async function cleanupStripeResource(label, operation) {
+  try {
+    await operation();
+  } catch (error) {
+    failures += 1;
+    console.error(`  ! cleanup failed (${label}): ${error.message}`);
+  }
+}
+
 async function main() {
   assertConfiguration();
   console.log(`Staging billing canary → ${BASE}`);
@@ -318,6 +327,7 @@ async function main() {
 
   let customerId = null;
   let subscriptionId = null;
+  let subscriptionDeleted = false;
   let sessionId = null;
 
   try {
@@ -450,6 +460,7 @@ async function main() {
     }
 
     await stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
+    subscriptionDeleted = true;
     const deletedEvent = {
       id: `evt_canary_${runId}_deleted`,
       type: "customer.subscription.deleted",
@@ -473,32 +484,30 @@ async function main() {
     await waitFor("subscription ends as canceled", (state) => state.subscriptionStatus === "canceled");
   } finally {
     if (cleanupNeeded) {
-      if (subscriptionId) {
-        try {
-          await stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
-        } catch {
-          /* already canceled */
-        }
+      if (subscriptionId && !subscriptionDeleted) {
+        await cleanupStripeResource("subscription", () =>
+          stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`),
+        );
       }
       if (customerId) {
-        try {
-          await stripeRequest("DELETE", `/v1/customers/${encodeURIComponent(customerId)}`);
-        } catch {
-          /* best-effort test-mode cleanup */
-        }
+        await cleanupStripeResource("customer", () =>
+          stripeRequest("DELETE", `/v1/customers/${encodeURIComponent(customerId)}`),
+        );
       }
       if (sessionId) {
-        try {
-          await stripeRequest("POST", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {});
-        } catch {
-          /* already completed or expired */
-        }
+        await cleanupStripeResource("checkout session", () =>
+          stripeRequest("POST", `/v1/checkout/sessions/${encodeURIComponent(sessionId)}/expire`, {}),
+        );
       }
       try {
-        runAssert({ cleanup: true });
+        const cleanupResult = runAssert({ cleanup: true });
+        if (cleanupResult.cleaned !== true) {
+          failures += 1;
+          console.error("  ! cleanup assertion did not report cleaned=true");
+        }
       } catch (error) {
         failures += 1;
-        console.error(`  ! cleanup failed: ${error.message}`);
+        console.error(`  ! cleanup assertion failed: ${error.message}`);
       }
     }
   }
