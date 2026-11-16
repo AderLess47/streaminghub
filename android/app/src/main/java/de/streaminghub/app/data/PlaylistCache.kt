@@ -39,7 +39,7 @@ class PlaylistCache(context: Context) {
                         if (read < 0) break
                         total += read
                         if (total > maxBytes) {
-                            throw IOException("Die Playlist ist zu groß (maximal 50 MB).")
+                            throw IOException("Die Playlist ist zu groß (maximal $MAX_PLAYLIST_MB MB).")
                         }
                         target.write(buffer, 0, read)
                     }
@@ -65,6 +65,7 @@ class PlaylistCache(context: Context) {
     private companion object {
         const val DIRECTORY_NAME = "playlists"
         const val FILE_NAME = "current.m3u"
-        const val MAX_PLAYLIST_BYTES = 50L * 1024 * 1024
+        const val MAX_PLAYLIST_MB = 100
+        const val MAX_PLAYLIST_BYTES = MAX_PLAYLIST_MB * 1024L * 1024L
     }
 }

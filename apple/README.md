@@ -100,7 +100,7 @@ Inhalte). Genau dafür läuft der Job.
 Playlist (M3U/M3U8) und XMLTV lassen sich neben der URL auch aus einer Datei
 laden: *Einstellungen → Playlist → Playlist aus Datei laden* bzw.
 *Programmdaten aus Datei laden*. Der Systemdialog liefert eine
-security-scoped URL; die App liest sie innerhalb des Scopes, begrenzt auf 50 MB,
+security-scoped URL; die App liest sie innerhalb des Scopes, begrenzt auf 100 MB,
 und fällt bei der Kodierung von UTF-8 auf ISO-8859-1 zurück. Importierte Dateien
 ersetzen die URL als Quelle – die Hintergrund-Auffrischung entfällt dann, weil
 es keine Adresse gibt. Auf dem Apple TV fehlen diese Knöpfe, weil tvOS keinen

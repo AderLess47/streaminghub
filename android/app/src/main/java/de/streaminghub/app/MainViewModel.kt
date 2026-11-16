@@ -993,9 +993,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
-        // 50 MB wie im Apple-Dateiimport; große Anbieterlisten liegen oft
+        // 100 MB wie im Apple-Dateiimport; große Anbieterlisten liegen oft
         // deutlich über den früheren 20 MB.
-        const val MAX_PLAYLIST_CHARS = 50_000_000
+        const val MAX_PLAYLIST_CHARS = 100_000_000
         const val MAX_EPG_CHARS = 50_000_000
         const val CACHE_REFRESH_AFTER_MS = 15 * 60 * 1_000L
         const val PAGE_SIZE = 80

@@ -47,6 +47,7 @@ class PlaylistCacheTest {
         }.exceptionOrNull()
 
         assertTrue(failure is IOException)
+        assertEquals("Die Playlist ist zu groß (maximal 100 MB).", failure?.message)
         assertEquals("old", cache.file.readText(Charsets.UTF_8))
     }
 
