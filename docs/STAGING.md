@@ -166,8 +166,10 @@ CANARY_SWEEP_APPLY=1 npm run staging:canary:sweep
 
 The sweeper refuses non-`sk_test_` keys, requires the exact
 `metadata.canary=staging-billing-canary` marker, defaults to a 24-hour minimum
-age, caps the number of objects, and uses Stripe's test-mode data only. It is
-not run automatically by the canary gate.
+age, caps the number of objects, and uses Stripe's test-mode data only. The
+staging canary workflow runs it as a **dry-run preflight** and reports old IDs
+in the step summary; it never applies deletions automatically. Cleanup remains
+a separate manual `CANARY_SWEEP_APPLY=1` action.
 
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. `queued` is rejected by configuration, not treated as
