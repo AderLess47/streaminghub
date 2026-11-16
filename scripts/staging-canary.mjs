@@ -108,8 +108,8 @@ function assertConfiguration() {
     fail("STRIPE_SECRET_KEY must be a test-mode key (sk_test_...)");
   }
   email = buildCanaryEmail();
-  if (!EXPECT_MAIL || !["sent", "queued"].includes(EXPECT_MAIL)) {
-    fail("CANARY_EXPECT_MAIL must be sent or queued");
+  if (EXPECT_MAIL !== "sent") {
+    fail("CANARY_EXPECT_MAIL must be sent; queued is not a passing state");
   }
   if (!process.env.FLY_API_TOKEN && process.env.CANARY_LOCAL_ASSERT !== "1") {
     fail("FLY_API_TOKEN is required for the staging database assertion");

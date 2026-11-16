@@ -129,8 +129,9 @@ fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
 30-second command timeout.
 
 The canary requires a configured staging email provider, because `sent` is the
-only passing mail state. Without `EMAIL_API_KEY`, the outbox remains `queued`
-and the canary fails; that is intentional, not a skipped check.
+only passing mail state. `queued` is rejected by configuration, not treated as
+a slow success. Without `EMAIL_API_KEY`, the outbox remains `queued` and the
+canary fails; that is intentional, not a skipped check.
 
 **What it does not cover:** the hosted Stripe card form itself. A human must
 still complete one test-mode purchase with `4242 4242 4242 4242` before a
