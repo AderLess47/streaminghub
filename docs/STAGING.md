@@ -148,10 +148,11 @@ report `cleaned=true`; a green run therefore means cleanup completed.
 
 ### Orphaned Stripe object sweeper
 
-If a canary process dies before it can run cleanup, older Stripe test objects can
-remain. The canary stamps its creations with `metadata.canary` and a run-specific
-`metadata.canary_run_id`, and create calls use idempotency keys. A separate
-sweeper handles leftovers:
+The canary uses Stripe's shared test PaymentMethod `pm_card_visa` instead of
+creating a payment method per run, so a failed run cannot leave an unsweepable
+PaymentMethod orphan. The customer and subscription it creates carry
+`metadata.canary` and a run-specific `metadata.canary_run_id`, and those create
+calls use idempotency keys. A separate sweeper handles leftovers:
 
 ```bash
 # Safe dry run: prints what would be deleted
