@@ -133,7 +133,9 @@ manual run. The database assertion helper is covered by
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion
 fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
-30-second command timeout.
+30-second command timeout. Failed Stripe cleanup calls (subscription, customer
+or checkout session) count as canary failures, and the cleanup assertion must
+report `cleaned=true`; a green run therefore means cleanup completed.
 
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. `queued` is rejected by configuration, not treated as
