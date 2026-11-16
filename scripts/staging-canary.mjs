@@ -41,6 +41,14 @@ const PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 const FLY_APP = process.env.STAGING_APP ?? "streaminghub-staging";
 const EXPECT_MAIL = process.env.CANARY_EXPECT_MAIL ?? "sent";
+const REQUIRED_WEBHOOK_EVENTS = [
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.payment_failed",
+];
 const TIMEOUT_MS = Number(process.env.CANARY_TIMEOUT_MS ?? 90_000);
 const runId = `${Date.now()}-${randomBytes(4).toString("hex")}`;
 const RAW_CANARY_EMAIL =
@@ -200,6 +208,34 @@ function signWebhook(body) {
   return `t=${timestamp},v1=${signature}`;
 }
 
+async function assertStripeWebhookEndpoint() {
+  const expectedUrl = `${BASE}/api/webhooks/stripe`;
+  const result = await stripeRequest("GET", "/v1/webhook_endpoints?limit=100");
+  if (result.has_more) {
+    fail("too many Stripe webhook endpoints to verify safely");
+  }
+  const endpoints = Array.isArray(result.data) ? result.data : [];
+  const matching = endpoints.filter((endpoint) => endpoint.url === expectedUrl);
+  if (matching.length !== 1) {
+    fail(`expected exactly one Stripe webhook endpoint for ${expectedUrl}, found ${matching.length}`);
+  }
+  const endpoint = matching[0];
+  if (endpoint.livemode !== false) {
+    fail("the Stripe webhook endpoint is not a test-mode endpoint");
+  }
+  if (endpoint.status !== "enabled") {
+    fail(`the Stripe webhook endpoint is not enabled (${endpoint.status})`);
+  }
+  const enabledEvents = Array.isArray(endpoint.enabled_events) ? endpoint.enabled_events : [];
+  const missing = REQUIRED_WEBHOOK_EVENTS.filter(
+    (event) => !enabledEvents.includes(event) && !enabledEvents.includes("*"),
+  );
+  if (missing.length > 0) {
+    fail(`the Stripe webhook endpoint is missing events: ${missing.join(", ")}`);
+  }
+  console.log(`  ✓ Stripe webhook endpoint is enabled for ${expectedUrl}`);
+}
+
 async function sendEvent(event) {
   const body = JSON.stringify(event);
   const response = await fetchWithTimeout(
@@ -278,6 +314,7 @@ async function waitFor(label, predicate) {
 async function main() {
   assertConfiguration();
   console.log(`Staging billing canary → ${BASE}`);
+  await assertStripeWebhookEndpoint();
 
   let customerId = null;
   let subscriptionId = null;
@@ -399,6 +436,18 @@ async function main() {
     const cancellation = await request("POST", "/api/subscription/cancel", {}, cookieHeader());
     ok(cancellation.status === 200, `cancellation accepted (${cancellation.status})`);
     await waitFor("cancel_at_period_end is stored", (state) => state.cancelAtPeriodEnd === true);
+
+    const providerCancellation = await stripeRequest(
+      "GET",
+      `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    );
+    ok(
+      providerCancellation.cancel_at_period_end === true,
+      `Stripe reports cancel_at_period_end=true (${providerCancellation.cancel_at_period_end})`,
+    );
+    if (providerCancellation.cancel_at_period_end !== true) {
+      fail("Stripe subscription is not set to cancel at period end");
+    }
 
     await stripeRequest("DELETE", `/v1/subscriptions/${encodeURIComponent(subscriptionId)}`);
     const deletedEvent = {

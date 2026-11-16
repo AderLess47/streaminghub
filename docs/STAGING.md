@@ -89,6 +89,12 @@ hosted Checkout and Payment Element have security measures that prevent
 automated testing. A Playwright test of the hosted card form would be an
 unsupported selector race, not a trustworthy release gate.
 
+Before creating the synthetic user, the canary calls the Stripe API and requires
+exactly one enabled test-mode webhook endpoint for
+`https://streaminghub-staging.fly.dev/api/webhooks/stripe` with the required
+events. This catches a missing or misconfigured endpoint that the locally signed
+test event alone would not reveal.
+
 The canary creates a real Stripe test-mode Checkout Session through the app,
 creates a test subscription with a test payment method, and sends the signed
 `checkout.session.completed` and `customer.subscription.deleted` events. It then
@@ -100,7 +106,8 @@ checks inside the staging container that:
 - its status is the expected `sent`;
 - the marker `mail:purchase-confirmation:<subscriptionId>` exists exactly once;
 - a duplicate webhook does not create a second mail;
-- cancellation sets `cancel_at_period_end = 1`;
+- cancellation sets `cancel_at_period_end = 1` locally and Stripe reports
+  `cancel_at_period_end = true` on the subscription;
 - `customer.subscription.deleted` ends the subscription as `canceled`.
 
 The canary refuses to run if the base URL is production, the Stripe key does not
