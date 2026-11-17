@@ -176,9 +176,10 @@ report `cleaned=true`; a green run therefore means cleanup completed.
 
 ### Orphaned Stripe object sweeper
 
-The canary uses Stripe's shared test PaymentMethod `pm_card_visa` instead of
-creating a payment method per run, so a failed run cannot leave an unsweepable
-PaymentMethod orphan. The customer and subscription it creates carry
+The canary creates a test PaymentMethod from Stripe's `tok_visa` test token
+for each run and attaches it to that run's customer. Deleting the customer
+detaches it again; Stripe keeps the unattached test PaymentMethod, but it
+cannot be charged without a customer. The customer and subscription it creates carry
 `metadata.canary` and a run-specific `metadata.canary_run_id`, and those create
 calls use idempotency keys. The canary asserts that Stripe returns both metadata
 fields on the customer and subscription responses before it relies on them. A

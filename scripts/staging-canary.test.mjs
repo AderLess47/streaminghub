@@ -136,7 +136,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
 
       if (
         request.method === "POST" &&
-        ["/v1/customers", "/v1/subscriptions"].includes(url)
+        ["/v1/payment_methods", "/v1/customers", "/v1/subscriptions"].includes(url)
       ) {
         stripeCreates.push({
           path: url,
@@ -203,6 +203,13 @@ test("canary success and failure paths keep cleanup single and complete", async 
               },
             ],
           },
+        });
+      }
+      if (request.method === "POST" && url === "/v1/payment_methods") {
+        return send(200, {
+          id: "pm_canary",
+          object: "payment_method",
+          type: "card",
         });
       }
       if (request.method === "POST" && url === "/v1/customers") {
@@ -316,22 +323,25 @@ test("canary success and failure paths keep cleanup single and complete", async 
     });
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    assert.equal(stripeCreates.length, 2, "the success run must create two Stripe resources");
+    assert.equal(stripeCreates.length, 3, "the success run must create three Stripe resources");
     assert.deepEqual(
       stripeCreates.map((create) => create.path),
-      ["/v1/customers", "/v1/subscriptions"],
+      ["/v1/payment_methods", "/v1/customers", "/v1/subscriptions"],
     );
-    assert.equal(new Set(stripeCreates.map((create) => create.idempotencyKey)).size, 2);
+    assert.equal(new Set(stripeCreates.map((create) => create.idempotencyKey)).size, 3);
     for (const create of stripeCreates) {
       assert.match(create.idempotencyKey, /^canary-/);
       assert.equal(create.form.get("metadata[canary]"), "staging-billing-canary");
       assert.match(create.form.get("metadata[canary_run_id]") ?? "", /^\d+-[0-9a-f]+$/);
     }
+    const paymentMethodCreate = stripeCreates.find((create) => create.path === "/v1/payment_methods");
     const customerCreate = stripeCreates.find((create) => create.path === "/v1/customers");
     const subscriptionCreate = stripeCreates.find((create) => create.path === "/v1/subscriptions");
-    assert.equal(customerCreate.form.get("payment_method"), "pm_card_visa");
-    assert.equal(customerCreate.form.get("invoice_settings[default_payment_method]"), "pm_card_visa");
-    assert.equal(subscriptionCreate.form.get("default_payment_method"), "pm_card_visa");
+    assert.equal(paymentMethodCreate.form.get("type"), "card");
+    assert.equal(paymentMethodCreate.form.get("card[token]"), "tok_visa");
+    assert.equal(customerCreate.form.get("payment_method"), "pm_canary");
+    assert.equal(customerCreate.form.get("invoice_settings[default_payment_method]"), "pm_canary");
+    assert.equal(subscriptionCreate.form.get("default_payment_method"), "pm_canary");
     assert.match(result.stdout, /checkout uses configured price/);
     assert.match(result.stdout, /bound to the canary user/);
     assert.match(result.stdout, /Stripe reports cancel_at_period_end=true/);
