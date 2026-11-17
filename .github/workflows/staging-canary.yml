@@ -16,6 +16,7 @@ on:
 permissions:
   contents: read
   actions: read
+  issues: write
 
 concurrency:
   group: staging-canary
@@ -162,6 +163,51 @@ jobs:
               ;;
           esac
           node scripts/staging-canary.mjs
+
+      - name: Open or update the failure issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="Staging canary failing"
+          body=$(printf '%s\n' \
+            'Der tägliche Staging-Billing-Canary ist fehlgeschlagen.' \
+            '' \
+            "- Lauf: $RUN_URL" \
+            "- Commit: $COMMIT" \
+            "- Auslöser: schedule" \
+            '' \
+            'Bitte den Lauf und die Staging-Logs prüfen. Der Canary deckt Checkout, Webhook, E-Mail-Versand, Datenbankzustand und Cleanup ab; Produktionsdaten sind nicht beteiligt.' \
+            '' \
+            'Dieses Issue wird beim nächsten erfolgreichen täglichen Lauf automatisch geschlossen.')
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Close the failure issue after recovery
+        if: success() && github.event_name == 'schedule'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Staging canary failing"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          if [ -z "$existing" ]; then
+            echo "No open canary failure issue."
+            exit 0
+          fi
+          gh issue comment "$existing" --body "Der tägliche Staging-Canary läuft wieder erfolgreich: $RUN_URL"
+          gh issue close "$existing" --reason completed
 
       - name: Summary
         if: always()

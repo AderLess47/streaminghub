@@ -167,6 +167,11 @@ run will fail rather than silently skip. Add the daily `schedule` only after a
 green run. The database assertion helper is covered by
 `npm run test:staging-canary`.
 
+A failed **scheduled** run opens (or updates) the issue
+`Staging canary failing` with the run link and commit; the next successful
+scheduled run comments and closes it. This uses GitHub issue notifications and
+needs no separate chat or webhook integration.
+
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion
 fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
