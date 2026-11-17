@@ -199,6 +199,39 @@ repository secret exists; secret values cannot be read back, so this does not
 prove the stored value is the same URL. The step still only runs for failed
 scheduled runs, so a silent green scheduled run is expected.
 
+### Verifying the failure alert once
+
+`notify` only runs for `schedule`, and GitHub cannot dispatch a scheduled run on
+demand (`gh workflow run` produces `workflow_dispatch`), so the alert path is
+verified with one short-lived deliberate failure on `main`. The failing step sits
+before every Stripe, flyctl and canary step, so no Staging data is touched and
+there is nothing to clean up:
+
+1. Set `SLACK_WEBHOOK_URL` and check the webhook as described above.
+2. On a short-lived branch off `main`, make exactly two edits:
+   - point the schedule at a minute about 15 minutes ahead in UTC while keeping
+     the daily time, e.g. `- cron: "10 15 * * *"` and `- cron: "47 5 * * *"`;
+   - add one first step to the `canary` job directly after
+     `Check out repository`:
+
+     ```yaml
+      - name: Deliberate alert verification
+        run: exit 1
+     ```
+
+3. Merge the branch once its CI is green. The CI workflow does not schedule the
+   billing canary, so the deliberate step only runs from the cron.
+4. The scheduled run fails there; `notify` then opens (or updates) the issue and
+   posts to Slack. Confirm both: the message in the target channel and the issue
+   carrying the run link.
+5. Revert both edits on `main` immediately (revert PR, green CI). The next
+   regular scheduled run comments on and closes the issue automatically.
+
+Keep the window to a single run and do not merge this near 05:47 UTC: while the
+deliberate step exists, a real failure would be masked, every scheduled run would
+alert, and a successful Staging deploy would trigger a failing canary run too.
+The temporary schedule must not survive the verification.
+
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion
 fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
