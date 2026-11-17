@@ -159,6 +159,10 @@ jobs:
       - name: Staging canary assert tests
         run: npm run test:staging-canary
 
+      # Staging cache: only anonymous public HTML may be shared.
+      - name: Public HTML cache tests
+        run: npm run test:public-cache
+
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
   # erst beim next build auf. Der Build braucht keine Secrets.

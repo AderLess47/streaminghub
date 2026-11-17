@@ -33,4 +33,16 @@ retention_interval="${RETENTION_INTERVAL_SECONDS:-86400}"
   done
 ) &
 
+if [ "${ENABLE_PUBLIC_HTML_CACHE:-0}" = "1" ]; then
+  # Keep the Next server private to the container and put the anonymous-only
+  # public HTML cache on the public port. Session requests bypass the cache.
+  PORT="${UPSTREAM_PORT:-3001}" HOSTNAME=127.0.0.1 node server.js &
+  next_pid=$!
+  node scripts/public-html-cache-proxy.mjs &
+  proxy_pid=$!
+  trap 'kill "$next_pid" "$proxy_pid" 2>/dev/null || true' INT TERM EXIT
+  wait "$proxy_pid"
+  exit $?
+fi
+
 exec node server.js
