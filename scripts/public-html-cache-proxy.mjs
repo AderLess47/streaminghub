@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 const SESSION_COOKIE = "sh_session";
 const CACHE_CONTROL = "public, max-age=60, s-maxage=60, stale-while-revalidate=300";
 
+// Every path here must pass the audit in docs/PUBLIC_CACHE_AUDIT.md.
 export const PUBLIC_CACHE_PATHS = new Set([
   "/",
   "/premium",
