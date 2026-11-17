@@ -1,10 +1,13 @@
 name: Staging billing canary
 
-# Runs manually and after any successful Deploy staging run. Automatic runs
-# download the exact commit recorded by that deploy, so custom refs and
-# non-main deploys are verified without trusting the default-branch tip. Do not
-# add a schedule until the staging Stripe/email secrets are configured.
+# Runs manually, daily, and after any successful Deploy staging run. Automatic
+# runs download the exact commit recorded by that deploy, so custom refs and
+# non-main deploys are verified without trusting the default-branch tip.
 on:
+  # Daily at 05:47 UTC, after the Amazon sync (04:41) and release drift check
+  # (05:17). A scheduled run also catches staging that has fallen behind main.
+  schedule:
+    - cron: "47 5 * * *"
   workflow_dispatch:
   workflow_run:
     workflows: ["Deploy staging"]
