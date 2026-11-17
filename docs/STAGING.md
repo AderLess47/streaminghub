@@ -180,6 +180,11 @@ visible to it. The webhook's channel is the destination. The step only posts for
 failed scheduled runs; if the secret is missing it logs a warning and skips, and
 the GitHub issue is still created. The URL is never printed or committed.
 
+To test the Slack path without waiting for a failure, set `SLACK_WEBHOOK_URL`
+and run **Actions → Staging billing canary → Run workflow** with `test_slack`
+enabled. That skips the billing canary and sends one test message. Regular manual
+runs leave the input disabled.
+
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion
 fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
