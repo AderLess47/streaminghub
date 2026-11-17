@@ -16,7 +16,6 @@ on:
 permissions:
   contents: read
   actions: read
-  issues: write
 
 concurrency:
   group: staging-canary
@@ -164,8 +163,29 @@ jobs:
           esac
           node scripts/staging-canary.mjs
 
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Staging billing canary"
+            echo
+            echo "- target: \`${{ vars.STAGING_BASE_URL }}\`"
+            echo "- commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    name: Notify about the scheduled canary
+    needs: canary
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+
+    steps:
       - name: Open or update the failure issue
-        if: failure() && github.event_name == 'schedule'
+        if: needs.canary.result != 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -192,7 +212,7 @@ jobs:
           fi
 
       - name: Close the failure issue after recovery
-        if: success() && github.event_name == 'schedule'
+        if: needs.canary.result == 'success'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -208,14 +228,3 @@ jobs:
           fi
           gh issue comment "$existing" --body "Der tägliche Staging-Canary läuft wieder erfolgreich: $RUN_URL"
           gh issue close "$existing" --reason completed
-
-      - name: Summary
-        if: always()
-        run: |
-          {
-            echo "### Staging billing canary"
-            echo
-            echo "- target: \`${{ vars.STAGING_BASE_URL }}\`"
-            echo "- commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
-            echo "- result: ${{ job.status }}"
-          } >> "$GITHUB_STEP_SUMMARY"
