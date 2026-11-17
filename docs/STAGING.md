@@ -135,12 +135,16 @@ npm run staging:canary
 ```
 
 Or use **Actions → Staging billing canary → Run workflow**. The workflow also
-runs automatically after a successful **Deploy staging** run on `main`; the
-automatic run checks out the deploy run's head commit and uses that SHA as
-`CANARY_EXPECT_COMMIT`. Failed deploys do not trigger it, and production is not
-involved. Until the test secrets exist, an automatic run will fail rather than
-silently skip. Add the daily `schedule` only after a green run. The database
-assertion helper is covered by `npm run test:staging-canary`.
+runs automatically after any successful **Deploy staging** run, including custom
+`ref` values and non-`main` deploys. The deploy checks out the requested ref,
+records the resolved `git rev-parse HEAD` in a `deployed-commit` artifact, and
+builds with that exact SHA. The automatic canary downloads the artifact, checks
+out the same SHA and uses it as `CANARY_EXPECT_COMMIT`; it does not trust the
+default-branch tip or the workflow-run head SHA. Failed deploys do not trigger
+it, and production is not involved. Until the test secrets exist, an automatic
+run will fail rather than silently skip. Add the daily `schedule` only after a
+green run. The database assertion helper is covered by
+`npm run test:staging-canary`.
 
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion

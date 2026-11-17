@@ -51,6 +51,22 @@ jobs:
           fi
           echo "Staging target validated: streaminghub-staging / streaminghub_staging_data"
 
+      - name: Resolve deployed commit
+        id: deployed_commit
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/deployed-commit"
+          printf '%s\n' "$sha" > "$RUNNER_TEMP/deployed-commit/commit.txt"
+
+      - name: Record deployed commit
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-commit
+          path: ${{ runner.temp }}/deployed-commit/commit.txt
+          if-no-files-found: error
+
       - name: Install flyctl
         run: |
           set -euo pipefail
@@ -67,7 +83,7 @@ jobs:
             --config fly.staging.toml \
             --app streaminghub-staging \
             --ha=false \
-            --build-arg "GIT_COMMIT=${GITHUB_SHA}"
+            --build-arg "GIT_COMMIT=${{ steps.deployed_commit.outputs.sha }}"
 
       - name: Verify staging health
         run: |
@@ -91,7 +107,7 @@ jobs:
             echo "### Staging deploy"
             echo
             echo "- ref: \`${{ inputs.ref || 'main' }}\`"
-            echo "- commit: \`${GITHUB_SHA}\`"
+            echo "- commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
             echo "- result: ${{ job.status }}"
             echo "- target: \`https://streaminghub-staging.fly.dev\`"
           } >> "$GITHUB_STEP_SUMMARY"
