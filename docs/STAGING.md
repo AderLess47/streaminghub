@@ -134,10 +134,13 @@ FLY_API_TOKEN=... \
 npm run staging:canary
 ```
 
-Or use **Actions → Staging billing canary → Run workflow**. The workflow is
-manual until the test secrets exist; add the daily `schedule` only after a green
-manual run. The database assertion helper is covered by
-`npm run test:staging-canary`.
+Or use **Actions → Staging billing canary → Run workflow**. The workflow also
+runs automatically after a successful **Deploy staging** run on `main`; the
+automatic run checks out the deploy run's head commit and uses that SHA as
+`CANARY_EXPECT_COMMIT`. Failed deploys do not trigger it, and production is not
+involved. Until the test secrets exist, an automatic run will fail rather than
+silently skip. Add the daily `schedule` only after a green run. The database
+assertion helper is covered by `npm run test:staging-canary`.
 
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion

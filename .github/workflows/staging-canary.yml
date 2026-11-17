@@ -1,10 +1,13 @@
 name: Staging billing canary
 
-# Manual until the staging Stripe test key, webhook secret and email key are
-# configured. Once that is done, add a schedule here; do not silently skip a
-# scheduled run when a secret is missing.
+# Runs manually and after a successful Deploy staging run on main. Automatic
+# runs use the deploy run's head commit as the expected commit. Do not add a
+# schedule until the staging Stripe/email secrets are configured.
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy staging"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -16,6 +19,7 @@ concurrency:
 jobs:
   canary:
     name: Run the staging billing canary
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
@@ -23,6 +27,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -100,7 +106,7 @@ jobs:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
           STAGING_APP: streaminghub-staging
           STAGING_CANARY_EMAIL: ${{ vars.STAGING_CANARY_EMAIL }}
-          CANARY_EXPECT_COMMIT: ${{ github.sha }}
+          CANARY_EXPECT_COMMIT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           STRIPE_PRICE_ID: ${{ vars.STRIPE_PRICE_ID }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
