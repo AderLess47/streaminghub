@@ -2,9 +2,16 @@
 /**
  * Safely removes old synthetic staging-canary database rows.
  *
- * Dry-run is the default. It only selects customer accounts whose email ends in
- * @resend.dev and whose user (or orphaned outbox) row is older than the minimum
- * age. Apply runs in one transaction and never targets a non-test email.
+ * Dry-run is the default. It only selects customer accounts created by the
+ * canary (the exact registration fingerprint: @resend.dev, display name
+ * "Staging Canary", locale de) and older than the minimum age. Apply runs in
+ * one transaction and touches only tables the canary itself creates:
+ *
+ *   users, subscriptions, legal_acceptances, auth_tokens, sessions (cascade),
+ *   outbox_emails, subscription_events and audit_log.
+ *
+ * It does not touch support tickets, contact messages, contract requests,
+ * email suppressions or unrelated orphan outbox rows.
  *
  *   node scripts/staging-canary-db-sweep.mjs
  *   node scripts/staging-canary-db-sweep.mjs --apply
@@ -67,32 +74,20 @@ function main() {
       .prepare(
         `SELECT id, email, created_at
          FROM users
-         WHERE LOWER(email) LIKE '%@resend.dev' AND role = 'customer'
+         WHERE LOWER(email) LIKE '%@resend.dev'
+           AND role = 'customer'
+           AND display_name = 'Staging Canary'
+           AND locale = 'de'
          ORDER BY created_at`,
       )
       .all()
       .filter((user) => isOld(user.created_at, cutoffMs))
       .slice(0, LIMIT);
-    const outboxCandidates = db
-      .prepare(
-        `SELECT id, to_email, created_at
-         FROM outbox_emails
-         WHERE LOWER(to_email) LIKE '%@resend.dev'
-         ORDER BY created_at`,
-      )
-      .all()
-      .filter((row) => isOld(row.created_at, cutoffMs))
-      .slice(0, LIMIT);
 
     const userIds = candidates.map((user) => user.id);
-    const emails = [
-      ...new Set([
-        ...candidates.map((user) => user.email.toLowerCase()),
-        ...outboxCandidates.map((row) => row.to_email.toLowerCase()),
-      ]),
-    ];
-    const emailPlaceholders = placeholders(emails.length);
+    const emails = [...new Set(candidates.map((user) => user.email.toLowerCase()))];
     const userPlaceholders = placeholders(userIds.length);
+    const emailPlaceholders = placeholders(emails.length);
 
     const counts = {
       users: userIds.length,
@@ -102,20 +97,17 @@ function main() {
       subscriptions: userIds.length
         ? count(db, `SELECT COUNT(*) AS c FROM subscriptions WHERE user_id IN (${userPlaceholders})`, userIds)
         : 0,
+      legalAcceptances: userIds.length
+        ? count(db, `SELECT COUNT(*) AS c FROM legal_acceptances WHERE user_id IN (${userPlaceholders})`, userIds)
+        : 0,
+      authTokens: userIds.length
+        ? count(db, `SELECT COUNT(*) AS c FROM auth_tokens WHERE user_id IN (${userPlaceholders})`, userIds)
+        : 0,
+      sessions: userIds.length
+        ? count(db, `SELECT COUNT(*) AS c FROM sessions WHERE user_id IN (${userPlaceholders})`, userIds)
+        : 0,
       subscriptionEvents: userIds.length
         ? count(db, `SELECT COUNT(*) AS c FROM subscription_events WHERE user_id IN (${userPlaceholders})`, userIds)
-        : 0,
-      supportTickets: emails.length
-        ? count(db, `SELECT COUNT(*) AS c FROM support_tickets WHERE LOWER(email) IN (${emailPlaceholders})`, emails)
-        : 0,
-      contractRequests: emails.length
-        ? count(db, `SELECT COUNT(*) AS c FROM contract_requests WHERE LOWER(email) IN (${emailPlaceholders})`, emails)
-        : 0,
-      contactMessages: emails.length
-        ? count(db, `SELECT COUNT(*) AS c FROM contact_messages WHERE LOWER(email) IN (${emailPlaceholders})`, emails)
-        : 0,
-      emailSuppressions: emails.length
-        ? count(db, `SELECT COUNT(*) AS c FROM email_suppressions WHERE LOWER(email) IN (${emailPlaceholders})`, emails)
         : 0,
     };
 
@@ -137,7 +129,6 @@ function main() {
       dryRun: !APPLY,
       cutoff,
       users: candidates.map((user) => ({ id: user.id, email: user.email, created_at: user.created_at })),
-      outboxRows: outboxCandidates.map((row) => ({ id: row.id, to_email: row.to_email, created_at: row.created_at })),
       counts,
     };
 
@@ -148,10 +139,6 @@ function main() {
 
     db.exec("BEGIN IMMEDIATE");
     try {
-      deleteWhere(db, `DELETE FROM support_tickets WHERE LOWER(email) IN (${emailPlaceholders})`, emails);
-      deleteWhere(db, `DELETE FROM contract_requests WHERE LOWER(email) IN (${emailPlaceholders})`, emails);
-      deleteWhere(db, `DELETE FROM contact_messages WHERE LOWER(email) IN (${emailPlaceholders})`, emails);
-      deleteWhere(db, `DELETE FROM email_suppressions WHERE LOWER(email) IN (${emailPlaceholders})`, emails);
       deleteWhere(db, `DELETE FROM outbox_emails WHERE LOWER(to_email) IN (${emailPlaceholders})`, emails);
       deleteWhere(db, `DELETE FROM subscription_events WHERE user_id IN (${userPlaceholders})`, userIds);
       deleteWhere(db, `DELETE FROM audit_log WHERE ${auditWhere}`, auditParams);

@@ -27,10 +27,11 @@ function insertFixture(db, old, recent) {
   db.prepare(
     `INSERT INTO users (id, email, password_hash, display_name, locale, role, created_at, updated_at)
      VALUES
-       ('canary-old', 'canary+old@resend.dev', 'x', 'Old Canary', 'de', 'customer', ?, ?),
-       ('canary-recent', 'canary+recent@resend.dev', 'x', 'Recent Canary', 'de', 'customer', ?, ?),
+       ('canary-old', 'canary+old@resend.dev', 'x', 'Staging Canary', 'de', 'customer', ?, ?),
+       ('canary-recent', 'canary+recent@resend.dev', 'x', 'Staging Canary', 'de', 'customer', ?, ?),
+       ('decoy-old', 'canary+decoy@resend.dev', 'x', 'Regular Test', 'de', 'customer', ?, ?),
        ('real-old', 'real@example.com', 'x', 'Real User', 'de', 'customer', ?, ?)`,
-  ).run(old, old, recent, recent, old, old);
+  ).run(old, old, recent, recent, old, old, old, old);
 
   db.prepare(
     `INSERT INTO subscriptions (id, user_id, plan, status, channel, provider,
@@ -38,33 +39,58 @@ function insertFixture(db, old, recent) {
        cancel_at_period_end, updated_at, created_at)
      VALUES
        ('sub-old', 'canary-old', 'premium', 'active', 'web', 'stripe', 'cus_old', 'sub_old', ?, 0, ?, ?),
-       ('sub-recent', 'canary-recent', 'premium', 'active', 'web', 'stripe', 'cus_recent', 'sub_recent', ?, 0, ?, ?)`,
-  ).run(recent, old, old, recent, recent, recent);
+       ('sub-recent', 'canary-recent', 'premium', 'active', 'web', 'stripe', 'cus_recent', 'sub_recent', ?, 0, ?, ?),
+       ('sub-decoy', 'decoy-old', 'premium', 'active', 'web', 'stripe', 'cus_decoy', 'sub_decoy', ?, 0, ?, ?)`,
+  ).run(recent, old, old, recent, recent, recent, recent, old, old);
+
+  db.prepare(
+    `INSERT INTO legal_acceptances (id, user_id, document, version, accepted_at)
+     VALUES
+       ('legal-old', 'canary-old', 'terms_and_privacy', '2026-11-01', ?),
+       ('legal-recent', 'canary-recent', 'terms_and_privacy', '2026-11-01', ?)`,
+  ).run(old, recent);
+
+  db.prepare(
+    `INSERT INTO auth_tokens (id, user_id, kind, token_hash, created_at, expires_at)
+     VALUES
+       ('token-old', 'canary-old', 'verify_email', 'hash-old', ?, ?),
+       ('token-recent', 'canary-recent', 'verify_email', 'hash-recent', ?, ?)`,
+  ).run(old, old, recent, recent);
+
+  db.prepare(
+    `INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at)
+     VALUES
+       ('session-old', 'canary-old', ?, ?, ?),
+       ('session-recent', 'canary-recent', ?, ?, ?)`,
+  ).run(old, old, old, recent, recent, recent);
 
   db.prepare(
     `INSERT INTO outbox_emails (id, to_email, subject, body_text, kind, status, created_at)
      VALUES
        ('mail-old', 'canary+old@resend.dev', 'Old', 'Test', 'subscription', 'sent', ?),
        ('mail-recent', 'canary+recent@resend.dev', 'Recent', 'Test', 'subscription', 'sent', ?),
+       ('mail-decoy', 'canary+decoy@resend.dev', 'Decoy', 'Test', 'subscription', 'sent', ?),
        ('mail-orphan-old', 'orphan@resend.dev', 'Orphan', 'Test', 'subscription', 'sent', ?),
        ('mail-orphan-recent', 'orphan-recent@resend.dev', 'Recent orphan', 'Test', 'subscription', 'sent', ?),
        ('mail-real', 'real@example.com', 'Real', 'Test', 'subscription', 'sent', ?)`,
-  ).run(old, recent, old, recent, old);
+  ).run(old, recent, old, old, recent, old);
 
   db.prepare(
     `INSERT INTO subscription_events (id, user_id, provider, event_type, provider_event_id, payload, created_at)
      VALUES
        ('event-old', 'canary-old', 'stripe', 'invoice.paid', 'evt_old', '{}', ?),
-       ('event-recent', 'canary-recent', 'stripe', 'invoice.paid', 'evt_recent', '{}', ?)`,
-  ).run(old, recent);
+       ('event-recent', 'canary-recent', 'stripe', 'invoice.paid', 'evt_recent', '{}', ?),
+       ('event-decoy', 'decoy-old', 'stripe', 'invoice.paid', 'evt_decoy', '{}', ?)`,
+  ).run(old, recent, old);
 
   db.prepare(
     `INSERT INTO audit_log (id, actor_email, target_id, action, created_at)
      VALUES
        ('audit-old', 'canary+old@resend.dev', 'canary-old', 'canary.cleanup', ?),
        ('audit-recent', 'canary+recent@resend.dev', 'canary-recent', 'canary.cleanup', ?),
+       ('audit-decoy', 'canary+decoy@resend.dev', 'decoy-old', 'canary.cleanup', ?),
        ('audit-real', 'real@example.com', 'real-old', 'account.login', ?)`,
-  ).run(old, recent, old);
+  ).run(old, recent, old, old);
 
   db.prepare(
     `INSERT INTO support_tickets (id, user_id, email, subject, category, status, priority, created_at, updated_at)
@@ -89,7 +115,7 @@ function insertFixture(db, old, recent) {
   ).run(old);
 }
 
-test("database sweeper reports old resend.dev rows without deleting on dry run", () => {
+test("database sweeper reports only old canary-fingerprint accounts without deleting", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "streaminghub-db-sweep-dry-"));
   const dbPath = path.join(dir, "canary.db");
   const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
@@ -110,14 +136,20 @@ test("database sweeper reports old resend.dev rows without deleting on dry run",
     const plan = JSON.parse(result.stdout.trim());
     assert.equal(plan.dryRun, true);
     assert.deepEqual(plan.users.map((user) => user.id), ["canary-old"]);
-    assert.deepEqual(plan.outboxRows.map((row) => row.id).sort(), ["mail-old", "mail-orphan-old"]);
-    assert.equal(plan.counts.users, 1);
-    assert.equal(plan.counts.subscriptions, 1);
-    assert.equal(plan.counts.subscriptionEvents, 1);
+    assert.deepEqual(plan.counts, {
+      users: 1,
+      outboxEmails: 1,
+      subscriptions: 1,
+      legalAcceptances: 1,
+      authTokens: 1,
+      sessions: 1,
+      subscriptionEvents: 1,
+      auditLog: 1,
+    });
 
     const verify = new DatabaseSync(dbPath);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users").get().c, 3);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 5);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users").get().c, 4);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails").get().c, 6);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM support_tickets").get().c, 1);
     verify.close();
   } finally {
@@ -125,7 +157,7 @@ test("database sweeper reports old resend.dev rows without deleting on dry run",
   }
 });
 
-test("database sweeper apply removes only old resend.dev canary rows", () => {
+test("database sweeper apply removes only old canary-created rows", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "streaminghub-db-sweep-apply-"));
   const dbPath = path.join(dir, "canary.db");
   const old = new Date(Date.now() - 3 * 86_400_000).toISOString();
@@ -150,24 +182,38 @@ test("database sweeper apply removes only old resend.dev canary rows", () => {
     const verify = new DatabaseSync(dbPath);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users WHERE id = 'canary-old'").get().c, 0);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users WHERE id = 'canary-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users WHERE id = 'decoy-old'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM users WHERE id = 'real-old'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscriptions WHERE id = 'sub-old'").get().c, 0);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscriptions WHERE id = 'sub-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscriptions WHERE id = 'sub-decoy'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM legal_acceptances WHERE id = 'legal-old'").get().c, 0);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM legal_acceptances WHERE id = 'legal-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM auth_tokens WHERE id = 'token-old'").get().c, 0);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM auth_tokens WHERE id = 'token-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM sessions WHERE token_hash = 'session-old'").get().c, 0);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM sessions WHERE token_hash = 'session-recent'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-old'").get().c, 0);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-orphan-old'").get().c, 0);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-decoy'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-orphan-old'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-orphan-recent'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM outbox_emails WHERE id = 'mail-real'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscription_events WHERE id = 'event-old'").get().c, 0);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscription_events WHERE id = 'event-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM subscription_events WHERE id = 'event-decoy'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE id = 'audit-old'").get().c, 0);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE id = 'audit-recent'").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE id = 'audit-decoy'").get().c, 1);
     assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE id = 'audit-real'").get().c, 1);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM support_tickets").get().c, 0);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM ticket_messages").get().c, 0);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM contract_requests").get().c, 0);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM contact_messages").get().c, 0);
-    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM email_suppressions").get().c, 0);
+
+    // These tables are not created by the canary and must remain untouched.
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM support_tickets").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM ticket_messages").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM contract_requests").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM contact_messages").get().c, 1);
+    assert.equal(verify.prepare("SELECT COUNT(*) AS c FROM email_suppressions").get().c, 1);
+    assert.equal(verify.prepare("SELECT user_id FROM support_tickets WHERE id = 'ticket-old'").get().user_id, null);
     verify.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });
