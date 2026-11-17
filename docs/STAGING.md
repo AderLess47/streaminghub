@@ -98,6 +98,9 @@ anonymous Next HTML and never account data.
 
 The cache is in-process and bounded; it is a latency experiment, not a CDN.
 Admin content changes become visible after the 60-second lifetime at the latest.
+The request-dependency review for the allowlist is recorded in
+[PUBLIC_CACHE_AUDIT.md](PUBLIC_CACHE_AUDIT.md). Re-run it before adding a path or
+introducing a nonce-based CSP.
 
 ## 5. Billing canary
 
