@@ -192,8 +192,10 @@ CANARY_DB_SWEEP_APPLY=1 \
 ```
 
 The sweeper defaults to a 24-hour minimum age, caps candidates, refuses an age
-below one hour, and does not touch non-canary accounts. It is not run
-automatically by the canary gate.
+below one hour, and does not touch non-canary accounts. The staging canary
+workflow runs it as a **dry-run preflight** and reports candidate IDs and counts
+in the step summary; it never passes `--apply` or enables deletions. Cleanup
+remains a separate manual apply.
 
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. `queued` is rejected by configuration, not treated as
