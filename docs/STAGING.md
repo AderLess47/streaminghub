@@ -170,7 +170,15 @@ green run. The database assertion helper is covered by
 A failed **scheduled** run opens (or updates) the issue
 `Staging canary failing` with the run link and commit; the next successful
 scheduled run comments and closes it. This uses GitHub issue notifications and
-needs no separate chat or webhook integration.
+works without any chat integration.
+
+For an additional Slack alert, create an incoming webhook for the target
+channel and store its URL as the **repository** secret `SLACK_WEBHOOK_URL`
+(Settings → Secrets and variables → Actions → Repository secrets). The `notify`
+job does not use the `staging` environment, so an environment-only secret is not
+visible to it. The webhook's channel is the destination. The step only posts for
+failed scheduled runs; if the secret is missing it logs a warning and skips, and
+the GitHub issue is still created. The URL is never printed or committed.
 
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion

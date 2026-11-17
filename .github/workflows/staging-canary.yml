@@ -211,6 +211,37 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
 
+      - name: Notify Slack
+        if: always() && needs.canary.result != 'success'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+          RESULT: ${{ needs.canary.result }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL is not configured; skipping the Slack notification."
+            exit 0
+          fi
+          case "$SLACK_WEBHOOK_URL" in
+            https://hooks.slack.com/*) ;;
+            *)
+              echo "::error::SLACK_WEBHOOK_URL must be a Slack incoming webhook URL."
+              exit 1
+              ;;
+          esac
+          text=":rotating_light: *Staging-Billing-Canary fehlgeschlagen*"
+          details=$(printf '%s\n' \
+            "Ergebnis: \`$RESULT\`" \
+            "Commit: \`$COMMIT\`" \
+            "Lauf: $RUN_URL")
+          payload=$(jq -c -n --arg text "$text" --arg details "$details" '{text: ($text + "\n" + $details)}')
+          curl --fail-with-body --silent --show-error --max-time 10 \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+
       - name: Close the failure issue after recovery
         if: needs.canary.result == 'success'
         continue-on-error: true
