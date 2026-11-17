@@ -1,8 +1,9 @@
 name: Staging billing canary
 
-# Runs manually and after a successful Deploy staging run on main. Automatic
-# runs use the deploy run's head commit as the expected commit. Do not add a
-# schedule until the staging Stripe/email secrets are configured.
+# Runs manually and after any successful Deploy staging run. Automatic runs
+# download the exact commit recorded by that deploy, so custom refs and
+# non-main deploys are verified without trusting the default-branch tip. Do not
+# add a schedule until the staging Stripe/email secrets are configured.
 on:
   workflow_dispatch:
   workflow_run:
@@ -11,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: staging-canary
@@ -19,16 +21,40 @@ concurrency:
 jobs:
   canary:
     name: Run the staging billing canary
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
 
     steps:
+      - name: Resolve deployed commit
+        if: github.event_name == 'workflow_run'
+        id: deployed_commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/deployed-commit"
+          gh run download "$DEPLOY_RUN_ID" -n deployed-commit -D "$artifact_dir"
+          commit="$(tr -d '[:space:]' < "$artifact_dir/commit.txt")"
+          case "$commit" in
+            ""|*[!0-9a-f]*)
+              echo "::error::The deploy artifact does not contain a valid commit SHA."
+              exit 1
+              ;;
+          esac
+          if [ "${#commit}" -ne 40 ]; then
+            echo "::error::The deploy artifact commit is not a full 40-character SHA."
+            exit 1
+          fi
+          echo "sha=$commit" >> "$GITHUB_OUTPUT"
+
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ steps.deployed_commit.outputs.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -106,7 +132,7 @@ jobs:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
           STAGING_APP: streaminghub-staging
           STAGING_CANARY_EMAIL: ${{ vars.STAGING_CANARY_EMAIL }}
-          CANARY_EXPECT_COMMIT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          CANARY_EXPECT_COMMIT: ${{ steps.deployed_commit.outputs.sha || github.sha }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           STRIPE_PRICE_ID: ${{ vars.STRIPE_PRICE_ID }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
@@ -141,5 +167,6 @@ jobs:
             echo "### Staging billing canary"
             echo
             echo "- target: \`${{ vars.STAGING_BASE_URL }}\`"
+            echo "- commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
             echo "- result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
