@@ -55,7 +55,7 @@
     "test:contact-form": "node scripts/run-contact-form-tests.mjs",
     "test:admin-contacts": "node scripts/run-admin-contacts-tests.mjs",
     "test:audit-retention": "node scripts/run-audit-retention-tests.mjs",
-    "test:staging-canary": "node --test scripts/staging-canary-assert.test.mjs scripts/staging-canary.test.mjs scripts/staging-canary-sweep.test.mjs scripts/staging-canary-db-sweep.test.mjs",
+    "test:staging-canary": "node --test scripts/staging-canary-assert.test.mjs scripts/staging-canary.test.mjs scripts/staging-canary-sweep.test.mjs scripts/staging-canary-db-sweep.test.mjs scripts/staging-canary-db-preflight-summary.test.mjs",
     "staging:canary": "node scripts/staging-canary.mjs",
     "staging:canary:sweep": "node scripts/staging-canary-sweep.mjs",
     "staging:canary:db-sweep": "node scripts/staging-canary-db-sweep.mjs",
