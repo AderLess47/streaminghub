@@ -101,7 +101,7 @@ for (const name of fs.readdirSync("/proc")) {
 process.exit(1);
 ')"
 [ -n "$next_pid" ] || fail "could not find the Next server PID"
-docker exec "$CONTAINER" kill "$next_pid"
+docker exec "$CONTAINER" node -e 'process.kill(Number(process.argv[1]), "SIGTERM")' "$next_pid"
 sleep 1
 
 cached_headers="$(curl -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/")"
