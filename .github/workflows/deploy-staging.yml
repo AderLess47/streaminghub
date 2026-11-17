@@ -100,6 +100,17 @@ jobs:
           echo "::error::Staging /status did not return HTTP 200 within 120 seconds."
           exit 1
 
+      - name: Verify Next and cache proxy processes
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+          STAGING_APP: streaminghub-staging
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          script_b64="$(base64 -w0 scripts/staging-process-check.cjs)"
+          flyctl ssh console -a "$STAGING_APP" \
+            -C "node -e \"eval(Buffer.from('${script_b64}','base64').toString())\""
+
       - name: Summary
         if: always()
         run: |
