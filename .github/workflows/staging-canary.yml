@@ -82,6 +82,44 @@ jobs:
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
+      - name: Database sweep preflight (dry run)
+        env:
+          STAGING_APP: streaminghub-staging
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          # The remote command explicitly sets apply=0; no apply flag is passed.
+          output="$(flyctl ssh console -a "$STAGING_APP" -C "env CANARY_DB_SWEEP_APPLY=0 node /app/scripts/staging-canary-db-sweep.mjs")"
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" > "$RUNNER_TEMP/staging-canary-db-sweep.json"
+          node -e '
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (plan.dryRun !== true) {
+              console.error("Database sweep preflight did not report dryRun=true");
+              process.exit(1);
+            }
+            const lines = [
+              "### Canary database sweep preflight",
+              "",
+              "- mode: dry run (no deletions)",
+              "- cutoff: `" + plan.cutoff + "`",
+              "- candidate users: **" + plan.users.length + "**",
+            ];
+            if (plan.users.length) {
+              lines.push("- user IDs: " + plan.users.map((user) => "`" + user.id + "`").join(", "));
+              lines.push("- emails: " + plan.users.map((user) => "`" + user.email + "`").join(", "));
+            }
+            for (const [name, count] of Object.entries(plan.counts)) {
+              lines.push("- " + name + ": **" + count + "**");
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            if (plan.users.length) {
+              console.log("::warning::" + plan.users.length + " old canary database account(s) found; dry run only, nothing deleted.");
+            }
+          ' "$RUNNER_TEMP/staging-canary-db-sweep.json"
+
       - name: Run canary
         env:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
