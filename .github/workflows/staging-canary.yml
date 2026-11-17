@@ -9,11 +9,6 @@ on:
   schedule:
     - cron: "47 5 * * *"
   workflow_dispatch:
-    inputs:
-      test_slack:
-        description: "Nur eine Slack-Testnachricht senden; Canary überspringen"
-        type: boolean
-        default: false
   workflow_run:
     workflows: ["Deploy staging"]
     types: [completed]
@@ -29,7 +24,7 @@ concurrency:
 jobs:
   canary:
     name: Run the staging billing canary
-    if: (github.event_name == 'workflow_dispatch' && inputs.test_slack != true) || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
@@ -178,42 +173,6 @@ jobs:
             echo "- commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
             echo "- result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  test-slack:
-    name: Send a test Slack notification
-    if: github.event_name == 'workflow_dispatch' && inputs.test_slack
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-
-    steps:
-      - name: Send test message
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-            echo "::error::SLACK_WEBHOOK_URL is not configured as a repository secret."
-            exit 1
-          fi
-          case "$SLACK_WEBHOOK_URL" in
-            https://hooks.slack.com/*) ;;
-            *)
-              echo "::error::SLACK_WEBHOOK_URL must be a Slack incoming webhook URL."
-              exit 1
-              ;;
-          esac
-          text=":test_tube: *Test: Staging-Billing-Canary Slack-Alarm*"
-          details=$(printf '%s\n' \
-            "Commit: \`$COMMIT\`" \
-            "Lauf: $RUN_URL" \
-            "Diese Nachricht wurde manuell ausgelöst.")
-          payload=$(jq -c -n --arg text "$text" --arg details "$details" '{text: ($text + "\n" + $details)}')
-          curl --fail-with-body --silent --show-error --max-time 10 \
-            -H 'Content-Type: application/json' \
-            --data "$payload" \
-            "$SLACK_WEBHOOK_URL"
 
   notify:
     name: Notify about the scheduled canary
