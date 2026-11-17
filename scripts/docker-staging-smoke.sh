@@ -55,7 +55,7 @@ done
 
 processes="$(docker top "$CONTAINER")"
 printf '%s\n' "$processes"
-grep -Eq 'node[[:space:]]+server\.js' <<<"$processes" \
+grep -Eq 'next-server|node[[:space:]]+server\.js' <<<"$processes" \
   || fail "the Next standalone server is not running"
 grep -q 'public-html-cache-proxy\.mjs' <<<"$processes" \
   || fail "the public HTML cache proxy is not running"
@@ -92,7 +92,7 @@ for (const name of fs.readdirSync("/proc")) {
   if (!/^\d+$/.test(name)) continue;
   try {
     const cmd = fs.readFileSync(`/proc/${name}/cmdline`, "utf8").split("\0").join(" ");
-    if (cmd.includes("node server.js")) {
+    if (cmd.includes("next-server") || cmd.includes("node server.js")) {
       console.log(name);
       process.exit(0);
     }
