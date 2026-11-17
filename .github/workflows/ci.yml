@@ -166,6 +166,9 @@ jobs:
       - name: Staging process check syntax
         run: node --check scripts/staging-process-check.cjs
 
+      - name: Staging cache check syntax
+        run: node --check scripts/staging-cache-check.mjs
+
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
   # erst beim next build auf. Der Build braucht keine Secrets.

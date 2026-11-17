@@ -111,6 +111,13 @@ jobs:
           flyctl ssh console -a "$STAGING_APP" \
             -C "node -e \"eval(Buffer.from('${script_b64}','base64').toString())\""
 
+      - name: Verify anonymous cache hit and session bypass
+        env:
+          STAGING_BASE_URL: https://streaminghub-staging.fly.dev
+        run: |
+          set -euo pipefail
+          node scripts/staging-cache-check.mjs "$STAGING_BASE_URL"
+
       - name: Summary
         if: always()
         run: |
