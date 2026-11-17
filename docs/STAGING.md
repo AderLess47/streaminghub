@@ -172,32 +172,36 @@ A failed **scheduled** run opens (or updates) the issue
 scheduled run comments and closes it. This uses GitHub issue notifications and
 works without any chat integration.
 
-For an additional Slack alert, create an incoming webhook for the target
-channel and store its URL as the **repository** secret `SLACK_WEBHOOK_URL`
-(Settings → Secrets and variables → Actions → Repository secrets). The `notify`
-job does not use the `staging` environment, so an environment-only secret is not
-visible to it. The webhook's channel is the destination. The step only posts for
-failed scheduled runs; if the secret is missing it logs a warning and skips, and
-the GitHub issue is still created. The URL is never printed or committed.
+For an additional Discord alert, create a channel webhook (channel settings →
+Integrations → Webhooks → New Webhook → Copy Webhook URL) and store its URL as
+the **repository** secret `DISCORD_WEBHOOK_URL` (Settings → Secrets and variables
+→ Actions → Repository secrets). The `notify` job does not use the `staging`
+environment, so an environment-only secret is not visible to it. The webhook
+posts to the channel it was created in; the step rejects anything that is not a
+`https://discord.com/api/webhooks/…` (or legacy `discordapp.com`) URL. It only
+posts for failed scheduled runs; if the secret is missing it logs a warning and
+skips, and the GitHub issue is still created. The URL is never printed or
+committed.
 
 To check the webhook and the channel without waiting for a failed scheduled
 run, send the same payload once from a local shell where the URL is exported
 (never commit it, paste it into a workflow file or echo it into a log):
 
 ```bash
-export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/...'
+export DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/...'
 curl --fail-with-body --silent --show-error --max-time 10 \
   -H 'Content-Type: application/json' \
-  --data '{"text":":rotating_light: *Staging-Billing-Canary fehlgeschlagen*\nLokale Prüfung des Webhooks."}' \
-  "$SLACK_WEBHOOK_URL"
-unset SLACK_WEBHOOK_URL
+  --data '{"content":"**:rotating_light: Staging-Billing-Canary fehlgeschlagen**\nLokale Prüfung des Webhooks.","allowed_mentions":{"parse":[]}}' \
+  "$DISCORD_WEBHOOK_URL"
+unset DISCORD_WEBHOOK_URL
 ```
 
-A 2xx response and a message in the target channel confirm that URL and channel
-match. `gh secret list --repo AderLess47/streaminghub` then confirms that the
-repository secret exists; secret values cannot be read back, so this does not
-prove the stored value is the same URL. The step still only runs for failed
-scheduled runs, so a silent green scheduled run is expected.
+A success answers `204 No Content` (so `--fail-with-body` prints nothing) and a
+message appears in the channel the webhook was created in. Both together confirm
+URL and channel. `gh secret list --repo AderLess47/streaminghub` then confirms
+that the repository secret exists; secret values cannot be read back, so this
+does not prove the stored value is the same URL. The step still only runs for
+failed scheduled runs, so a silent green scheduled run is expected.
 
 ### Verifying the failure alert once
 
@@ -207,7 +211,7 @@ verified with one short-lived deliberate failure on `main`. The failing step sit
 before every Stripe, flyctl and canary step, so no Staging data is touched and
 there is nothing to clean up:
 
-1. Set `SLACK_WEBHOOK_URL` and check the webhook as described above.
+1. Set `DISCORD_WEBHOOK_URL` and check the webhook as described above.
 2. On a short-lived branch off `main`, make exactly two edits:
    - point the schedule at a minute about 15 minutes ahead in UTC while keeping
      the daily time, e.g. `- cron: "10 15 * * *"` and `- cron: "47 5 * * *"`;
@@ -222,7 +226,7 @@ there is nothing to clean up:
 3. Merge the branch once its CI is green. The CI workflow does not schedule the
    billing canary, so the deliberate step only runs from the cron.
 4. The scheduled run fails there; `notify` then opens (or updates) the issue and
-   posts to Slack. Confirm both: the message in the target channel and the issue
+   posts to Discord. Confirm both: the message in the channel and the issue
    carrying the run link.
 5. Revert both edits on `main` immediately (revert PR, green CI). The next
    regular scheduled run comments on and closes the issue automatically.
