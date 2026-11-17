@@ -180,6 +180,25 @@ visible to it. The webhook's channel is the destination. The step only posts for
 failed scheduled runs; if the secret is missing it logs a warning and skips, and
 the GitHub issue is still created. The URL is never printed or committed.
 
+To check the webhook and the channel without waiting for a failed scheduled
+run, send the same payload once from a local shell where the URL is exported
+(never commit it, paste it into a workflow file or echo it into a log):
+
+```bash
+export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/...'
+curl --fail-with-body --silent --show-error --max-time 10 \
+  -H 'Content-Type: application/json' \
+  --data '{"text":":rotating_light: *Staging-Billing-Canary fehlgeschlagen*\nLokale Prüfung des Webhooks."}' \
+  "$SLACK_WEBHOOK_URL"
+unset SLACK_WEBHOOK_URL
+```
+
+A 2xx response and a message in the target channel confirm that URL and channel
+match. `gh secret list --repo AderLess47/streaminghub` then confirms that the
+repository secret exists; secret values cannot be read back, so this does not
+prove the stored value is the same URL. The step still only runs for failed
+scheduled runs, so a silent green scheduled run is expected.
+
 The canary removes the synthetic account, subscription, outbox rows, event rows
 and canary audit rows even when registration, checkout or a later assertion
 fails. Cleanup is restricted to `@resend.dev` recipients and uses a bounded
