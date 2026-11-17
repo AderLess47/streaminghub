@@ -78,8 +78,11 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
         run: |
           set -euo pipefail
+          # The DNS check queries an external resolver (9.9.9.9) and can hang
+          # on GitHub-hosted runners. The HTTP health check below is authoritative.
           flyctl deploy \
             --remote-only \
+            --dns-checks=false \
             --config fly.staging.toml \
             --app streaminghub-staging \
             --ha=false \
