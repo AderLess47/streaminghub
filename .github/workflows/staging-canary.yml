@@ -211,36 +211,38 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
 
-      - name: Notify Slack
+      - name: Notify Discord
         if: always() && needs.canary.result != 'success'
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMMIT: ${{ github.sha }}
           RESULT: ${{ needs.canary.result }}
         run: |
           set -euo pipefail
-          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-            echo "::warning::SLACK_WEBHOOK_URL is not configured; skipping the Slack notification."
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL is not configured; skipping the Discord notification."
             exit 0
           fi
-          case "$SLACK_WEBHOOK_URL" in
-            https://hooks.slack.com/*) ;;
+          case "$DISCORD_WEBHOOK_URL" in
+            https://discord.com/api/webhooks/* | https://discordapp.com/api/webhooks/*) ;;
             *)
-              echo "::error::SLACK_WEBHOOK_URL must be a Slack incoming webhook URL."
+              echo "::error::DISCORD_WEBHOOK_URL must be a Discord channel webhook URL."
               exit 1
               ;;
           esac
-          text=":rotating_light: *Staging-Billing-Canary fehlgeschlagen*"
-          details=$(printf '%s\n' \
+          content=$(printf '%s\n' \
+            '**:rotating_light: Staging-Billing-Canary fehlgeschlagen**' \
+            '' \
             "Ergebnis: \`$RESULT\`" \
             "Commit: \`$COMMIT\`" \
             "Lauf: $RUN_URL")
-          payload=$(jq -c -n --arg text "$text" --arg details "$details" '{text: ($text + "\n" + $details)}')
+          payload=$(jq -c -n --arg content "$content" '{content: $content, allowed_mentions: {parse: []}}')
+          # The webhook URL is a bearer credential for one channel; it is never echoed.
           curl --fail-with-body --silent --show-error --max-time 10 \
             -H 'Content-Type: application/json' \
             --data "$payload" \
-            "$SLACK_WEBHOOK_URL"
+            "$DISCORD_WEBHOOK_URL"
 
       - name: Close the failure issue after recovery
         if: needs.canary.result == 'success'
