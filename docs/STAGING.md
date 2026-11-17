@@ -174,12 +174,15 @@ a separate manual `CANARY_SWEEP_APPLY=1` action.
 
 If a canary process is killed after registration but before its cleanup, the
 synthetic SQLite rows can remain even when the Stripe objects were swept. The
-database sweeper handles only old `@resend.dev` customer accounts and their
-related outbox, event, audit, support and contact rows. It also removes old
-orphaned `@resend.dev` outbox rows without a user.
+database sweeper handles only old customer accounts with the exact canary
+registration fingerprint: `@resend.dev`, display name `Staging Canary` and
+locale `de`. It removes only rows the canary creates: the user and cascaded
+subscription/session/auth/legal rows, plus its outbox, subscription-event and
+audit rows. Support tickets, contact messages, contract requests, email
+suppressions and unrelated orphan outbox rows are not touched.
 
 ```bash
-# Dry run: print candidate users, outbox rows and counts
+# Dry run: print candidate users and counts
 node scripts/staging-canary-db-sweep.mjs
 
 # Apply in one transaction inside the staging app container
@@ -189,7 +192,7 @@ CANARY_DB_SWEEP_APPLY=1 \
 ```
 
 The sweeper defaults to a 24-hour minimum age, caps candidates, refuses an age
-below one hour, and does not touch non-`@resend.dev` accounts. It is not run
+below one hour, and does not touch non-canary accounts. It is not run
 automatically by the canary gate.
 
 The canary requires a configured staging email provider, because `sent` is the
