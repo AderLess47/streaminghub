@@ -189,6 +189,29 @@ jobs:
       - name: Next.js build
         run: npm run build
 
+  # Builds the actual production image and starts the staging two-process
+  # entrypoint. No Fly token or production secret is used.
+  docker-staging-smoke:
+    name: Staging image smoke test
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build staging image
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg GIT_COMMIT="${GITHUB_SHA}" \
+            --tag streaminghub-staging-smoke \
+            .
+
+      - name: Smoke-test two-process staging entrypoint
+        run: bash scripts/docker-staging-smoke.sh streaminghub-staging-smoke
+
   android:
     name: Android unit tests
     runs-on: ubuntu-latest
