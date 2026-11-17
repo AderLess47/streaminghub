@@ -166,10 +166,31 @@ CANARY_SWEEP_APPLY=1 npm run staging:canary:sweep
 
 The sweeper refuses non-`sk_test_` keys, requires the exact
 `metadata.canary=staging-billing-canary` marker, defaults to a 24-hour minimum
-age, caps the number of objects, and uses Stripe's test-mode data only. The
-staging canary workflow runs it as a **dry-run preflight** and reports old IDs
+age, caps the number of objects, and uses Stripe's test-mode data only. The staging canary workflow runs it as a **dry-run preflight** and reports old IDs
 in the step summary; it never applies deletions automatically. Cleanup remains
 a separate manual `CANARY_SWEEP_APPLY=1` action.
+
+### Orphaned database rows
+
+If a canary process is killed after registration but before its cleanup, the
+synthetic SQLite rows can remain even when the Stripe objects were swept. The
+database sweeper handles only old `@resend.dev` customer accounts and their
+related outbox, event, audit, support and contact rows. It also removes old
+orphaned `@resend.dev` outbox rows without a user.
+
+```bash
+# Dry run: print candidate users, outbox rows and counts
+node scripts/staging-canary-db-sweep.mjs
+
+# Apply in one transaction inside the staging app container
+CANARY_DB_SWEEP_APPLY=1 \
+  DATABASE_PATH=/app/data/streaminghub.db \
+  node scripts/staging-canary-db-sweep.mjs
+```
+
+The sweeper defaults to a 24-hour minimum age, caps candidates, refuses an age
+below one hour, and does not touch non-`@resend.dev` accounts. It is not run
+automatically by the canary gate.
 
 The canary requires a configured staging email provider, because `sent` is the
 only passing mail state. `queued` is rejected by configuration, not treated as
