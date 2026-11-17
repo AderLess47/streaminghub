@@ -28,6 +28,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/contact-retention.mjs ./s
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/audit-retention.mjs ./scripts/audit-retention.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/staging-canary-assert.mjs ./scripts/staging-canary-assert.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/staging-canary-db-sweep.mjs ./scripts/staging-canary-db-sweep.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/public-html-cache-proxy.mjs ./scripts/public-html-cache-proxy.mjs
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 USER nextjs

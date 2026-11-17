@@ -81,6 +81,24 @@ The workflow is deliberately manual for the first rollout. Once staging secrets
 and the canary are stable, a `push` trigger on `main` can be added without
 changing the isolation rules.
 
+### Anonymous public HTML cache
+
+Staging can enable a small cache in front of the Next server with
+`ENABLE_PUBLIC_HTML_CACHE=1` and `UPSTREAM_PORT=3001` (both are set only in
+`fly.staging.toml`; production stays direct). The cache is intentionally
+limited to the allowlisted public content pages and to `GET` HTML requests
+without a `sh_session` cookie. Those responses get a 60-second public lifetime
+and `Vary: Cookie`.
+
+A request carrying any `sh_session` cookie bypasses the cache completely, and
+so do RSC requests, non-public paths and responses with `Set-Cookie`. The cached
+anonymous shell therefore contains only the logged-out navigation; a logged-in
+shell is never stored under a shared key. Cached responses contain the same
+anonymous Next HTML and never account data.
+
+The cache is in-process and bounded; it is a latency experiment, not a CDN.
+Admin content changes become visible after the 60-second lifetime at the latest.
+
 ## 5. Billing canary
 
 The implemented canary is a deterministic **provider-contract** check. It is

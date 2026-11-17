@@ -9,6 +9,9 @@ primary_region = "fra"
 [env]
   NODE_ENV = "production"
   DEPLOY_ENV = "staging"
+  # Staging-only anonymous public HTML cache; production remains direct Next.
+  ENABLE_PUBLIC_HTML_CACHE = "1"
+  UPSTREAM_PORT = "3001"
   APP_URL = "https://streaminghub-staging.fly.dev"
   DATABASE_PATH = "/app/data/streaminghub.db"
   SESSION_DAYS = "30"
