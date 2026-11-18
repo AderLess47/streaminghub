@@ -292,6 +292,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
           title="Staging canary failing"
@@ -300,5 +301,10 @@ jobs:
             echo "No open canary failure issue."
             exit 0
           fi
-          gh issue comment "$existing" --body "Der tägliche Staging-Canary läuft wieder erfolgreich: $RUN_URL"
+          case "$TRIGGER" in
+            schedule) trigger='Zeitplan' ;;
+            workflow_run) trigger='Deploy' ;;
+            *) trigger="$TRIGGER" ;;
+          esac
+          gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
           gh issue close "$existing" --reason completed
