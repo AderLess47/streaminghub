@@ -188,6 +188,7 @@ signal that still reaches someone when a whole day of slots is dropped.
 | Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
 | Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
+| External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
 | External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 8 hours |
 
 The properties that hold across all of them:
@@ -198,7 +199,9 @@ The properties that hold across all of them:
   missing the step logs a warning and skips, so a missing secret can never
   suppress or delay the issue.
 - Only an automatic successful run comments on and closes the issue, and that
-  comment names its trigger (`Zeitplan` or `Deploy`).
+  comment names its trigger (`Zeitplan`, `Deploy` or `externer Auslöser`). A
+  manual run from the Actions tab stays annotation-only; the fallback dispatch is
+  not manual, it sends `source=external`.
 - At most one canary run and one failure comment per day, even when several
   schedule slots fire or a deploy repeats an already reported commit.
 - A failed deploy does not start the canary at all, so a red deploy never
@@ -290,6 +293,38 @@ unset CANARY_HEARTBEAT_URL
 The check then shows **Up** with a fresh ping. To prove the alarm path, set
 Period to `1 minute` and Grace to `2 minutes` in the dashboard, wait, and confirm
 the e-mail arrives before restoring `1 day`/`8 hours`.
+
+### External fallback trigger
+
+Even five slots are useless when GitHub delivers none of them for a day, which
+happened on 18 November 2026. `ops/canary-dispatcher/` therefore contains a
+Cloudflare Worker with an hourly Cron Trigger: it reads the last canary run and
+dispatches the workflow through the API when that run is older than 22 hours. It
+only starts a run — the issue, the closing comment and the heartbeat stay in the
+workflow, because the dispatch sends `source=external` and the workflow treats
+that exactly like an unattended run.
+
+Deploy it once:
+
+1. Create a fine-grained token: GitHub → Settings → Developer settings → Personal
+   access tokens → Fine-grained tokens → *Generate new token*, repository access
+   “Only select repositories” → `streaminghub`, permission **Actions: Read and
+   write**. A classic token with `repo` and `workflow` also works.
+2. `cd ops/canary-dispatcher && npx wrangler deploy`. Without wrangler, create a
+   Worker in the Cloudflare dashboard, paste `worker.js`, and add the Cron Trigger
+   `7 * * * *` from `wrangler.toml` under *Triggers*.
+3. Store the token as the Worker secret `GH_TOKEN` (`npx wrangler secret put
+   GH_TOKEN`, or dashboard → Worker → *Settings* → *Variables and Secrets* →
+   *Add* → type **Secret**). Without it the Worker answers `GH_TOKEN is not
+   configured` and starts nothing.
+4. Check it: the Worker URL (or `npx wrangler tail`) answers
+   `{"action":"none",...}` while the last run is recent and
+   `{"action":"dispatched"}` once it started one. A wrong or missing token
+   answers `{"action":"error",...,"status":401}` on dispatch.
+
+The token can only start workflows in this repository and never lives in the repo.
+The Worker is a fallback, not the schedule: while GitHub delivers its slots it
+does nothing, and it does not touch the issue or the heartbeat itself.
 
 ### Verifying the failure alert once
 
