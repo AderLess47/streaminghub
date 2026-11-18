@@ -10,8 +10,6 @@ on:
   # delay in this repository), so the remaining slots are retries: the `guard` job
   # lets only one of them run the canary per day.
   schedule:
-    # TEMPORARY probe, removed again after the investigation.
-    - cron: "*/10 * * * *"
     - cron: "47 5 * * *"
     - cron: "47 9 * * *"
     - cron: "47 13 * * *"
