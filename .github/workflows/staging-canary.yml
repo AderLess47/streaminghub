@@ -332,30 +332,6 @@ jobs:
             --data "$payload" \
             "$DISCORD_WEBHOOK_URL"
 
-      - name: Report the daily success to the heartbeat
-        # Only a real scheduled run proves that GitHub's scheduler is still
-        # delivering the daily canary. Deploy-triggered and manual runs must not
-        # hide a dead schedule, and a failed run pings nothing on purpose.
-        if: needs.canary.result == 'success' && github.event_name == 'schedule'
-        env:
-          HEARTBEAT_URL: ${{ secrets.CANARY_HEARTBEAT_URL }}
-        run: |
-          set -euo pipefail
-          if [ -z "${HEARTBEAT_URL:-}" ]; then
-            echo "::warning::CANARY_HEARTBEAT_URL is not configured; skipping the heartbeat ping."
-            exit 0
-          fi
-          case "$HEARTBEAT_URL" in
-            https://hc-ping.com/*) ;;
-            *)
-              echo "::error::CANARY_HEARTBEAT_URL must be a healthchecks.io ping URL (https://hc-ping.com/...)."
-              exit 1
-              ;;
-          esac
-          # The ping URL is a credential for one check; it is never echoed.
-          curl --fail --silent --show-error --max-time 10 --retry 5 -o /dev/null "$HEARTBEAT_URL"
-          echo "Heartbeat pinged."
-
       - name: Close the failure issue after recovery
         if: needs.canary.result == 'success' && github.event_name != 'workflow_dispatch'
         continue-on-error: true
@@ -379,3 +355,28 @@ jobs:
           esac
           gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
           gh issue close "$existing" --reason completed
+
+      - name: Report the daily success to the heartbeat
+        # Runs after the closing step on purpose: a healthchecks.io outage must not
+        # keep a recovered issue open. Only a real scheduled run proves that
+        # GitHub's scheduler still delivers; deploy-triggered and manual runs must
+        # not hide a dead schedule, and a failed run pings nothing on purpose.
+        if: needs.canary.result == 'success' && github.event_name == 'schedule'
+        env:
+          HEARTBEAT_URL: ${{ secrets.CANARY_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HEARTBEAT_URL:-}" ]; then
+            echo "::warning::CANARY_HEARTBEAT_URL is not configured; skipping the heartbeat ping."
+            exit 0
+          fi
+          case "$HEARTBEAT_URL" in
+            https://hc-ping.com/*) ;;
+            *)
+              echo "::error::CANARY_HEARTBEAT_URL must be a healthchecks.io ping URL (https://hc-ping.com/...)."
+              exit 1
+              ;;
+          esac
+          # The ping URL is a credential for one check; it is never echoed.
+          curl --fail --silent --show-error --max-time 10 --retry 5 -o /dev/null "$HEARTBEAT_URL"
+          echo "Heartbeat pinged."
