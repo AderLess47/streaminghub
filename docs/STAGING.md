@@ -181,6 +181,33 @@ Actions can notice that its own scheduler stopped, so the successful scheduled
 run additionally pings an external heartbeat (see below). That ping is the only
 signal that still reaches someone when a whole day of slots is dropped.
 
+### Alarm overview
+
+| Trigger | When it runs | What it produces on failure |
+| --- | --- | --- |
+| Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
+| Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
+| Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
+| External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 8 hours |
+
+The properties that hold across all of them:
+
+- The issue is the primary alarm and needs nothing but the workflow's own
+  `GITHUB_TOKEN`; it works without any chat or monitoring integration.
+- `DISCORD_WEBHOOK_URL` and `CANARY_HEARTBEAT_URL` are optional. When they are
+  missing the step logs a warning and skips, so a missing secret can never
+  suppress or delay the issue.
+- Only an automatic successful run comments on and closes the issue, and that
+  comment names its trigger (`Zeitplan` or `Deploy`).
+- At most one canary run and one failure comment per day, even when several
+  schedule slots fire or a deploy repeats an already reported commit.
+- A failed deploy does not start the canary at all, so a red deploy never
+  produces a second, misleading canary alarm.
+- Nothing here touches production: the canary refuses non-`sk_test_` keys,
+  `livemode: true` sessions and a non-staging base URL.
+
+The subsections below describe each part in detail.
+
 A failed run opens (or updates) the issue `Staging canary failing` with the run
 link and commit. Both unattended paths do this: the daily scheduled run and the
 automatic run after a successful **Deploy staging**. A failed manual run
