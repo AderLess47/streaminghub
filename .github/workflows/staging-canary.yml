@@ -257,7 +257,7 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
           RESULT: ${{ needs.canary.result }}
         run: |
           set -euo pipefail
