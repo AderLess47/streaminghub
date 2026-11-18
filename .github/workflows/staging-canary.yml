@@ -82,7 +82,15 @@ jobs:
   canary:
     name: Run the staging billing canary
     needs: guard
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && needs.guard.outputs.run == 'true') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    # always() is required: a job that needs a skipped job is skipped as well, and
+    # `guard` only runs for schedule events. Without it every deploy-triggered and
+    # manual run was silently skipped.
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch'
+        || (github.event_name == 'schedule' && needs.guard.outputs.run == 'true')
+        || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
