@@ -318,9 +318,15 @@ Deploy it once:
    *Add* → type **Secret**). Without it the Worker answers `GH_TOKEN is not
    configured` and starts nothing.
 4. Check it: the Worker URL (or `npx wrangler tail`) answers
-   `{"action":"none",...}` while the last run is recent and
+   `{"action":"none",...,"lastRun":"..."}` while the last run is recent and
    `{"action":"dispatched"}` once it started one. A wrong or missing token
    answers `{"action":"error",...,"status":401}` on dispatch.
+5. Prove the dispatch path without waiting a day: add the plain variable
+   `MAX_AGE_HOURS` with value `0` (dashboard → Worker → *Settings* →
+   *Variables and Secrets*), open the Worker URL once — it answers
+   `{"action":"dispatched"}` and a new run with `source=external` appears in the
+   Actions tab — then **delete `MAX_AGE_HOURS` again**. While it is `0` every
+   request would dispatch.
 
 The token can only start workflows in this repository and never lives in the repo.
 The Worker is a fallback, not the schedule: while GitHub delivers its slots it
