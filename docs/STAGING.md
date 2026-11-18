@@ -75,7 +75,22 @@ Start **Actions → Deploy staging → Run workflow**. The workflow:
 1. validates that `fly.staging.toml` names `streaminghub-staging`, uses the
    staging URL and does not contain a live Stripe key;
 2. deploys with the staging-scoped token;
-3. waits for `/status` to return HTTP 200.
+3. waits for `/status` to answer HTTP 200 **and to name the deployed commit**;
+4. on any failure, reports which commit staging still serves.
+
+The deploy itself is capped at 8 minutes. A healthy rollout needs about two
+minutes; on 2026-11-18 the remote builder hung and Fly only aborted after 16
+minutes with `deadline_exceeded`, so staging kept running the old commit while
+nothing on the run said so. A cap that fires during the build now fails the step
+with an explicit error instead of waiting for Fly's own deadline.
+
+HTTP 200 alone is not proof of a rollout: a rolled-back or half-finished deploy
+can answer 200 while serving the previous commit. Because `/status` names its
+commit, the health step requires that commit to equal the one being deployed, so
+a silent rollback cannot pass. When the job fails after the commit was resolved,
+the last step prints `Staging serves <old> instead of <new>` into the run summary
+and as an error annotation — the drift is named at the deploy, not discovered by
+a canary failure days later.
 
 The workflow is deliberately manual for the first rollout. Once staging secrets
 and the canary are stable, a `push` trigger on `main` can be added without

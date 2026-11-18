@@ -74,34 +74,95 @@ jobs:
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
       - name: Deploy
+        # Backstop: the shell timeout below reports the hang itself, but a stuck
+        # flyctl process must not be able to hold the job either.
+        timeout-minutes: 12
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+          DEPLOY_COMMIT: ${{ steps.deployed_commit.outputs.sha }}
         run: |
           set -euo pipefail
+          # A healthy staging deploy takes about two minutes. On 2026-11-18 the
+          # remote builder hung and Fly only gave up after 16 minutes with
+          # `deadline_exceeded`, leaving staging silently on the previous commit.
+          # Cap the attempt ourselves so a hung build fails while somebody is
+          # still watching, with a message that says what happened.
+          DEPLOY_TIMEOUT_SECONDS=480
+          set +e
           # The DNS check queries an external resolver (9.9.9.9) and can hang
           # on GitHub-hosted runners. The HTTP health check below is authoritative.
-          flyctl deploy \
+          timeout --kill-after=30 "$DEPLOY_TIMEOUT_SECONDS" flyctl deploy \
             --remote-only \
             --dns-checks=false \
             --config fly.staging.toml \
             --app streaminghub-staging \
             --ha=false \
-            --build-arg "GIT_COMMIT=${{ steps.deployed_commit.outputs.sha }}"
+            --build-arg "GIT_COMMIT=$DEPLOY_COMMIT"
+          status=$?
+          set -e
+          # 124 = timeout fired, 137 = the process had to be killed.
+          if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+            echo "::error title=Fly deploy hung::flyctl deploy made no progress within $((DEPLOY_TIMEOUT_SECONDS / 60)) minutes. The remote builder is most likely stuck; staging was not updated and still serves the previous commit. Re-run the deploy."
+            exit 1
+          fi
+          exit "$status"
 
       - name: Verify staging health
+        # HTTP 200 alone is not proof: a rolled back or half-finished rollout can
+        # answer 200 while still serving the previous commit. The /status page
+        # names the commit it runs, so require that commit to be the deployed one.
+        env:
+          EXPECTED_COMMIT: ${{ steps.deployed_commit.outputs.sha }}
         run: |
           set -euo pipefail
+          status_file="$RUNNER_TEMP/staging-status.html"
+          served=""
+          code=""
           for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' https://streaminghub-staging.fly.dev/status || true)
-            if [ "$code" = "200" ]; then
-              echo "Staging /status returned HTTP 200 on attempt ${attempt}."
+            code=$(curl -sS --max-time 10 -o "$status_file" -w '%{http_code}' https://streaminghub-staging.fly.dev/status || true)
+            served=$(sed -n 's/.*data-deployment-commit="\([^"]*\)".*/\1/p' "$status_file" 2>/dev/null | head -1 || true)
+            if [ "$code" = "200" ] && [ "$served" = "$EXPECTED_COMMIT" ]; then
+              echo "Staging serves ${served} (HTTP 200) on attempt ${attempt}."
               exit 0
             fi
-            echo "Staging not ready yet (HTTP ${code:-no response}); retrying in 5s ..."
+            echo "Attempt ${attempt}: HTTP ${code:-no response}, serving commit ${served:-unknown} (expected ${EXPECTED_COMMIT}); retrying in 5s ..."
             sleep 5
           done
-          echo "::error::Staging /status did not return HTTP 200 within 120 seconds."
+          echo "::error title=Staging does not serve the deployed commit::After 120 seconds staging answered HTTP ${code:-none} with commit ${served:-unknown} instead of ${EXPECTED_COMMIT}."
           exit 1
+
+      - name: Report the staging drift
+        # Runs whenever the job fails after the commit was resolved, so a failed
+        # or hung deploy states explicitly which commit staging still serves
+        # instead of leaving the drift to be discovered by a later canary run.
+        if: failure()
+        env:
+          EXPECTED_COMMIT: ${{ steps.deployed_commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EXPECTED_COMMIT:-}" ]; then
+            echo "The commit was not resolved before the failure; no drift to report."
+            exit 0
+          fi
+          status_file="$RUNNER_TEMP/staging-drift.html"
+          curl -sS --max-time 10 -o "$status_file" https://streaminghub-staging.fly.dev/status || true
+          served=$(sed -n 's/.*data-deployment-commit="\([^"]*\)".*/\1/p' "$status_file" 2>/dev/null | head -1 || true)
+          served="${served:-unknown}"
+          if [ "$served" = "$EXPECTED_COMMIT" ]; then
+            echo "Staging already serves ${EXPECTED_COMMIT}; the failure is not a staging drift." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### Staging is still behind"
+            echo
+            echo "- intended commit: \`${EXPECTED_COMMIT}\`"
+            echo "- staging serves: \`${served}\`"
+            echo "- run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Staging keeps serving the previous commit until a deploy succeeds, so the next canary run will fail on the commit comparison alone."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error title=Staging is behind::Staging serves ${served} instead of ${EXPECTED_COMMIT}. Re-run the deploy so the canary does not fail on the commit comparison."
+          exit 0
 
       - name: Verify Next and cache proxy processes
         env:
