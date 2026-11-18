@@ -270,10 +270,10 @@ jobs:
           set -euo pipefail
           title="Staging canary failing"
           case "$TRIGGER" in
-            schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.' ;;
-            workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.' ;;
-            workflow_dispatch) summary='Der Staging-Billing-Canary ist beim externen Nachhol-Lauf fehlgeschlagen (GitHub hat keinen Zeitplan-Slot geliefert).' ;;
-            *) summary='Der Staging-Billing-Canary ist fehlgeschlagen.' ;;
+            schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.'; label='Zeitplan' ;;
+            workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.'; label='Deploy' ;;
+            workflow_dispatch) summary='Der Staging-Billing-Canary ist beim externen Nachhol-Lauf fehlgeschlagen (GitHub hat keinen Zeitplan-Slot geliefert).'; label='externer Auslöser' ;;
+            *) summary='Der Staging-Billing-Canary ist fehlgeschlagen.'; label="$TRIGGER" ;;
           esac
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
           # A repeated deploy failure for the commit that is already reported adds
@@ -289,11 +289,11 @@ jobs:
             '' \
             "- Lauf: $RUN_URL" \
             "- Commit: $COMMIT" \
-            "- Auslöser: $TRIGGER" \
+            "- Auslöser: $label" \
             '' \
             'Bitte den Lauf und die Staging-Logs prüfen. Der Canary deckt Checkout, Webhook, E-Mail-Versand, Datenbankzustand und Cleanup ab; Produktionsdaten sind nicht beteiligt.' \
             '' \
-            'Dieses Issue wird beim nächsten erfolgreichen automatischen Lauf (Zeitplan oder Deploy) automatisch geschlossen; manuelle Läufe ändern es nicht.')
+            'Dieses Issue wird beim nächsten erfolgreichen unbeaufsichtigten Lauf (Zeitplan, Deploy oder externer Auslöser) automatisch geschlossen; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else
