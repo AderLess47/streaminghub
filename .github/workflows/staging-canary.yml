@@ -6,8 +6,15 @@ name: Staging billing canary
 on:
   # Daily at 05:47 UTC, after the Amazon sync (04:41) and release drift check
   # (05:17). A scheduled run also catches staging that has fallen behind main.
+  # GitHub starts scheduled runs late and drops slots entirely (observed hours of
+  # delay in this repository), so the remaining slots are retries: the `guard` job
+  # lets only one of them run the canary per day.
   schedule:
     - cron: "47 5 * * *"
+    - cron: "47 9 * * *"
+    - cron: "47 13 * * *"
+    - cron: "47 17 * * *"
+    - cron: "47 21 * * *"
   workflow_dispatch:
   workflow_run:
     workflows: ["Deploy staging"]
@@ -22,9 +29,49 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    name: Decide whether today's scheduled canary runs
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+
+    steps:
+      - name: Check the last scheduled attempt
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          # One canary per day. Only the documented verification procedure lowers
+          # this to 0 so a near-future test slot is not treated as a retry.
+          MIN_INTERVAL_SECONDS: "64800"
+        run: |
+          set -euo pipefail
+          run="true"
+          runs=$(gh api "repos/$GH_REPO/actions/workflows/staging-canary.yml/runs?event=schedule&per_page=30")
+          last=$(printf '%s' "$runs" | jq -r --argjson id "$RUN_ID" '
+            [.workflow_runs[] | select(.id != $id and .status == "completed")][0].created_at // empty')
+          if [ -n "$last" ]; then
+            age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
+            echo "Last completed scheduled attempt: $last (${age}s ago)."
+            if [ "$age" -lt "$MIN_INTERVAL_SECONDS" ]; then
+              run="false"
+            fi
+          else
+            echo "No completed scheduled attempt yet."
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Run the canary now: $run"
+
   canary:
     name: Run the staging billing canary
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    needs: guard
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && needs.guard.outputs.run == 'true') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging

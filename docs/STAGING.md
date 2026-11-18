@@ -167,6 +167,15 @@ run will fail rather than silently skip. Add the daily `schedule` only after a
 green run. The database assertion helper is covered by
 `npm run test:staging-canary`.
 
+The schedule is written five times a day (`47 5`, `47 9`, `47 13`, `47 17`,
+`47 21` UTC) because GitHub starts scheduled runs late and drops slots — in this
+repository by hours, and some days not at all. Only the first slot is the
+intended daily time; the rest are retries. The `guard` job reads the last
+completed scheduled attempt and skips the canary when it is younger than 18 hours
+(`MIN_INTERVAL_SECONDS`), so a late or repeated slot neither creates a second
+canary nor a second failure comment on the same day. A retry slot still appears
+as a run in which the `guard` job decided to skip; that is normal.
+
 A failed run opens (or updates) the issue `Staging canary failing` with the run
 link and commit. Both unattended paths do this: the daily scheduled run and the
 automatic run after a successful **Deploy staging**. A failed manual run
@@ -219,9 +228,11 @@ before every Stripe, flyctl and canary step, so no Staging data is touched and
 there is nothing to clean up:
 
 1. Set `DISCORD_WEBHOOK_URL` and check the webhook as described above.
-2. On a short-lived branch off `main`, make exactly two edits:
-   - point the schedule at a minute about 15 minutes ahead in UTC while keeping
-     the daily time, e.g. `- cron: "10 15 * * *"` and `- cron: "47 5 * * *"`;
+2. On a short-lived branch off `main`, make exactly three edits:
+   - add a schedule about 15 minutes ahead in UTC next to the existing slots,
+     e.g. `- cron: "10 15 * * *"`;
+   - set `MIN_INTERVAL_SECONDS` in the `guard` step to `"0"`, otherwise the test
+     slot counts as a retry slot and the canary is skipped;
    - add one first step to the `canary` job directly after
      `Check out repository`:
 
@@ -235,7 +246,7 @@ there is nothing to clean up:
 4. The scheduled run fails there; `notify` then opens (or updates) the issue and
    posts to Discord. Confirm both: the message in the channel and the issue
    carrying the run link.
-5. Revert both edits on `main` immediately (revert PR, green CI). The next
+5. Revert all three edits on `main` immediately (revert PR, green CI). The next
    regular scheduled run comments on and closes the issue automatically.
 
 Keep the window to a single run and do not merge this near 05:47 UTC: while the
