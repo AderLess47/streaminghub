@@ -16,6 +16,17 @@ on:
     - cron: "47 17 * * *"
     - cron: "47 21 * * *"
   workflow_dispatch:
+    inputs:
+      # The external dispatcher (Cloudflare Worker, see docs/STAGING.md) starts the
+      # canary with source=external when GitHub dropped every schedule slot. Such a
+      # run must alert like an unattended one, not like a run somebody is watching.
+      source:
+        description: Who started the run
+        type: choice
+        options:
+          - manual
+          - external
+        default: manual
   workflow_run:
     workflows: ["Deploy staging"]
     types: [completed]
@@ -240,7 +251,7 @@ jobs:
 
     steps:
       - name: Open or update the failure issue
-        if: needs.canary.result == 'failure' && github.event_name != 'workflow_dispatch'
+        if: needs.canary.result == 'failure' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -253,6 +264,7 @@ jobs:
           case "$TRIGGER" in
             schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.' ;;
             workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.' ;;
+            workflow_dispatch) summary='Der Staging-Billing-Canary ist beim externen Nachhol-Lauf fehlgeschlagen (GitHub hat keinen Zeitplan-Slot geliefert).' ;;
             *) summary='Der Staging-Billing-Canary ist fehlgeschlagen.' ;;
           esac
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
@@ -281,7 +293,7 @@ jobs:
           fi
 
       - name: Annotate a failed manual run
-        if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch'
+        if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'external'
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMMIT: ${{ needs.canary.outputs.commit }}
@@ -300,7 +312,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Discord
-        if: needs.canary.result == 'failure' && github.event_name != 'workflow_dispatch'
+        if: needs.canary.result == 'failure' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -333,7 +345,7 @@ jobs:
             "$DISCORD_WEBHOOK_URL"
 
       - name: Close the failure issue after recovery
-        if: needs.canary.result == 'success' && github.event_name != 'workflow_dispatch'
+        if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -351,6 +363,7 @@ jobs:
           case "$TRIGGER" in
             schedule) trigger='Zeitplan' ;;
             workflow_run) trigger='Deploy' ;;
+            workflow_dispatch) trigger='externer Auslöser' ;;
             *) trigger="$TRIGGER" ;;
           esac
           gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
@@ -361,7 +374,7 @@ jobs:
         # keep a recovered issue open. Only a real scheduled run proves that
         # GitHub's scheduler still delivers; deploy-triggered and manual runs must
         # not hide a dead schedule, and a failed run pings nothing on purpose.
-        if: needs.canary.result == 'success' && github.event_name == 'schedule'
+        if: needs.canary.result == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.source == 'external'))
         env:
           HEARTBEAT_URL: ${{ secrets.CANARY_HEARTBEAT_URL }}
         run: |

@@ -1,0 +1,8 @@
+name = "staging-canary-dispatcher"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Hourly at minute 7. The Worker only dispatches when the last canary run is
+# older than 22 hours, so a healthy schedule makes this a no-op.
+[triggers]
+crons = ["7 * * * *"]
