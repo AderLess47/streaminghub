@@ -11,7 +11,9 @@ const OWNER = "AderLess47";
 const REPO = "streaminghub";
 const WORKFLOW_FILE = ".github/workflows/staging-canary.yml";
 const WORKFLOW_ID = "staging-canary.yml";
-const MAX_AGE_MS = 22 * 60 * 60 * 1000;
+// The regular threshold. Set MAX_AGE_HOURS in the Worker environment only to
+// prove the dispatch path by hand (0 dispatches immediately), then remove it.
+const MAX_AGE_HOURS = 22;
 
 export default {
   async scheduled(_event, env, ctx) {
@@ -28,6 +30,10 @@ async function check(env) {
   if (!token) {
     return { action: "skipped", reason: "GH_TOKEN is not configured" };
   }
+
+  const configured = Number(env.MAX_AGE_HOURS);
+  const maxAgeHours = Number.isFinite(configured) && env.MAX_AGE_HOURS !== undefined ? configured : MAX_AGE_HOURS;
+  const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
 
   const headers = {
     authorization: `Bearer ${token}`,
@@ -48,8 +54,8 @@ async function check(env) {
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
   const now = Date.now();
 
-  if (latest && now - Date.parse(latest.created_at) < MAX_AGE_MS) {
-    return { action: "none", lastRun: latest.created_at, runId: latest.id };
+  if (latest && now - Date.parse(latest.created_at) < maxAgeMs) {
+    return { action: "none", lastRun: latest.created_at, runId: latest.id, maxAgeHours };
   }
 
   const dispatchRes = await fetch(`${api}/workflows/${WORKFLOW_ID}/dispatches`, {
@@ -61,5 +67,5 @@ async function check(env) {
   if (dispatchRes.status !== 204) {
     return { action: "error", step: "dispatch", status: dispatchRes.status };
   }
-  return { action: "dispatched", lastRun: latest ? latest.created_at : null };
+  return { action: "dispatched", lastRun: latest ? latest.created_at : null, maxAgeHours };
 }
