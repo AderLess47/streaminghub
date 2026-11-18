@@ -176,6 +176,11 @@ completed scheduled attempt and skips the canary when it is younger than 18 hour
 canary nor a second failure comment on the same day. A retry slot still appears
 as a run in which the `guard` job decided to skip; that is normal.
 
+Even five slots only help while GitHub delivers *some* slot. Nothing inside
+Actions can notice that its own scheduler stopped, so the successful scheduled
+run additionally pings an external heartbeat (see below). That ping is the only
+signal that still reaches someone when a whole day of slots is dropped.
+
 A failed run opens (or updates) the issue `Staging canary failing` with the run
 link and commit. Both unattended paths do this: the daily scheduled run and the
 automatic run after a successful **Deploy staging**. A failed manual run
@@ -217,6 +222,46 @@ URL and channel. `gh secret list --repo AderLess47/streaminghub` then confirms
 that the repository secret exists; secret values cannot be read back, so this
 does not prove the stored value is the same URL. The step still only runs for
 failed unattended runs, so a silent green scheduled run is expected.
+
+### Heartbeat for a missing schedule run
+
+GitHub starts scheduled runs late and sometimes drops them for a whole day, which
+happened on 18 November 2026. Since no workflow can report its own absence, the
+successful scheduled run pings an external dead-man's switch: [Healthchecks.io](https://healthchecks.io/)
+is free for 20 checks and alerts by e-mail when the ping does not arrive.
+
+Set it up once:
+
+1. Create the free account and **Add Check**: name `staging-billing-canary`,
+   **Period** `1 day`, **Grace Time** `8 hours` (the canary runs once per day, so
+   an 8-hour grace keeps a late run from alerting).
+2. Copy the **ping URL** (`https://hc-ping.com/<uuid>`) and store it as the
+   **repository** secret `CANARY_HEARTBEAT_URL` under Settings → Secrets and
+   variables → Actions → Repository secrets. The `notify` job does not use the
+   `staging` environment, so an environment-only secret would be invisible here.
+3. Leave the integrations at their default (e-mail to the account address) or
+   add the channel you actually read.
+
+The ping is sent by the `notify` job only when a **scheduled** canary run
+succeeded. Deploy-triggered and manual runs never ping, so a green deploy cannot
+hide a dead schedule; a failing scheduled run does not ping either, which makes
+the heartbeat a second, slower alarm next to the issue. A missing secret only
+logs a warning and skips, exactly like the Discord webhook. The ping URL is never
+printed or committed, and the step rejects anything that is not a
+`https://hc-ping.com/…` URL.
+
+Check the wiring without waiting for the schedule by pinging once from a local
+shell where the URL is exported (never commit it or paste it into a workflow):
+
+```bash
+export CANARY_HEARTBEAT_URL='https://hc-ping.com/...'
+curl --fail --silent --show-error --max-time 10 -o /dev/null "$CANARY_HEARTBEAT_URL" && echo 'ping accepted'
+unset CANARY_HEARTBEAT_URL
+```
+
+The check then shows **Up** with a fresh ping. To prove the alarm path, set
+Period to `1 minute` and Grace to `2 minutes` in the dashboard, wait, and confirm
+the e-mail arrives before restoring `1 day`/`8 hours`.
 
 ### Verifying the failure alert once
 
