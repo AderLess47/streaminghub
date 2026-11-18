@@ -270,7 +270,8 @@ Set it up once:
    add the channel you actually read.
 
 The ping is sent by the `notify` job only when a **scheduled** canary run
-succeeded. Deploy-triggered and manual runs never ping, so a green deploy cannot
+succeeded, and it runs after the closing step so a healthchecks.io outage cannot
+keep a recovered issue open. Deploy-triggered and manual runs never ping, so a green deploy cannot
 hide a dead schedule; a failing scheduled run does not ping either, which makes
 the heartbeat a second, slower alarm next to the issue. A missing secret only
 logs a warning and skips, exactly like the Discord webhook. The ping URL is never
