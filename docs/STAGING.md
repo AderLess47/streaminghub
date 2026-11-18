@@ -167,10 +167,16 @@ run will fail rather than silently skip. Add the daily `schedule` only after a
 green run. The database assertion helper is covered by
 `npm run test:staging-canary`.
 
-A failed **scheduled** run opens (or updates) the issue
-`Staging canary failing` with the run link and commit; the next successful
-scheduled run comments and closes it. This uses GitHub issue notifications and
-works without any chat integration.
+A failed run opens (or updates) the issue `Staging canary failing` with the run
+link and commit. Both unattended paths do this: the daily scheduled run and the
+automatic run after a successful **Deploy staging**. A failed manual run
+(`workflow_dispatch`) instead annotates its own run and writes a step summary,
+because whoever started it is already watching it; it never opens, comments on
+or closes the issue. A deploy failure that repeats the commit already reported on
+an open issue adds no second comment, while the daily run still comments every
+day so a persistent failure keeps its heartbeat. The next successful scheduled or
+deploy-triggered run comments and closes the issue. This uses GitHub issue
+notifications and works without any chat integration.
 
 For an additional Discord alert, create a channel webhook (channel settings →
 Integrations → Webhooks → New Webhook → Copy Webhook URL) and store its URL as
@@ -179,9 +185,9 @@ the **repository** secret `DISCORD_WEBHOOK_URL` (Settings → Secrets and variab
 environment, so an environment-only secret is not visible to it. The webhook
 posts to the channel it was created in; the step rejects anything that is not a
 `https://discord.com/api/webhooks/…` (or legacy `discordapp.com`) URL. It only
-posts for failed scheduled runs; if the secret is missing it logs a warning and
-skips, and the GitHub issue is still created. The URL is never printed or
-committed.
+posts for failed scheduled and deploy-triggered runs; if the secret is missing it
+logs a warning and skips, and the GitHub issue is still created. The URL is never
+printed or committed.
 
 To check the webhook and the channel without waiting for a failed scheduled
 run, send the same payload once from a local shell where the URL is exported
@@ -201,12 +207,13 @@ message appears in the channel the webhook was created in. Both together confirm
 URL and channel. `gh secret list --repo AderLess47/streaminghub` then confirms
 that the repository secret exists; secret values cannot be read back, so this
 does not prove the stored value is the same URL. The step still only runs for
-failed scheduled runs, so a silent green scheduled run is expected.
+failed unattended runs, so a silent green scheduled run is expected.
 
 ### Verifying the failure alert once
 
-`notify` only runs for `schedule`, and GitHub cannot dispatch a scheduled run on
-demand (`gh workflow run` produces `workflow_dispatch`), so the alert path is
+The issue is opened by scheduled and deploy-triggered runs only, and GitHub
+cannot dispatch a scheduled run on demand (`gh workflow run` produces
+`workflow_dispatch`, which merely annotates the run), so the issue path is
 verified with one short-lived deliberate failure on `main`. The failing step sits
 before every Stripe, flyctl and canary step, so no Staging data is touched and
 there is nothing to clean up:

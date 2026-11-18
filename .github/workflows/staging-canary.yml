@@ -28,6 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
+    outputs:
+      # The commit the canary actually verified: the artifact commit of the
+      # triggering deploy, or the default-branch checkout of a scheduled run.
+      commit: ${{ steps.deployed_commit.outputs.sha || github.sha }}
 
     steps:
       - name: Resolve deployed commit
@@ -175,9 +179,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify:
-    name: Notify about the scheduled canary
+    name: Notify about canary failures
     needs: canary
-    if: always() && github.event_name == 'schedule'
+    # Runs after every canary attempt that actually started, but only failures do
+    # anything. Scheduled and deploy-triggered failures open or update the single
+    # failure issue; a manual run only annotates itself, because whoever started it
+    # is already watching the run and must not be able to flood the issue tracker.
+    if: always() && needs.canary.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -185,38 +193,71 @@ jobs:
 
     steps:
       - name: Open or update the failure issue
-        if: needs.canary.result != 'success'
+        if: needs.canary.result == 'failure' && github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
           title="Staging canary failing"
+          case "$TRIGGER" in
+            schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.' ;;
+            workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.' ;;
+            *) summary='Der Staging-Billing-Canary ist fehlgeschlagen.' ;;
+          esac
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          # A repeated deploy failure for the commit that is already reported adds
+          # nothing; the daily run still comments every day so a persistent failure
+          # keeps producing its heartbeat.
+          if [ -n "$existing" ] && [ "$TRIGGER" != 'schedule' ] \
+            && gh issue view "$existing" --json comments --jq '.comments[].body' | grep -qF "Commit: $COMMIT"; then
+            echo "Commit $COMMIT is already reported on issue #$existing; nothing to add."
+            exit 0
+          fi
           body=$(printf '%s\n' \
-            'Der tägliche Staging-Billing-Canary ist fehlgeschlagen.' \
+            "$summary" \
             '' \
             "- Lauf: $RUN_URL" \
             "- Commit: $COMMIT" \
-            "- Auslöser: schedule" \
+            "- Auslöser: $TRIGGER" \
             '' \
             'Bitte den Lauf und die Staging-Logs prüfen. Der Canary deckt Checkout, Webhook, E-Mail-Versand, Datenbankzustand und Cleanup ab; Produktionsdaten sind nicht beteiligt.' \
             '' \
-            'Dieses Issue wird beim nächsten erfolgreichen täglichen Lauf automatisch geschlossen.')
-          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+            'Dieses Issue wird beim nächsten erfolgreichen automatischen Lauf (Zeitplan oder Deploy) automatisch geschlossen; manuelle Läufe ändern es nicht.')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else
             gh issue create --title "$title" --body "$body"
           fi
 
+      - name: Annotate a failed manual run
+        if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          RESULT: ${{ needs.canary.result }}
+        run: |
+          set -euo pipefail
+          echo "::error title=Staging billing canary failed::The manual staging billing canary failed ($RESULT). See $RUN_URL"
+          {
+            echo "### Staging billing canary failed (manual run)"
+            echo
+            echo "- result: \`$RESULT\`"
+            echo "- commit: \`$COMMIT\`"
+            echo "- run: $RUN_URL"
+            echo
+            echo "Manual runs are annotated only. The failure issue and the chat alert are reserved for scheduled and deploy-triggered runs."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Notify Discord
-        if: always() && needs.canary.result != 'success'
+        if: needs.canary.result == 'failure' && github.event_name != 'workflow_dispatch'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          COMMIT: ${{ github.sha }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
           RESULT: ${{ needs.canary.result }}
         run: |
           set -euo pipefail
@@ -245,7 +286,7 @@ jobs:
             "$DISCORD_WEBHOOK_URL"
 
       - name: Close the failure issue after recovery
-        if: needs.canary.result == 'success'
+        if: needs.canary.result == 'success' && github.event_name != 'workflow_dispatch'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
