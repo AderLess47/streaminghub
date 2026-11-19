@@ -392,9 +392,12 @@ export function purchaseConfirmationMail(input: {
   name: string;
   locale: string;
   priceEur: number;
+  /** Abrechnung des gekauften Tarifs; ohne Angabe monatlich. */
+  interval?: "month" | "year";
   periodEnd?: string | null;
 }): MailTemplate {
   const de = input.locale !== "en";
+  const unit = input.interval === "year" ? (de ? "Jahr" : "year") : de ? "Monat" : "month";
   const link = `${env.appUrl}/dashboard/subscription`;
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
     style: "currency",
@@ -410,13 +413,13 @@ export function purchaseConfirmationMail(input: {
       : null;
   const details = de
     ? [
-        `Preis: ${price} / Monat (Endpreis; keine USt. gemäß § 19 UStG)`,
+        `Preis: ${price} / ${unit} (Endpreis; keine USt. gemäß § 19 UStG)`,
         renewalDate ? `Nächste Verlängerung: ${renewalDate}` : null,
       ]
         .filter(Boolean)
         .join("\n")
     : [
-        `Price: ${price} / month (final price; no VAT under the German small business regulation)`,
+        `Price: ${price} / ${unit} (final price; no VAT under the German small business regulation)`,
         renewalDate ? `Next renewal: ${renewalDate}` : null,
       ]
         .filter(Boolean)
