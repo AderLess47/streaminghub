@@ -36,7 +36,7 @@ const {
   prunableBackups,
   restoreBackup,
 } = await import("./backup.ts");
-const { buildAuthorization, normalizeEndpoint } = await import("./r2.ts");
+const { buildAuthorization, normalizeEndpoint, r2Store } = await import("./r2.ts");
 
 after(() => rmSync(directory, { recursive: true, force: true }));
 
@@ -148,6 +148,35 @@ test("a pasted endpoint is cleaned up instead of failing later", () => {
   // Unbrauchbare Werte gelten als nicht konfiguriert.
   assert.equal(normalizeEndpoint(""), "");
   assert.equal(normalizeEndpoint("https://<>"), "");
+});
+
+test("a PUT sends the body whose hash it signed", async () => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (url: URL | RequestInfo, init?: RequestInit) => {
+    calls.push({ url: String(url), init: init ?? {} });
+    return new Response(null, { status: 200 });
+  }) as typeof fetch;
+
+  try {
+    const store = r2Store({
+      endpoint: "https://account.r2.cloudflarestorage.com",
+      bucket: "streaminghub-backups",
+      accessKeyId: "key",
+      secretAccessKey: "secret",
+    });
+    await store.put("backups/user/one.bin", new Uint8Array([1, 2, 3, 4]), "application/octet-stream");
+  } finally {
+    globalThis.fetch = original;
+  }
+
+  assert.equal(calls.length, 1);
+  const headers = calls[0].init.headers as Record<string, string>;
+  const body = calls[0].init.body as Uint8Array;
+  // Regression: der Body fehlte, der Hash galt aber fuer die Verschluesselung.
+  assert.deepEqual([...body], [1, 2, 3, 4], "der signierte Hash muss zum gesendeten Body passen");
+  assert.equal(headers["x-amz-content-sha256"], createHash("sha256").update(body).digest("hex"));
+  assert.equal(calls[0].url, "https://account.r2.cloudflarestorage.com/streaminghub-backups/backups/user/one.bin");
 });
 
 test("encryption round-trips and is bound to the account", () => {
