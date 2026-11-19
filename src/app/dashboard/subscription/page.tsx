@@ -54,6 +54,12 @@ export default async function SubscriptionPage({
               ? t.dashboard.subscription.statusIncomplete
               : t.dashboard.overview.planNone;
 
+  // Während des Trials bleibt der Abo-Status in der Datenbank unverändert;
+  // für die Anzeige ist „Testphase“ die ehrliche Beschreibung, und unter
+  // „Läuft bis“ steht das Trial-Ende statt eines nicht vorhandenen
+  // Periodenendes.
+  const displayStatus = trialRunning ? t.dashboard.subscription.statusTrial : statusLabel;
+
   const periodEnd = subscription.current_period_end
     ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(
         new Date(subscription.current_period_end),
@@ -93,11 +99,17 @@ export default async function SubscriptionPage({
         <div className="card p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">StreamingHub Premium</h2>
-            <Badge tone={status === "active" ? "ok" : status === "pending" ? "warn" : "neutral"}>{statusLabel}</Badge>
+            <Badge
+              tone={
+                trialRunning ? "brand" : status === "active" ? "ok" : status === "pending" ? "warn" : "neutral"
+              }
+            >
+              {displayStatus}
+            </Badge>
           </div>
           <div className="mt-4">
             <InfoRow label={t.dashboard.subscription.currentPlan} value="Premium" />
-            <InfoRow label={t.dashboard.subscription.status} value={statusLabel} />
+            <InfoRow label={t.dashboard.subscription.status} value={displayStatus} />
             <InfoRow
               label={t.dashboard.subscription.channel}
               value={
@@ -108,7 +120,10 @@ export default async function SubscriptionPage({
                     : t.dashboard.subscription.channelWeb
               }
             />
-            <InfoRow label={t.dashboard.subscription.renewsAt} value={periodEnd ?? "—"} />
+            <InfoRow
+              label={t.dashboard.subscription.renewsAt}
+              value={trialRunning ? (trialEndLabel ?? "—") : (periodEnd ?? "—")}
+            />
             <InfoRow
               label={t.premium.price}
               value={locale === "de" ? "2,49 € / Monat; keine USt. (Kleinunternehmerregelung)" : `€${PREMIUM_PRICE_EUR.toFixed(2)} / month; no VAT (small business regulation)`}
