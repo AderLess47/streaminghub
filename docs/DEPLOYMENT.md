@@ -383,6 +383,12 @@ live.
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
 | `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial jobs* workflow skips |
 | `STRIPE_PRICE_ID_ANNUAL` | fly.toml (`price_1Udbs9Pmp8Jh8xSPwsWMiajx`) | Annual price (34,99 EUR/year); the annual option is only shown while `annual_enabled` is on |
+| `R2_ENDPOINT` | Fly secret | `https://<account_id>.r2.cloudflarestorage.com` – storage for cloud backups |
+| `R2_BUCKET` | Fly secret | Bucket name, e.g. `streaminghub-backups` |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Fly secret | R2 API token with Object Read & Write on that bucket |
+| `BACKUP_ENCRYPTION_KEY` | Fly secret | `openssl rand -base64 32`; losing it makes existing backups unreadable |
+| `BACKUP_RETENTION_DAYS` | optional (default 365) | Backups older than this are pruned on the next create |
+| `BACKUP_MAX_BYTES` | optional (default 1048576) | Largest unencrypted snapshot |
 | `STRIPE_CONVERSION_COUPON_ID` | fly.toml (`streaminghub_trial_25_3`) | Stripe coupon for converting trials; only applied while `conversion_coupon_enabled` is on |
 | `STRIPE_WINBACK_COUPON_ID` | fly.toml (`streaminghub_winback_50_2`) | Stripe coupon for the cancellation offer; only shown while `retention_enabled` is on |
 

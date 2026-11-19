@@ -4,6 +4,7 @@ import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { logoutAction } from "@/lib/actions/auth";
+import { isFeatureEnabled } from "@/lib/flags";
 import { isStaff, requireUser } from "@/lib/session";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/subscription", label: t.dashboard.nav.subscription, icon: "card" },
     { href: "/dashboard/support", label: t.dashboard.nav.support, icon: "mail" },
     { href: "/dashboard/settings", label: t.dashboard.nav.settings, icon: "settings" },
+    // Nur sichtbar, wenn die Funktion freigegeben ist: ein Flag aus heißt,
+    // das Konto sieht keinerlei Änderung.
+    ...(isFeatureEnabled("cloudBackup")
+      ? [{ href: "/dashboard/backup", label: t.dashboard.nav.backup, icon: "layers" as const }]
+      : []),
     { href: "/activate", label: t.nav.activate, icon: "key" },
   ];
 

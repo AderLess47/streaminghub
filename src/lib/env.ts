@@ -9,6 +9,10 @@ import { androidRelease } from "./android-release";
 
 const bool = (value: string | undefined) => value === "1" || value?.toLowerCase() === "true";
 
+/** Zahl aus der Umgebung mit Grenzen; alles Unbrauchbare fällt auf den Default zurück. */
+const boundedNumber = (value: number, min: number, max: number, fallback: number) =>
+  Number.isFinite(value) && value > 0 ? Math.min(Math.max(Math.floor(value), min), max) : fallback;
+
 export const env = {
   appUrl: (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
   deployEnv:
@@ -67,6 +71,17 @@ export const env = {
     appleIapProductId: process.env.APPLE_IAP_PRODUCT_ID ?? "premium_monthly",
     appleIapAllowSandbox: bool(process.env.APPLE_IAP_ALLOW_SANDBOX),
   },
+  backup: {
+    /** Cloudflare R2 (S3-kompatibel) für die verschlüsselten Sicherungen. */
+    r2Endpoint: (process.env.R2_ENDPOINT ?? "").replace(/\/$/, ""),
+    r2Bucket: process.env.R2_BUCKET ?? "",
+    r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
+    r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
+    /** Mindestens 32 Zeichen; ein Verlust macht bestehende Sicherungen unlesbar. */
+    encryptionKey: process.env.BACKUP_ENCRYPTION_KEY ?? "",
+    maxBytes: boundedNumber(Number(process.env.BACKUP_MAX_BYTES ?? 1048576), 1024, 10485760, 1048576),
+    retentionDays: boundedNumber(Number(process.env.BACKUP_RETENTION_DAYS ?? 365), 7, 3650, 365),
+  },
   downloads: {
     /**
      * Every platform downloads the same signed build through the stable /app.apk
@@ -103,6 +118,15 @@ export const isAmazonIapConfigured = () =>
   Boolean(env.billing.amazonRvsSharedSecret && env.billing.amazonIapSku);
 export const isAppleIapConfigured = () =>
   Boolean(env.billing.appleIapBundleId && env.billing.appleIapProductId);
+/** Ohne Endpoint, Bucket, Zugang und Schlüssel gibt es keinen Speicherort. */
+export const isBackupConfigured = () =>
+  Boolean(
+    env.backup.r2Endpoint &&
+      env.backup.r2Bucket &&
+      env.backup.r2AccessKeyId &&
+      env.backup.r2SecretAccessKey &&
+      env.backup.encryptionKey.length >= 32,
+  );
 
 /** Company / operator details. Placeholders are intentional until confirmed. */
 const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);

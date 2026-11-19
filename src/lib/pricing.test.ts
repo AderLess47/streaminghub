@@ -14,16 +14,16 @@ import {
 } from "./pricing.ts";
 
 test("price book matches the published prices", () => {
-  assert.equal(PREMIUM_PRICE_EUR, 2.49);
-  assert.equal(cents(PRICE_BOOK.standard_monthly.eur), 249);
-  assert.equal(cents(PRICE_BOOK.standard_annual.eur), 2499);
+  assert.equal(PREMIUM_PRICE_EUR, 3.49);
+  assert.equal(cents(PRICE_BOOK.standard_monthly.eur), 349);
+  assert.equal(cents(PRICE_BOOK.standard_annual.eur), 3499);
   assert.equal(PRICE_BOOK.standard_annual.interval, "year");
   assert.equal(priceForPlan("standard_annual").tier, "standard");
 });
 
-test("annual billing is 16 percent cheaper than twelve monthly payments", () => {
-  assert.equal(cents(PREMIUM_PRICE_EUR) * 12, 2988);
-  assert.equal(annualSavingCents(), 489);
+test("annual billing is cheaper than twelve monthly payments", () => {
+  assert.equal(cents(PREMIUM_PRICE_EUR) * 12, 4188);
+  assert.equal(annualSavingCents(), 689);
   assert.equal(annualSavingPercent(), 16);
 });
 
