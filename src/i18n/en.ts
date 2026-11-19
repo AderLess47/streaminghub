@@ -522,7 +522,11 @@ export const en: Dictionary = {
       trialTitle: "Try Premium free for 14 days",
       trialBody:
         "Test Premium for two weeks without payment details. Afterwards the free plan applies again automatically – nothing is charged.",
-      trialRunningNote: "Your trial runs until",
+      trialRunningTitle: "Trial in progress",
+      trialRunningBody:
+        "The free plan applies again automatically afterwards. Devices and playlist stay; nothing is charged. You can subscribe at any time above.",
+      trialInfo:
+        "Your trial is running; the free plan applies again automatically afterwards – nothing is charged. Premium rights apply for the whole period.",
       trialCta: "Start trial",
       trialStarted: "Your trial is running. Ends:",
       trialFailed: "The trial could not be started.",

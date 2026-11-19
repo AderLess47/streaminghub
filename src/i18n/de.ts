@@ -525,7 +525,11 @@ export const de = {
       trialTitle: "14 Tage kostenlos testen",
       trialBody:
         "Teste Premium zwei Wochen lang ohne Zahlungsdaten. Danach gilt automatisch wieder der kostenlose Tarif – es wird nichts abgebucht.",
-      trialRunningNote: "Dein Testzeitraum läuft bis",
+      trialRunningTitle: "Testzeitraum läuft",
+      trialRunningBody:
+        "Danach gilt automatisch der kostenlose Tarif. Geräte und Playlist bleiben erhalten; es wird nichts abgebucht. Abschließen kannst du jederzeit oben.",
+      trialInfo:
+        "Dein Testzeitraum läuft; danach gilt automatisch der kostenlose Tarif – es wird nichts abgebucht. Premium-Rechte gelten für die gesamte Laufzeit.",
       trialCta: "Testzeitraum starten",
       trialStarted: "Dein Testzeitraum läuft. Ende:",
       trialFailed: "Der Testzeitraum konnte nicht gestartet werden.",
