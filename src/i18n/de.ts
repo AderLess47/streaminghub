@@ -241,6 +241,9 @@ export const de = {
     subtitle:
       "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
     price: "3,49 €",
+    annualCta: "Jährlich für 34,99 € (2 Monate frei)",
+    annualNote:
+      "34,99 € pro Jahr statt 41,88 € – entspricht 2,92 € pro Monat. Verlängert sich jährlich; kündbar zum Laufzeitende.",
     period: "pro Monat",
     vat: "Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
     ctaPrimary: "Premium entdecken",

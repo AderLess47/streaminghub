@@ -17,6 +17,7 @@ primary_region = "fra"
   EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
   EMAIL_REPLY_TO = "service@streaminghub.org"
   STRIPE_PRICE_ID = "price_1UdbPYPmp8Jh8xSPMWv47Lya"
+  STRIPE_PRICE_ID_ANNUAL = "price_1Udbs9Pmp8Jh8xSPwsWMiajx"
   # Coupon-IDs sind keine Geheimnisse; sie schalten nur den jeweiligen Rabatt frei.
   STRIPE_CONVERSION_COUPON_ID = "streaminghub_trial_25_3"
   STRIPE_WINBACK_COUPON_ID = "streaminghub_winback_50_2"

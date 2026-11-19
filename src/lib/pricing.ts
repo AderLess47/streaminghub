@@ -37,7 +37,7 @@ export const PRICE_BOOK = {
     plan: "standard_annual",
     tier: "standard",
     interval: "year",
-    eur: 24.99,
+    eur: 34.99,
   },
 } as const satisfies Record<PlanId, PriceEntry>;
 
@@ -51,6 +51,7 @@ export const PREMIUM_PRICE_EUR = PRICE_BOOK.standard_monthly.eur;
  * Anzeige, solange in der Datenbank kein Betrag hinterlegt ist.
  */
 export const LEGACY_PREMIUM_PRICE_EUR = 2.49;
+export const ANNUAL_PRICE_EUR = PRICE_BOOK.standard_annual.eur;
 export const PREMIUM_PLAN_ID = "premium_monthly";
 
 /** Plan, der ohne ausdrückliche Wahl abgeschlossen wird. */

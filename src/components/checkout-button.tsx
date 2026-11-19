@@ -12,11 +12,14 @@ export function CheckoutButton({
   disabledLabel,
   configured,
   signedIn,
+  interval = "month",
 }: {
   label: string;
   disabledLabel: string;
   configured: boolean;
   signedIn: boolean;
+  /** Abrechnung des Abschlusses; Standard ist monatlich. */
+  interval?: "month" | "year";
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,7 +35,11 @@ export function CheckoutButton({
     }
     setPending(true);
     try {
-      const response = await fetch("/api/subscription/checkout", { method: "POST" });
+      const response = await fetch("/api/subscription/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ interval }),
+      });
       const data = (await response.json()) as { url?: string; error?: { message?: string } };
       if (response.ok && data.url) {
         window.location.href = data.url;

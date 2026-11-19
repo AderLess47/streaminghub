@@ -239,6 +239,9 @@ export const en: Dictionary = {
     subtitle:
       "A subscription for cross-device continue watching and managing your devices.",
     price: "€3.49",
+    annualCta: "Yearly for €34.99 (2 months free)",
+    annualNote:
+      "€34.99 per year instead of €41.88 – that is €2.92 per month. Renews yearly; cancellable at the end of the term.",
     period: "per month",
     vat: "Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
     ctaPrimary: "Discover Premium",

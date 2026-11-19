@@ -39,6 +39,8 @@ export const env = {
   billing: {
     stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
     stripePriceId: process.env.STRIPE_PRICE_ID ?? "",
+    /** Jahresabo; leer = Jahresabschluss nicht angeboten. */
+    stripeAnnualPriceId: process.env.STRIPE_PRICE_ID_ANNUAL ?? "",
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
     stripeApiBase: (process.env.STRIPE_API_BASE ?? "https://api.stripe.com").replace(/\/$/, ""),
     stripeTimeoutMs: Number(process.env.STRIPE_TIMEOUT_MS ?? 10000),

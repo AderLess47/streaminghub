@@ -9,6 +9,7 @@ import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { cancelSubscriptionAction } from "@/lib/actions/dashboard";
 import { trialConversionCoupon } from "@/lib/conversion";
+import { env } from "@/lib/env";
 import { isFeatureEnabled } from "@/lib/flags";
 import { retentionOffer } from "@/lib/retention";
 import { billingConfigured, effectiveStatus, ensureSubscription } from "@/lib/payments";
@@ -37,6 +38,8 @@ export default async function SubscriptionPage({
   const trialRunning = Boolean(trialEnd && trialEnd.getTime() > Date.now());
   const trialAvailable =
     isFeatureEnabled("trial") && user.emailVerified && !trialRunning && !subscription.trial_used_at;
+  // Jahresabo nur anbieten, wenn der Preis hinterlegt und der Flag gesetzt ist.
+  const annualAvailable = isFeatureEnabled("annualBilling") && Boolean(env.billing.stripeAnnualPriceId);
   const trialEndLabel =
     trialEnd && Number.isFinite(trialEnd.getTime())
       ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(trialEnd)
@@ -245,13 +248,25 @@ export default async function SubscriptionPage({
                   {t.dashboard.subscription.conversionCouponNote}
                 </p>
               ) : null}
-              <div className="mt-4">
+              <div className="mt-4 grid gap-2">
                 <CheckoutButton
                   label={t.dashboard.subscription.startCta}
                   disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
                   configured={configured}
                   signedIn
                 />
+                {annualAvailable ? (
+                  <div className="grid gap-1">
+                    <CheckoutButton
+                      label={t.premium.annualCta}
+                      disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+                      configured={configured}
+                      signedIn
+                      interval="year"
+                    />
+                    <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
+                  </div>
+                ) : null}
               </div>
               <Link href="/premium" className="btn btn-ghost btn-sm btn-block mt-2">
                 {t.nav.premium}

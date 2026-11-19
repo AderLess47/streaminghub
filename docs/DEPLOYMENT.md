@@ -382,6 +382,7 @@ live.
 | `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
 | `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial jobs* workflow skips |
+| `STRIPE_PRICE_ID_ANNUAL` | fly.toml (`price_1Udbs9Pmp8Jh8xSPwsWMiajx`) | Annual price (34,99 EUR/year); the annual option is only shown while `annual_enabled` is on |
 | `STRIPE_CONVERSION_COUPON_ID` | fly.toml (`streaminghub_trial_25_3`) | Stripe coupon for converting trials; only applied while `conversion_coupon_enabled` is on |
 | `STRIPE_WINBACK_COUPON_ID` | fly.toml (`streaminghub_winback_50_2`) | Stripe coupon for the cancellation offer; only shown while `retention_enabled` is on |
 
