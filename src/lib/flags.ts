@@ -12,6 +12,8 @@ export const FEATURE_FLAGS = {
   trial: "trial_enabled",
   cloudBackup: "cloud_backup_enabled",
   annualBilling: "annual_enabled",
+  conversionCoupon: "conversion_coupon_enabled",
+  retention: "retention_enabled",
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

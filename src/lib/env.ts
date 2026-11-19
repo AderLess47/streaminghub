@@ -42,6 +42,10 @@ export const env = {
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
     stripeApiBase: (process.env.STRIPE_API_BASE ?? "https://api.stripe.com").replace(/\/$/, ""),
     stripeTimeoutMs: Number(process.env.STRIPE_TIMEOUT_MS ?? 10000),
+    /** Coupon für die Umwandlung nach dem Testzeitraum; leer = kein Rabatt. */
+    stripeConversionCouponId: process.env.STRIPE_CONVERSION_COUPON_ID ?? "",
+    /** Coupon für die Kündigungs-Rettung; leer = kein Angebot. */
+    stripeWinbackCouponId: process.env.STRIPE_WINBACK_COUPON_ID ?? "",
     amazonStoreUrl: process.env.AMAZON_STORE_URL ?? "",
     /** Amazon In-App Purchasing (Appstore SDK) receipt verification. */
     amazonRvsSharedSecret: process.env.AMAZON_RVS_SHARED_SECRET ?? "",

@@ -3,9 +3,12 @@ import { CancelSubscriptionForm } from "@/components/cancel-subscription-form";
 import { CheckoutButton } from "@/components/checkout-button";
 import { CheckoutSync } from "@/components/checkout-sync";
 import { Icon } from "@/components/icons";
+import { RetentionOffer } from "@/components/retention-offer";
 import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { cancelSubscriptionAction } from "@/lib/actions/dashboard";
+import { trialConversionCoupon } from "@/lib/conversion";
+import { retentionOffer } from "@/lib/retention";
 import { billingConfigured, effectiveStatus, ensureSubscription, PREMIUM_PRICE_EUR } from "@/lib/payments";
 import { requireUser } from "@/lib/session";
 
@@ -20,6 +23,10 @@ export default async function SubscriptionPage({
   const subscription = ensureSubscription(user.id);
   const status = effectiveStatus(subscription);
   const configured = billingConfigured();
+  // Beide Angebote sind hinter Flags und einem Stripe-Coupon; ohne beides
+  // rendert die Seite unverändert.
+  const offer = retentionOffer(user.id);
+  const conversionCoupon = trialConversionCoupon(user.id);
 
   const statusLabel =
     status === "active"
@@ -114,7 +121,26 @@ export default async function SubscriptionPage({
           {/* Nach der Kündigung ist die Handlung erledigt; der Hinweis oben nennt
               bereits das Periodenende, ein zweiter Klick wäre nur ein Duplikat. */}
           {status === "active" && subscription.channel === "web" && !subscription.cancel_at_period_end ? (
-            <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+            offer.available ? (
+              <div className="mt-4 rounded-xl border border-brand/40 bg-brand/10 p-4">
+                <h3 className="text-sm font-semibold">{t.dashboard.subscription.retentionTitle}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  {t.dashboard.subscription.retentionBody}
+                </p>
+                <div className="mt-3">
+                  <RetentionOffer
+                    label={t.dashboard.subscription.retentionCta}
+                    acceptedMessage={t.dashboard.subscription.retentionAccepted}
+                    failedMessage={t.dashboard.subscription.retentionFailed}
+                  />
+                </div>
+                {/* Die Kündigung bleibt unverändert daneben stehen; das Angebot
+                    ist ein Vorschlag, keine Hürde. */}
+                <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+              </div>
+            ) : (
+              <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+            )
           ) : null}
 
           {status === "canceled" ? (
@@ -144,6 +170,11 @@ export default async function SubscriptionPage({
             <div className="card p-5">
               <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
+              {conversionCoupon ? (
+                <p className="mt-2 text-xs leading-relaxed text-emerald-300">
+                  {t.dashboard.subscription.conversionCouponNote}
+                </p>
+              ) : null}
               <div className="mt-4">
                 <CheckoutButton
                   label={t.dashboard.subscription.startCta}
