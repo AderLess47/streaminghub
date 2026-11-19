@@ -16,6 +16,7 @@ process.env.EMAIL_API_KEY = "";
 const { all, get, nowIso, run } = await import("@/lib/db");
 const { hashPassword } = await import("@/lib/auth");
 const { createSession } = await import("@/lib/session");
+const { ensureSubscription } = await import("@/lib/payments");
 const {
   createTicketAction,
   replyTicketAction: customerReply,
@@ -122,7 +123,36 @@ async function redirectOf(action: () => Promise<unknown>): Promise<string> {
 
 seedUser("kunde-1", "kunde@example.test");
 seedUser("kunde-2", "andere@example.test");
+seedUser("kunde-3", "ohneabo@example.test");
 seedUser("admin-1", "admin@example.test", "admin");
+
+// kunde-1 ist zahlender Kunde: E-Mail-Support ist eine Premium-Leistung.
+// kunde-3 bleibt ohne Abo und darf deshalb keine Anfrage anlegen.
+ensureSubscription("kunde-1");
+run(
+  `UPDATE subscriptions
+     SET status = 'active', plan = 'standard_monthly', channel = 'web', provider = 'stripe',
+         provider_subscription_id = 'sub_test_zahlend', current_period_end = ?, updated_at = ?
+   WHERE user_id = 'kunde-1'`,
+  new Date(Date.now() + 30 * 86_400_000).toISOString(),
+  nowIso(),
+);
+
+await check("Ohne Abo wird keine Anfrage angelegt", async () => {
+  run("DELETE FROM outbox_emails");
+  sessionToken.value = await createSession("kunde-3");
+  const before = ticketCount();
+
+  const result = await createTicketAction(
+    null,
+    ticketForm("Playlist einrichten", "playlist", "Wie richte ich meine erste Playlist ein?")
+  );
+
+  assert.equal(result?.ok, false);
+  assert.match(result?.message ?? "", /Premium/);
+  assert.equal(ticketCount(), before, "Gratis-Konto darf kein Ticket erzeugen");
+  assert.equal(mails().length, 0, "Gratis-Konto löst keine Mail aus");
+});
 
 await check("Anlage ohne Anmeldung wird abgelehnt", async () => {
   sessionToken.value = null;

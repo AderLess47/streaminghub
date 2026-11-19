@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { hashPassword, randomToken, verifyPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { get, nowIso, run } from "@/lib/db";
+import { getEntitlements } from "@/lib/entitlements";
 import { env } from "@/lib/env";
 import {
   sendMail,
@@ -154,6 +155,18 @@ export async function createTicketAction(
   formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  // E-Mail-Support gehört zu Premium: Supportzeit ist der größte Kostenblock,
+  // deshalb erzeugen Gratis- und Trial-Konten keine Tickets, sondern werden
+  // auf den Hilfebereich verwiesen. Die Sperre sitzt serverseitig, damit sie
+  // nicht durch die Oberfläche umgangen werden kann.
+  const entitlements = getEntitlements(user.id);
+  if (entitlements.source === "none" || entitlements.source === "trial") {
+    return {
+      ok: false,
+      message:
+        "E-Mail-Support gehört zu Premium. Antworten auf die häufigsten Fragen findest du im Hilfebereich.",
+    };
+  }
   const parsed = ticketSchema.safeParse({
     subject: formData.get("subject"),
     category: formData.get("category"),
