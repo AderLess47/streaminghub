@@ -25,7 +25,7 @@ import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as activateDevice } from "@/app/api/devices/activate/route";
 import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
 import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
-import { __setPremium, __setSessionUser } from "./fakes/api";
+import { __setPremium, __setSessionUser, __setTrial } from "./fakes/api";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -807,6 +807,23 @@ await check("/me: ohne Token 401, mit Token Konto, Gerät und Abo", async () => 
   assert.equal(data.device.activationStatus, "active");
   assert.equal(data.subscription.premiumActive, true);
   assert.equal(data.playlist, null, "ohne Playlist kein Eintrag");
+});
+
+await check("/me: der Testzeitraum zählt in der App als Premium", async () => {
+  resetDb();
+  seedDevice("dev-trial", "user-trial");
+  __setTrial("user-trial", new Date(Date.now() + 3 * 86_400_000).toISOString());
+
+  const response = await getMe(
+    call("GET", "/api/v1/me", { token: tokenFor("user-trial", "dev-trial") }),
+  );
+  assert.equal(response.status, 200);
+  const data = await bodyOf(response);
+  // Regression: die Route las nur den Abo-Status und meldete im Trial „kein Premium“.
+  assert.equal(data.subscription.premiumActive, true);
+  assert.equal(data.subscription.status, "none");
+
+  __setTrial("user-trial", null);
 });
 
 await check("/me: Playlist kommt nur für angeforderte, eigene Einträge", async () => {
