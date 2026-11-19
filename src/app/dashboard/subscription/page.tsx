@@ -11,7 +11,8 @@ import { cancelSubscriptionAction } from "@/lib/actions/dashboard";
 import { trialConversionCoupon } from "@/lib/conversion";
 import { isFeatureEnabled } from "@/lib/flags";
 import { retentionOffer } from "@/lib/retention";
-import { billingConfigured, effectiveStatus, ensureSubscription, PREMIUM_PRICE_EUR } from "@/lib/payments";
+import { billingConfigured, effectiveStatus, ensureSubscription } from "@/lib/payments";
+import { LEGACY_PREMIUM_PRICE_EUR, PREMIUM_PRICE_EUR } from "@/lib/pricing";
 import { requireUser } from "@/lib/session";
 
 export default async function SubscriptionPage({
@@ -59,6 +60,19 @@ export default async function SubscriptionPage({
   // „Läuft bis“ steht das Trial-Ende statt eines nicht vorhandenen
   // Periodenendes.
   const displayStatus = trialRunning ? t.dashboard.subscription.statusTrial : statusLabel;
+
+  // Gezahlter Betrag, falls bekannt; Abos aus der Zeit vor der Preisanpassung
+  // haben keinen Betrag in der Datenbank und behalten den alten Preis.
+  const priceCents =
+    subscription.price_cents ??
+    (subscription.provider_subscription_id
+      ? Math.round(LEGACY_PREMIUM_PRICE_EUR * 100)
+      : Math.round(PREMIUM_PRICE_EUR * 100));
+  const priceEur = (priceCents / 100).toFixed(2);
+  const priceLabel =
+    locale === "de"
+      ? `${priceEur.replace(".", ",")} € / Monat; keine USt. (Kleinunternehmerregelung)`
+      : `€${priceEur} / month; no VAT (small business regulation)`;
 
   const periodEnd = subscription.current_period_end
     ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(
@@ -126,7 +140,7 @@ export default async function SubscriptionPage({
             />
             <InfoRow
               label={t.premium.price}
-              value={locale === "de" ? "2,49 € / Monat; keine USt. (Kleinunternehmerregelung)" : `€${PREMIUM_PRICE_EUR.toFixed(2)} / month; no VAT (small business regulation)`}
+              value={priceLabel}
             />
           </div>
           {/* Nach dem Periodenende ist die Kündigung vorbei, nicht mehr vorgemerkt. */}

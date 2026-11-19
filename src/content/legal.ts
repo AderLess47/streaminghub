@@ -427,7 +427,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "1. Preis und Steuern",
         paragraphs: [
-          "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Preis wird im Checkout als Gesamtbetrag ausgewiesen. Bei Verbraucherpreisanpassungen informieren wir vorab.",
+          "StreamingHub Premium kostet 3,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Preis wird im Checkout als Gesamtbetrag ausgewiesen. Bereits abgeschlossene Abonnements behalten den Preis, zu dem sie abgeschlossen wurden. Bei Verbraucherpreisanpassungen informieren wir vorab.",
         ],
       },
       {
@@ -474,7 +474,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "1. Price and taxes",
         paragraphs: [
-          "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. The checkout shows the total amount. We will inform you in advance of consumer price adjustments.",
+          "StreamingHub Premium costs €3.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. The checkout shows the total amount. Existing subscriptions keep the price at which they were taken out. We will inform you in advance of consumer price adjustments.",
         ],
       },
       {

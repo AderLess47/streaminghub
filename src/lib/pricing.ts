@@ -31,7 +31,7 @@ export const PRICE_BOOK = {
     plan: "standard_monthly",
     tier: "standard",
     interval: "month",
-    eur: 2.49,
+    eur: 3.49,
   },
   standard_annual: {
     plan: "standard_annual",
@@ -43,12 +43,20 @@ export const PRICE_BOOK = {
 
 /** Alt-Namen: unverändert, damit bestehende Importe und Preistexte weiter stimmen. */
 export const PREMIUM_PRICE_EUR = PRICE_BOOK.standard_monthly.eur;
+/**
+ * Preis der Abos, die vor der Preisanpassung abgeschlossen wurden.
+ *
+ * Ein Stripe-Abo haengt an dem Preis, mit dem es erstellt wurde; der neue
+ * Listenpreis aendert bestehende Abos nicht. Diese Konstante ist nur fuer die
+ * Anzeige, solange in der Datenbank kein Betrag hinterlegt ist.
+ */
+export const LEGACY_PREMIUM_PRICE_EUR = 2.49;
 export const PREMIUM_PLAN_ID = "premium_monthly";
 
 /** Plan, der ohne ausdrückliche Wahl abgeschlossen wird. */
 export const DEFAULT_PLAN: PlanId = "standard_monthly";
 
-/** Beträge werden in Cent gerechnet, damit 2,49 € exakt 249 ergibt. */
+/** Beträge werden in Cent gerechnet, damit 3,49 € exakt 349 ergibt. */
 export function cents(eur: number): number {
   return Math.round(eur * 100);
 }

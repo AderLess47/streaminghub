@@ -73,6 +73,7 @@ type StripeSubscriptionObject = {
   current_period_end?: number;
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string>;
+  items?: { data?: { price?: { id?: string; unit_amount?: number | null } }[] };
 };
 
 export function getSubscription(userId: string): Subscription | null {
@@ -162,13 +163,16 @@ function patchSubscription(
     subscriptionId?: string | null;
     periodEnd?: string | null;
     cancelAtPeriodEnd?: boolean;
+    /** Betrag des abgeschlossenen Preises in Cent, damit die Anzeige stimmt. */
+    priceCents?: number | null;
+    priceId?: string | null;
   },
 ) {
   const current = ensureSubscription(userId);
   run(
     `UPDATE subscriptions SET status = ?, provider = 'stripe', channel = 'web',
        provider_customer_id = ?, provider_subscription_id = ?, current_period_end = ?,
-       cancel_at_period_end = ?, updated_at = ?
+       cancel_at_period_end = ?, price_cents = ?, provider_price_id = ?, updated_at = ?
      WHERE user_id = ?`,
     patch.status ?? current.status,
     patch.customerId === undefined ? current.provider_customer_id : patch.customerId,
@@ -179,6 +183,8 @@ function patchSubscription(
       : patch.cancelAtPeriodEnd
         ? 1
         : 0,
+    patch.priceCents === undefined ? (current.price_cents ?? null) : patch.priceCents,
+    patch.priceId === undefined ? (current.provider_price_id ?? null) : patch.priceId,
     nowIso(),
     userId,
   );
@@ -368,12 +374,17 @@ export async function applyStripeEvent(event: StripeEvent) {
       const subscription = subscriptionId ? await fetchSubscription(subscriptionId) : null;
       status = subscription ? mapStripeStatus(subscription.status) : "pending";
       const periodEnd = isoFromSeconds(subscription?.current_period_end) ?? null;
+      // Betrag und Preis-ID mitschreiben: Ein Abo behaelt den Preis, mit dem es
+      // abgeschlossen wurde, auch wenn der Listenpreis spaeter steigt.
+      const checkoutPrice = subscription?.items?.data?.[0]?.price;
       patchSubscription(userId, {
         status,
         customerId,
         subscriptionId,
         periodEnd: periodEnd ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+        priceCents: typeof checkoutPrice?.unit_amount === "number" ? checkoutPrice.unit_amount : undefined,
+        priceId: checkoutPrice?.id ?? undefined,
       });
       if (status === "active" && sessionId) {
         await sendPurchaseConfirmation({ userId, sessionId, subscriptionId, periodEnd });
@@ -384,12 +395,15 @@ export async function applyStripeEvent(event: StripeEvent) {
     case "customer.subscription.updated": {
       const subscription = object as StripeSubscriptionObject;
       status = mapStripeStatus(subscription.status);
+      const price = subscription.items?.data?.[0]?.price;
       patchSubscription(userId, {
         status,
         customerId: idOf(subscription.customer),
         subscriptionId: subscription.id ?? null,
         periodEnd: isoFromSeconds(subscription.current_period_end) ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+        priceCents: typeof price?.unit_amount === "number" ? price.unit_amount : undefined,
+        priceId: price?.id ?? undefined,
       });
       // "unpaid" ist bei Stripe das Ende der Wiederholungen: Premium ist weg,
       // ohne dass je eine Kündigung erklärt wurde.

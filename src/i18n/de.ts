@@ -215,9 +215,9 @@ export const de = {
     },
     premium: {
       eyebrow: "StreamingHub Premium",
-      title: "Mehr Kontrolle für 2,49 € im Monat",
+      title: "Mehr Kontrolle für 3,49 € im Monat",
       subtitle:
-        "2,49 € pro Monat. Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.",
+        "3,49 € pro Monat. Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.",
       ctaPrimary: "Premium entdecken",
       ctaSecondary: "Mein Abonnement verwalten",
       note: "Premium umfasst derzeit Weiterschauen auf allen Geräten und die geräteübergreifende Kontoverwaltung. Zahlungen werden erst nach serverseitiger Bestätigung abgewickelt.",
@@ -240,7 +240,7 @@ export const de = {
     title: "StreamingHub Premium",
     subtitle:
       "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
-    price: "2,49 €",
+    price: "3,49 €",
     period: "pro Monat",
     vat: "Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
     ctaPrimary: "Premium entdecken",
@@ -253,7 +253,7 @@ export const de = {
     billingNotice:
       "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Dein Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",
     billingLiveNotice:
-      "Zahlungen werden über Stripe abgewickelt. Dein Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout siehst du den Gesamtbetrag von 2,49 €. Es wird keine Umsatzsteuer ausgewiesen.",
+      "Zahlungen werden über Stripe abgewickelt. Dein Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout siehst du den Gesamtbetrag von 3,49 €. Es wird keine Umsatzsteuer ausgewiesen.",
     featuresTitle: "Premiumfunktionen",
     features: [
       {
@@ -561,7 +561,7 @@ export const de = {
         "Dieses Abonnement wird über den Amazon Appstore verwaltet. Kündigung und Änderungen erfolgen in deinem Amazon-Konto.",
       noSubscription:
         "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
-      priceNote: "2,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+      priceNote: "3,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
       conversionCouponNote:
         "Für deinen Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – du musst keinen Code eingeben.",
       retentionTitle: "Bleib bei Premium – mit Rabatt",

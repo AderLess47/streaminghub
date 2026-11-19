@@ -88,7 +88,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
   premium: {
     de: {
       intro:
-        "Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Die Abwicklung erfolgt über den Web-Checkout über Stripe.",
+        "Premium kostet 3,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Die Abwicklung erfolgt über den Web-Checkout über Stripe.",
       steps: [
         "Melde dich an und öffne „Abonnement“ im Dashboard.",
         "Prüfe den Abrechnungskanal (Web oder Amazon Appstore).",
@@ -99,7 +99,7 @@ export const helpArticles: Record<HelpTopicKey, Record<"de" | "en", Article>> = 
     },
     en: {
       intro:
-        "Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Payment is handled via the Stripe web checkout.",
+        "Premium costs €3.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Payment is handled via the Stripe web checkout.",
       steps: [
         "Sign in and open “Subscription” in your dashboard.",
         "Check the billing channel (web or Amazon Appstore).",
