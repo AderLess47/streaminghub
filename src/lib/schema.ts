@@ -111,12 +111,26 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   plan TEXT NOT NULL DEFAULT 'premium',
   status TEXT NOT NULL DEFAULT 'none',  -- none | pending | active | past_due | canceled | incomplete
-  channel TEXT NOT NULL DEFAULT 'web', -- web | amazon
+  channel TEXT NOT NULL DEFAULT 'web', -- web | amazon | apple | apple
   provider TEXT NOT NULL DEFAULT 'none',
   provider_customer_id TEXT,
   provider_subscription_id TEXT,
   current_period_end TEXT,
   cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+  -- Tarif, Abrechnung und Trial. Der Status bleibt davon unberührt; ein Trial
+  -- ist eine eigene Information und wird nicht als Status gespeichert.
+  billing_interval TEXT,               -- month | year
+  provider_price_id TEXT,
+  price_cents INTEGER,
+  started_at TEXT,
+  canceled_at TEXT,
+  trial_started_at TEXT,
+  trial_ends_at TEXT,
+  trial_source TEXT,                   -- web | app | admin
+  trial_used_at TEXT,
+  trial_converted_at TEXT,
+  trial_reminder_sent_at TEXT,       -- Erinnerung vor Ablauf, einmal pro Trial
+  trial_ended_at TEXT,               -- vom Ablauf-Job markiert (Status bleibt)
   updated_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

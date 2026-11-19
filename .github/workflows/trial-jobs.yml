@@ -1,0 +1,69 @@
+name: Trial jobs
+
+on:
+  schedule:
+    # Daily at 03:17 UTC: reminders inside the 48 hour window and expiry of
+    # finished trials. Entitlements fall back by date anyway, so a late run
+    # never grants anything extra.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only report what the job would do
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-jobs
+  cancel-in-progress: false
+
+jobs:
+  trial-jobs:
+    name: Remind and expire trials
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No dependency install: the script uses fetch only.
+      - name: Run the trial jobs
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://streaminghub.org' }}
+          TRIAL_JOB_TOKEN: ${{ secrets.TRIAL_JOB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TRIAL_JOB_TOKEN}" ]; then
+            echo "::notice title=Trial jobs skipped::TRIAL_JOB_TOKEN is not set, so no trial is reminded or closed yet. Add the same value as the Fly secret, see docs/DEPLOYMENT.md."
+            exit 0
+          fi
+
+          args=()
+          if [ "${DRY_RUN}" = "1" ]; then
+            args+=("--dry-run")
+          fi
+
+          output=$(node scripts/trial-jobs.mjs "${args[@]}")
+          echo "${output}"
+          {
+            echo "### Trial jobs"
+            echo
+            echo '```json'
+            echo "${output}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
+          if [ "${failed}" != "0" ]; then
+            echo "::warning title=Trial jobs had failures::${failed} trial(s) could not be reminded or closed. Check TRIAL_JOB_TOKEN and the server log."
+          fi
