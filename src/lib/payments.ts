@@ -58,6 +58,8 @@ export type Subscription = {
   trial_source?: string | null;
   trial_used_at?: string | null;
   trial_converted_at?: string | null;
+  trial_reminder_sent_at?: string | null;
+  trial_ended_at?: string | null;
 };
 
 type StripeSubscriptionObject = {

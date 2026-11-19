@@ -22,6 +22,8 @@ export const env = {
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
   seedDemo: bool(process.env.SEED_DEMO),
   sessionDays: Number(process.env.SESSION_DAYS ?? 30),
+  /** Gemeinsames Token für die internen Trial-Jobs (`openssl rand -hex 32`). */
+  trialJobToken: process.env.TRIAL_JOB_TOKEN ?? "",
   email: {
     /** Only the Resend-compatible HTTP contract is implemented. */
     provider: (process.env.EMAIL_PROVIDER ?? "resend").toLowerCase(),

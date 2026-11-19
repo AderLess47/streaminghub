@@ -465,6 +465,64 @@ export function trialStartedMail(input: {
 }
 
 /**
+ * Erinnerung kurz vor dem Ende des Testzeitraums. Der Text nennt das Datum und
+ * den Preis, damit niemand eine Abbuchung erwartet – ohne Abo endet der Trial.
+ */
+export function trialReminderMail(input: {
+  name: string;
+  locale: string;
+  trialEndsAt: string;
+  priceEur: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/premium`;
+  const end = new Date(input.trialEndsAt);
+  const endDate = Number.isFinite(end.getTime())
+    ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
+        dateStyle: "long",
+        timeZone: "Europe/Berlin",
+      }).format(end)
+    : null;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+
+  return {
+    subject: de
+      ? "Dein Testzeitraum endet bald – StreamingHub"
+      : "Your trial ends soon – StreamingHub",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium${endDate ? ` endet am ${endDate}` : " endet in Kürze"}. Danach gilt wieder der kostenlose Tarif mit 2 Geräten.\n\nEs wird nichts abgebucht: Ohne Abo endet der Testzeitraum automatisch. Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert – es entfallen nur die Premium-Extras wie das fünfte Gerät.\n\nWenn du Premium behalten willst, sind es ${price} pro Monat, monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium${endDate ? ` ends on ${endDate}` : " ends soon"}. Afterwards the free plan with 2 devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. Your devices stay linked and your playlist stays stored – you only lose the Premium extras such as the fifth device.\n\nIf you want to keep Premium, it costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Abschlussmail nach dem Ende des Testzeitraums. Sie erklärt den Rückfall auf
+ * den kostenlosen Tarif und nennt den Preis, ohne zu drängen.
+ */
+export function trialEndedMail(input: {
+  name: string;
+  locale: string;
+  priceEur: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/premium`;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+
+  return {
+    subject: de ? "Dein Testzeitraum ist beendet – StreamingHub" : "Your trial has ended – StreamingHub",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit 2 Geräten. Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with 2 devices applies from now on. Your devices stay linked and your playlist stays stored, so you can keep watching at any time.\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+  };
+}
+
+/**
  * Abschlussmail, wenn ein Abo nach fehlgeschlagenen Zahlungen ausläuft. Die
  * normale Kündigung bekommt ihre eigene Bestätigung.
  */

@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   trial_source TEXT,                   -- web | app | admin
   trial_used_at TEXT,
   trial_converted_at TEXT,
+  trial_reminder_sent_at TEXT,       -- Erinnerung vor Ablauf, einmal pro Trial
+  trial_ended_at TEXT,               -- vom Ablauf-Job markiert (Status bleibt)
   updated_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

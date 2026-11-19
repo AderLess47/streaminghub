@@ -22,6 +22,7 @@
     "test:progress": "node --experimental-strip-types --test src/lib/watch-progress.test.ts",
     "test:entitlements": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/entitlements.test.ts src/lib/pricing.test.ts src/lib/flags.test.ts",
     "test:trial": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/trial.test.ts",
+    "test:trial-jobs": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/trial-jobs.test.ts",
     "test:contracts": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/contract-requests.test.ts",
     "amazon:sync": "node --env-file-if-exists=.env.local scripts/amazon-sync.mjs",
     "db:init": "node scripts/init-db.mjs",
