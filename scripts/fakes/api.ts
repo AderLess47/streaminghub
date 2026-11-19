@@ -5,6 +5,10 @@
  * Session-Cookies, Premium-Status und die NextResponse-Helfer. Datenbank,
  * Schema, Geräte-Tokens (`src/lib/device-auth.ts`), Validierung und
  * Rate-Limit laufen im Original.
+ *
+ * `getEntitlements`/`hasPremiumAccess` spiegeln den echten Vertrag aus
+ * `src/lib/entitlements.ts` für die gestubbte Premium-Freigabe. Die Routen
+ * lesen Rechte inzwischen dort statt direkt am Abo-Status.
  */
 
 import { ZodError, type ZodTypeAny } from "zod";
@@ -40,6 +44,29 @@ export function getSubscription(userId: string): { userId: string; status: strin
 
 export function effectiveStatus(subscription: { status: string }): string {
   return subscription.status;
+}
+
+/* ------------------------------- Ansprüche ------------------------------- */
+
+/** Gleiche Form wie `Entitlements`; Trial wird in diesen Tests nicht gefahren. */
+export function getEntitlements(userId: string) {
+  const premium = premiumUsers.has(userId);
+  return {
+    plan: premium ? "standard" : "free",
+    source: premium ? "stripe" : "none",
+    premium,
+    trialActive: false,
+    trialEndsAt: null,
+    billingInterval: premium ? "month" : null,
+    // Entspricht den Defaults aus seed.ts (free 2 / premium 5).
+    deviceLimit: premium ? 5 : 2,
+    cloudBackup: premium,
+    progressSync: premium,
+  };
+}
+
+export function hasPremiumAccess(userId: string): boolean {
+  return premiumUsers.has(userId);
 }
 
 /* ------------------------------ API-Antworten ---------------------------- */

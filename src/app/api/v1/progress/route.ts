@@ -1,7 +1,7 @@
 import { apiError, clientIp, json, tooManyRequests } from "@/lib/api";
 import { all, get, nowIso, run } from "@/lib/db";
 import { verifyDeviceToken } from "@/lib/device-auth";
-import { effectiveStatus, getSubscription } from "@/lib/payments";
+import { getEntitlements } from "@/lib/entitlements";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import {
   PROGRESS_LIMIT,
@@ -41,11 +41,17 @@ function deviceSession(request: Request): Session | { error: ReturnType<typeof a
 }
 
 function premiumGate(userId: string) {
-  const subscription = getSubscription(userId);
-  if (effectiveStatus(subscription) !== "active") {
+  const entitlements = getEntitlements(userId);
+  if (!entitlements.premium) {
     return apiError(
       "premium_required",
       "Weiterschauen auf allen Geräten gehört zu Premium. Aktiviere Premium und versuche es erneut.",
+      {
+        // Die App kann daraus direkt den passenden Hinweis bauen.
+        plan: entitlements.plan,
+        deviceLimit: entitlements.deviceLimit,
+        upgradeUrl: "/premium",
+      },
     );
   }
   return null;

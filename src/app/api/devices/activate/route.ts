@@ -2,11 +2,10 @@ import { randomToken, sha256, normalizePairingCode } from "@/lib/auth";
 import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { get, nowIso, run } from "@/lib/db";
-import { effectiveStatus, getSubscription } from "@/lib/payments";
+import { getEntitlements } from "@/lib/entitlements";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { requireUser } from "@/lib/session";
 import { activateSchema } from "@/lib/validation";
-import { getSetting } from "@/lib/content";
 
 export const runtime = "nodejs";
 
@@ -84,15 +83,22 @@ export async function POST(request: Request) {
     return apiError("rate_limited", "Zu viele Versuche. Bitte fordere in der App einen neuen Code an.");
   }
 
-  const subscription = getSubscription(user.id);
-  const premium = effectiveStatus(subscription) === "active";
-  const limit = Number(getSetting(premium ? "premium_device_limit" : "free_device_limit", premium ? "5" : "2"));
+  // Ein aktiver Trial zählt wie Premium; das Limit kommt aus denselben
+  // Einstellungen wie bisher (`premium_device_limit` / `free_device_limit`).
+  const entitlements = getEntitlements(user.id);
+  const limit = entitlements.deviceLimit;
   const activeDevices =
     get<{ c: number }>(`SELECT COUNT(*) AS c FROM devices WHERE user_id = ? AND status = 'active'`, user.id)?.c ?? 0;
   if (activeDevices >= limit) {
     return apiError(
       "conflict",
       "Dein Gerätelimit ist erreicht. Entferne ein Gerät oder aktiviere Premium.",
+      {
+        plan: entitlements.plan,
+        deviceLimit: limit,
+        activeDevices,
+        upgradeUrl: "/premium",
+      },
     );
   }
 

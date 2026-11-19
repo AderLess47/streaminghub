@@ -44,6 +44,20 @@ export type Subscription = {
   current_period_end: string | null;
   cancel_at_period_end: number;
   updated_at: string;
+  // Seit dem Abo-Modell zusätzlich vorhanden (per Migration ergänzt). Der
+  // Status bleibt die Laufzeit-Wahrheit; diese Felder beschreiben Tarif,
+  // Abrechnung und Trial.
+  plan?: string;
+  billing_interval?: string | null;
+  provider_price_id?: string | null;
+  price_cents?: number | null;
+  started_at?: string | null;
+  canceled_at?: string | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  trial_source?: string | null;
+  trial_used_at?: string | null;
+  trial_converted_at?: string | null;
 };
 
 type StripeSubscriptionObject = {

@@ -82,6 +82,25 @@ function migrate(db: DatabaseSync) {
   // kennen die Spalten noch nicht.
   addColumn(db, "contract_requests", "handled_at", "TEXT");
   addColumn(db, "contract_requests", "handled_by", "TEXT");
+
+  // Abo-Modell: Trial, Abrechnungsintervall und Preis sind eigene Spalten.
+  // `plan`/`status` bleiben die Wahrheit für Tarif und Laufzeit, damit
+  // Webhooks, Store-Pfade und Bestandsabos unverändert weiterlaufen.
+  const subscriptionAdditions: [string, string][] = [
+    ["billing_interval", "TEXT"],
+    ["provider_price_id", "TEXT"],
+    ["price_cents", "INTEGER"],
+    ["started_at", "TEXT"],
+    ["canceled_at", "TEXT"],
+    ["trial_started_at", "TEXT"],
+    ["trial_ends_at", "TEXT"],
+    ["trial_source", "TEXT"],
+    ["trial_used_at", "TEXT"],
+    ["trial_converted_at", "TEXT"],
+  ];
+  for (const [name, definition] of subscriptionAdditions) {
+    addColumn(db, "subscriptions", name, definition);
+  }
 }
 
 function prepare(sql: string): Statement {

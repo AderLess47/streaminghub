@@ -5,7 +5,7 @@
  *
  * Die Routen importieren über den Next-Alias `@/…`; esbuild bündelt sie mit
  * `@` → `src` und ersetzt nur die Teile, die ohne Server fehlen
- * (Session, Premium-Status, NextResponse-Helfer). Die Datenbank ist eine
+ * (Session, Premium-Status/Ansprüche, NextResponse-Helfer). Die Datenbank ist eine
  * echte SQLite-Datei in einem temporären Verzeichnis, das Schema legt
  * `src/lib/db.ts` selbst an.
  *
@@ -37,6 +37,7 @@ try {
       "--target=node22",
       `--alias:@/lib/api=${fakes}`,
       `--alias:@/lib/payments=${fakes}`,
+      `--alias:@/lib/entitlements=${fakes}`,
       `--alias:@/lib/session=${fakes}`,
       `--alias:@=${path.join(repoRoot, "src")}`,
       `--outfile=${bundle}`,
