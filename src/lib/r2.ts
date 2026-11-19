@@ -196,12 +196,14 @@ export type R2ObjectStore = {
   delete(key: string): Promise<void>;
 };
 
-const request = async (config: R2Config, options: RequestOptions, init?: RequestInit) => {
+const request = async (config: R2Config, options: RequestOptions) => {
   const signed = signedObjectRequest(config, options);
   return fetch(signed.url, {
     method: options.method,
     headers: signed.headers,
-    body: init?.body,
+    // Genau der Body, dessen Hash signiert wurde – sonst antwortet R2 mit
+    // `XAmzContentSHA256Mismatch`.
+    body: options.body ? (options.body as BodyInit) : undefined,
     signal: AbortSignal.timeout(15_000),
   });
 };
