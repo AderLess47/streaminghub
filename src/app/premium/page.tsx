@@ -6,6 +6,8 @@ import { Icon } from "@/components/icons";
 import { Alert, Badge, SectionHeading } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { getFaqItems } from "@/lib/content";
+import { env } from "@/lib/env";
+import { isFeatureEnabled } from "@/lib/flags";
 import { billingConfigured, PREMIUM_PRICE_EUR } from "@/lib/payments";
 import { getSessionUser } from "@/lib/session";
 
@@ -16,6 +18,8 @@ export default async function PremiumPage() {
   const user = await getSessionUser();
   const faq = getFaqItems(locale, { category: "premium" });
   const configured = billingConfigured();
+  // Jahresabo nur mit hinterlegtem Preis und gesetztem Flag anbieten.
+  const annualAvailable = isFeatureEnabled("annualBilling") && Boolean(env.billing.stripeAnnualPriceId);
 
   const statusTone = (status: string) =>
     status === "Verfügbar" || status === "Available"
@@ -103,6 +107,18 @@ export default async function PremiumPage() {
               configured={configured}
               signedIn={Boolean(user)}
             />
+            {annualAvailable ? (
+              <>
+                <CheckoutButton
+                  label={t.premium.annualCta}
+                  disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+                  configured={configured}
+                  signedIn={Boolean(user)}
+                  interval="year"
+                />
+                <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
+              </>
+            ) : null}
             <Link
               href={user ? "/dashboard/subscription" : "/login?next=/dashboard/subscription"}
               className="btn btn-outline btn-block"

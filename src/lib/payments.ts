@@ -76,6 +76,22 @@ type StripeSubscriptionObject = {
   items?: { data?: { price?: { id?: string; unit_amount?: number | null } }[] };
 };
 
+/**
+ * Tarif und Abrechnung aus dem abgeschlossenen Preis. Unbekannte Preise (etwa
+ * Alt-Abos mit dem frueheren Betrag) bleiben unbenannt, damit dort nichts
+ * umgeschrieben wird.
+ */
+function planPatch(priceId: string | undefined): { plan?: string; billingInterval?: "month" | "year" } {
+  if (!priceId) return {};
+  if (env.billing.stripeAnnualPriceId && priceId === env.billing.stripeAnnualPriceId) {
+    return { plan: "standard_annual", billingInterval: "year" };
+  }
+  if (priceId === env.billing.stripePriceId) {
+    return { plan: "standard_monthly", billingInterval: "month" };
+  }
+  return {};
+}
+
 export function getSubscription(userId: string): Subscription | null {
   return (
     get<Subscription>(`SELECT * FROM subscriptions WHERE user_id = ?`, userId) ?? null
@@ -166,13 +182,16 @@ function patchSubscription(
     /** Betrag des abgeschlossenen Preises in Cent, damit die Anzeige stimmt. */
     priceCents?: number | null;
     priceId?: string | null;
+    /** Tarif und Abrechnung, abgeleitet aus dem abgeschlossenen Preis. */
+    plan?: string | null;
+    billingInterval?: "month" | "year" | null;
   },
 ) {
   const current = ensureSubscription(userId);
   run(
     `UPDATE subscriptions SET status = ?, provider = 'stripe', channel = 'web',
        provider_customer_id = ?, provider_subscription_id = ?, current_period_end = ?,
-       cancel_at_period_end = ?, price_cents = ?, provider_price_id = ?, updated_at = ?
+       cancel_at_period_end = ?, price_cents = ?, provider_price_id = ?, plan = ?, billing_interval = ?, updated_at = ?
      WHERE user_id = ?`,
     patch.status ?? current.status,
     patch.customerId === undefined ? current.provider_customer_id : patch.customerId,
@@ -185,6 +204,10 @@ function patchSubscription(
         : 0,
     patch.priceCents === undefined ? (current.price_cents ?? null) : patch.priceCents,
     patch.priceId === undefined ? (current.provider_price_id ?? null) : patch.priceId,
+    patch.plan === undefined ? (current.plan ?? "premium") : (patch.plan ?? "premium"),
+    patch.billingInterval === undefined
+      ? (current.billing_interval ?? null)
+      : patch.billingInterval,
     nowIso(),
     userId,
   );
@@ -214,6 +237,8 @@ export async function createWebCheckout(params: {
   locale: string;
   /** Optionaler Stripe-Coupon (z. B. Umwandlung nach dem Testzeitraum). */
   couponId?: string | null;
+  /** Abrechnung; ohne Angabe monatlich, damit bestehende Aufrufer gleich bleiben. */
+  interval?: "month" | "year";
 }): Promise<CheckoutOutcome> {
   const subscription = ensureSubscription(params.userId);
   const status = effectiveStatus(subscription);
@@ -233,14 +258,25 @@ export async function createWebCheckout(params: {
     };
   }
 
+  const interval = params.interval === "year" ? "year" : "month";
+  const priceId = interval === "year" ? env.billing.stripeAnnualPriceId : env.billing.stripePriceId;
+  if (!priceId) {
+    return {
+      ok: false,
+      code: "not_configured",
+      message: "Der Jahresabschluss ist derzeit nicht verfügbar.",
+    };
+  }
+
   const body = new URLSearchParams({
     mode: "subscription",
-    "line_items[0][price]": env.billing.stripePriceId,
+    "line_items[0][price]": priceId,
     "line_items[0][quantity]": "1",
     customer_email: params.email,
     client_reference_id: params.userId,
     "metadata[userId]": params.userId,
     "subscription_data[metadata][userId]": params.userId,
+    "subscription_data[metadata][interval]": interval,
     locale: stripeLocale(params.locale),
     success_url: `${env.appUrl}/dashboard/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.appUrl}/premium?checkout=canceled`,
@@ -385,6 +421,7 @@ export async function applyStripeEvent(event: StripeEvent) {
         cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
         priceCents: typeof checkoutPrice?.unit_amount === "number" ? checkoutPrice.unit_amount : undefined,
         priceId: checkoutPrice?.id ?? undefined,
+        ...planPatch(checkoutPrice?.id),
       });
       if (status === "active" && sessionId) {
         await sendPurchaseConfirmation({ userId, sessionId, subscriptionId, periodEnd });
@@ -404,6 +441,7 @@ export async function applyStripeEvent(event: StripeEvent) {
         cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
         priceCents: typeof price?.unit_amount === "number" ? price.unit_amount : undefined,
         priceId: price?.id ?? undefined,
+        ...planPatch(price?.id),
       });
       // "unpaid" ist bei Stripe das Ende der Wiederholungen: Premium ist weg,
       // ohne dass je eine Kündigung erklärt wurde.
