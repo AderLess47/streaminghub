@@ -17,6 +17,9 @@ primary_region = "fra"
   EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
   EMAIL_REPLY_TO = "service@streaminghub.org"
   STRIPE_PRICE_ID = "price_1UdbPYPmp8Jh8xSPMWv47Lya"
+  # Coupon-IDs sind keine Geheimnisse; sie schalten nur den jeweiligen Rabatt frei.
+  STRIPE_CONVERSION_COUPON_ID = "streaminghub_trial_25_3"
+  STRIPE_WINBACK_COUPON_ID = "streaminghub_winback_50_2"
   # Personal operator details are Fly secrets, not repository content:
   # OPERATOR_LEGAL_NAME, OPERATOR_REPRESENTATIVE, OPERATOR_STREET,
   # OPERATOR_POSTAL_CODE, OPERATOR_CITY, OPERATOR_PHONE

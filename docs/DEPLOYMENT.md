@@ -382,8 +382,8 @@ live.
 | `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
 | `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial jobs* workflow skips |
-| `STRIPE_CONVERSION_COUPON_ID` | Fly env (optional) | Stripe coupon for converting trials; only applied while `conversion_coupon_enabled` is on |
-| `STRIPE_WINBACK_COUPON_ID` | Fly env (optional) | Stripe coupon for the cancellation offer; only shown while `retention_enabled` is on |
+| `STRIPE_CONVERSION_COUPON_ID` | fly.toml (`streaminghub_trial_25_3`) | Stripe coupon for converting trials; only applied while `conversion_coupon_enabled` is on |
+| `STRIPE_WINBACK_COUPON_ID` | fly.toml (`streaminghub_winback_50_2`) | Stripe coupon for the cancellation offer; only shown while `retention_enabled` is on |
 
 The easiest path needs no local tooling: add the values under *GitHub → Settings
 → Secrets and variables → Actions* as `AMAZON_RVS_SHARED_SECRET`,
@@ -511,8 +511,8 @@ fly secrets set NAME=… -a streaminghub-org      # Wert aus dem eigenen Passwor
 | `AMAZON_RVS_SHARED_SECRET` | für Fire-TV-Käufe | Shared Key aus der Amazon Developer Console |
 | `AMAZON_SYNC_TOKEN` | für den täglichen Abgleich | derselbe Wert zusätzlich als GitHub-Actions-Secret |
 | `TRIAL_JOB_TOKEN` | für die Trial-Jobs | gemeinsames Token für `POST /api/internal/trial-jobs` (Erinnerung und Ablauf), derselbe Wert zusätzlich als GitHub-Actions-Secret |
-| `STRIPE_CONVERSION_COUPON_ID` | für den Umwandlungsrabatt | Stripe-Coupon für Trials; wirkt nur bei `conversion_coupon_enabled=1` |
-| `STRIPE_WINBACK_COUPON_ID` | für die Kündigungs-Rettung | Stripe-Coupon für das Angebot vor der Kündigung; nur bei `retention_enabled=1` |
+| `STRIPE_CONVERSION_COUPON_ID` | für den Umwandlungsrabatt | `streaminghub_trial_25_3` (25 %, 3 Monate) in `fly.toml`; wirkt nur bei `conversion_coupon_enabled=1` |
+| `STRIPE_WINBACK_COUPON_ID` | für die Kündigungs-Rettung | `streaminghub_winback_50_2` (50 %, 2 Monate) in `fly.toml`; nur bei `retention_enabled=1` |
 | `AMAZON_RTN_TOPIC_ARN` | nach der RTN-Registrierung | SNS-Topic; vorher leer lassen (siehe 11.4) |
 
 Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,

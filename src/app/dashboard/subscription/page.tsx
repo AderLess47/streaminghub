@@ -199,7 +199,11 @@ export default async function SubscriptionPage({
               </Link>
             </div>
           ) : status !== "active" ? (
-            <p className="mt-4 text-xs leading-relaxed text-muted">{t.dashboard.subscription.noSubscription}</p>
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              {trialRunning
+                ? t.dashboard.subscription.trialInfo
+                : t.dashboard.subscription.noSubscription}
+            </p>
           ) : null}
         </div>
 
@@ -210,10 +214,14 @@ export default async function SubscriptionPage({
               zweites Abo anlegen, statt die offene Zahlung zu klären. */}
           {status !== "active" && status !== "past_due" && (trialRunning || trialAvailable) ? (
             <div className="card p-5">
-              <h2 className="text-sm font-semibold">{t.dashboard.subscription.trialTitle}</h2>
+              <h2 className="text-sm font-semibold">
+                {trialRunning
+                  ? t.dashboard.subscription.trialRunningTitle
+                  : t.dashboard.subscription.trialTitle}
+              </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                {trialRunning && trialEndLabel
-                  ? `${t.dashboard.subscription.trialRunningNote} ${trialEndLabel}`
+                {trialRunning
+                  ? t.dashboard.subscription.trialRunningBody
                   : t.dashboard.subscription.trialBody}
               </p>
               {trialRunning ? null : (
