@@ -301,3 +301,18 @@ test("dryRun counts surplus devices without unlinking them", async () => {
   assert.equal(mailsTo("job-devices-dry@example.test").length, 0);
   assert.equal(row("job-devices-dry")?.trial_ended_at, null);
 });
+
+test("the closing mail reads correctly with and without device revisions", async () => {
+  const { trialEndedMail } = await import("./mail.ts");
+
+  const one = trialEndedMail({ name: "Max", locale: "de", priceEur: 3.49, deviceLimit: 2, devicesRevoked: 1 });
+  assert.match(one.text, /ein weiteres Gerät wurde deshalb abgemeldet/);
+
+  const many = trialEndedMail({ name: "Max", locale: "de", priceEur: 3.49, deviceLimit: 2, devicesRevoked: 3 });
+  assert.match(many.text, /3 weitere Geräte wurden deshalb abgemeldet/);
+
+  const none = trialEndedMail({ name: "Max", locale: "de", priceEur: 3.49, deviceLimit: 2, devicesRevoked: 0 });
+  assert.match(none.text, /Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert/);
+  assert.doesNotMatch(none.text, /gekoppelt Deine/);
+  assert.doesNotMatch(none.text, /abgemeldet/);
+});

@@ -522,6 +522,18 @@ export function trialEndedMail(input: {
   const link = `${env.appUrl}/premium`;
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const revoked = input.devicesRevoked ?? 0;
+  // Zwei Varianten: "nichts abgemeldet" ist eine andere Zusage als eine
+  // Abmeldung, und der Satzbau unterscheidet sich.
+  const deviceNote = {
+    de:
+      revoked > 0
+        ? `Davon bleiben die zuletzt genutzten aktiv; ${revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`} deshalb abgemeldet. Deine Playlist bleibt gespeichert. Im Konto kannst du Geräte entfernen und in der App neu koppeln – ein abgemeldetes Gerät also, sobald wieder Platz ist.`
+        : "Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.",
+    en:
+      revoked > 0
+        ? `The most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored. You can remove devices in your account and pair them again in the app – so an unlinked device can come back once there is room.`
+        : "Your devices stay linked and your playlist stays stored, so you can keep watching at any time.",
+  };
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
     style: "currency",
     currency: "EUR",
@@ -530,8 +542,8 @@ export function trialEndedMail(input: {
   return {
     subject: de ? "Dein Testzeitraum ist beendet – StreamingHub" : "Your trial has ended – StreamingHub",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit ${limit} Geräten. ${revoked > 0 ? `Davon bleiben die zuletzt genutzten aktiv; ${revoked} weitere ${revoked === 1 ? "Gerät wurde" : "Geräte wurden"} deshalb abgemeldet. ` : "Deine Geräte bleiben gekoppelt "}Deine Playlist bleibt gespeichert. Im Konto kannst du Geräte entfernen und in der App neu koppeln – ein abgemeldetes Gerät also, sobald wieder Platz ist.\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with ${limit} devices applies from now on. ${revoked > 0 ? `The most recently used ones stay active; ${revoked} other ${revoked === 1 ? "device was" : "devices were"} unlinked for that reason. ` : "Your devices stay linked "}Your playlist stays stored. You can remove devices in your account and pair them again in the app – so an unlinked device can come back once there is room.\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit ${limit} Geräten. ${deviceNote.de}\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with ${limit} devices applies from now on. ${deviceNote.en}\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
   };
 }
 
