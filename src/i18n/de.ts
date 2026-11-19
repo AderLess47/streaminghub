@@ -1045,6 +1045,11 @@ export const de = {
       stateConverted: "konvertiert",
       stateExpired: "abgelaufen",
       empty: "Noch kein Testzeitraum gestartet.",
+      devices: "Geräte",
+      overLimit: "Über Free-Limit",
+      overLimitHint:
+        "„Über Free-Limit“ zählt abgelaufene Trials, die noch mehr aktive Geräte haben, als der kostenlose Tarif erlaubt. Die Abschlussmail sagt zu, dass Geräte verknüpft bleiben; die Zahl zeigt, wie viele Konten davon Gebrauch machen.",
+      overLimitRow: "Mehr aktive Geräte als im kostenlosen Tarif",
       flagOff:
         "Der Testzeitraum ist ausgeschaltet. Laufende Trials enden trotzdem zum hinterlegten Datum.",
     },
