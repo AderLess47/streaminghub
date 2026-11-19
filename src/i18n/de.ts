@@ -552,6 +552,16 @@ export const de = {
       noSubscription:
         "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
       priceNote: "2,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+      conversionCouponNote:
+        "Für deinen Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – du musst keinen Code eingeben.",
+      retentionTitle: "Bleib bei Premium – mit Rabatt",
+      retentionBody:
+        "Bevor du kündigst: Wir können dir auf die nächsten Abrechnungen einen Rabatt hinterlegen. Dein Abo läuft zu reduziertem Preis weiter und bleibt monatlich kündbar.",
+      retentionCta: "Rabatt sichern",
+      retentionAccepted:
+        "Der Rabatt ist hinterlegt. Dein Abo läuft zu reduziertem Preis weiter – danke, dass du bleibst!",
+      retentionFailed:
+        "Der Rabatt konnte nicht hinterlegt werden. Du kannst es erneut versuchen oder wie gewohnt kündigen.",
     },
     support: {
       title: "Support-Anfragen",

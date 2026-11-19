@@ -16,6 +16,8 @@ test("flags keep stable setting keys and start from an absent key", () => {
     trial: "trial_enabled",
     cloudBackup: "cloud_backup_enabled",
     annualBilling: "annual_enabled",
+    conversionCoupon: "conversion_coupon_enabled",
+    retention: "retention_enabled",
   });
   // Ein fehlender Schlüssel liest sich als leerer Wert und ist damit aus.
   assert.equal(isEnabledValue(undefined), false);

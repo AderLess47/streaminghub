@@ -131,6 +131,9 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   trial_converted_at TEXT,
   trial_reminder_sent_at TEXT,       -- Erinnerung vor Ablauf, einmal pro Trial
   trial_ended_at TEXT,               -- vom Ablauf-Job markiert (Status bleibt)
+  coupon_id TEXT,                    -- Rabatt aus Checkout oder Kündigungs-Rettung
+  retention_outcome TEXT,            -- accepted | declined (Kündigungs-Rettung)
+  retention_decided_at TEXT,
   updated_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

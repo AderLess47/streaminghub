@@ -549,6 +549,16 @@ export const en: Dictionary = {
       noSubscription:
         "No premium subscription is stored yet. Premium adds cross-device continue watching and device management.",
       priceNote: "€2.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
+      conversionCouponNote:
+        "A discount for the first billing periods is stored for your trial. It is applied automatically at checkout – no code needed.",
+      retentionTitle: "Stay with Premium – at a discount",
+      retentionBody:
+        "Before you cancel: we can apply a discount to your next billing periods. Your subscription continues at the reduced price and stays cancellable monthly.",
+      retentionCta: "Claim the discount",
+      retentionAccepted:
+        "The discount is applied. Your subscription continues at the reduced price – thanks for staying!",
+      retentionFailed:
+        "The discount could not be applied. You can try again or cancel as usual.",
     },
     support: {
       title: "Support requests",

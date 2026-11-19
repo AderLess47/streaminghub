@@ -223,6 +223,8 @@ function seedSettings() {
     trial_enabled: "0",
     cloud_backup_enabled: "0",
     annual_enabled: "0",
+    conversion_coupon_enabled: "0",
+    retention_enabled: "0",
   };
   for (const [key, value] of Object.entries(defaults)) {
     run(

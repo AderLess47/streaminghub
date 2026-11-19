@@ -99,6 +99,9 @@ function migrate(db: DatabaseSync) {
     ["trial_converted_at", "TEXT"],
     ["trial_reminder_sent_at", "TEXT"],
     ["trial_ended_at", "TEXT"],
+    ["coupon_id", "TEXT"],
+    ["retention_outcome", "TEXT"],
+    ["retention_decided_at", "TEXT"],
   ];
   for (const [name, definition] of subscriptionAdditions) {
     addColumn(db, "subscriptions", name, definition);

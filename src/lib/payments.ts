@@ -60,6 +60,10 @@ export type Subscription = {
   trial_converted_at?: string | null;
   trial_reminder_sent_at?: string | null;
   trial_ended_at?: string | null;
+  /** Rabatt, der beim Checkout oder für die Kündigungs-Rettung hinterlegt wurde. */
+  coupon_id?: string | null;
+  retention_outcome?: "accepted" | "declined" | null;
+  retention_decided_at?: string | null;
 };
 
 type StripeSubscriptionObject = {
@@ -202,6 +206,8 @@ export async function createWebCheckout(params: {
   userId: string;
   email: string;
   locale: string;
+  /** Optionaler Stripe-Coupon (z. B. Umwandlung nach dem Testzeitraum). */
+  couponId?: string | null;
 }): Promise<CheckoutOutcome> {
   const subscription = ensureSubscription(params.userId);
   const status = effectiveStatus(subscription);
@@ -234,6 +240,12 @@ export async function createWebCheckout(params: {
     cancel_url: `${env.appUrl}/premium?checkout=canceled`,
     allow_promotion_codes: "false",
   });
+  if (params.couponId) {
+    // Rabatte kommen ausschließlich von hier: kein frei eintippbarer Code im
+    // Checkout, und der Betrag wird erst nach serverseitiger Prüfung gesetzt.
+    body.set("discounts[0][coupon]", params.couponId);
+    body.set("metadata[coupon]", params.couponId);
+  }
 
   try {
     const response = await stripeRequest("/v1/checkout/sessions", {
@@ -260,7 +272,11 @@ export async function createWebCheckout(params: {
     }
 
     run(
-      `UPDATE subscriptions SET status = 'pending', provider = 'stripe', channel = 'web', updated_at = ? WHERE user_id = ?`,
+      `UPDATE subscriptions
+       SET status = 'pending', provider = 'stripe', channel = 'web',
+           coupon_id = COALESCE(?, coupon_id), updated_at = ?
+       WHERE user_id = ?`,
+      params.couponId ?? null,
       nowIso(),
       params.userId,
     );
@@ -764,5 +780,58 @@ export async function cancelSubscription(userId: string) {
     };
   } catch {
     return { ok: false as const, message: "Der Zahlungsanbieter ist derzeit nicht erreichbar." };
+  }
+}
+
+/**
+ * Legt einen Coupon auf ein laufendes Abo (Kündigungs-Rettung).
+ *
+ * Stripe ersetzt damit einen vorhandenen Rabatt, statt ihn zu stapeln – genau
+ * das ist hier gewollt. Erst eine erfolgreiche Antwort wird gespeichert, damit
+ * ein Fehlversuch wiederholt werden kann.
+ */
+export async function applySubscriptionCoupon(
+  userId: string,
+  couponId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const subscription = getSubscription(userId);
+  if (!subscription || effectiveStatus(subscription) !== "active") {
+    return { ok: false, message: "Es ist kein aktives Abonnement vorhanden." };
+  }
+  if (subscription.channel !== "web") {
+    return {
+      ok: false,
+      message:
+        "Dieses Abonnement wird über den Store verwaltet. Ein Rabatt lässt sich dort nicht setzen.",
+    };
+  }
+  if (subscription.provider !== "stripe" || !subscription.provider_subscription_id) {
+    return {
+      ok: false,
+      message: "Für dieses Abonnement ist kein aktiver Zahlungsanbieter hinterlegt.",
+    };
+  }
+
+  try {
+    const response = await stripeRequest(
+      `/v1/subscriptions/${encodeURIComponent(subscription.provider_subscription_id)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ coupon: couponId }),
+      },
+    );
+    if (!response.ok) {
+      console.error("stripe coupon error", response.status);
+      return {
+        ok: false,
+        message: "Der Rabatt konnte nicht hinterlegt werden. Bitte versuche es später erneut.",
+      };
+    }
+
+    run(`UPDATE subscriptions SET coupon_id = ?, updated_at = ? WHERE user_id = ?`, couponId, nowIso(), userId);
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Der Zahlungsanbieter ist derzeit nicht erreichbar." };
   }
 }

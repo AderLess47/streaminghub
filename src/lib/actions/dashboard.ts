@@ -13,6 +13,7 @@ import {
   ticketReceivedMail,
 } from "@/lib/mail";
 import { cancelSubscription, effectiveStatus, getSubscription } from "@/lib/payments";
+import { declineRetentionOffer, retentionOffer } from "@/lib/retention";
 import {
   currentSessionTokenHash,
   invalidateUserSessions,
@@ -323,12 +324,17 @@ export async function cancelSubscriptionAction(
   _formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  // Wurde vorher ein Rettungsangebot gezeigt? Dann ist die Kündigung eine
+  // Ablehnung – erst nach erfolgreicher Kündigung festhalten, damit ein
+  // Fehlschlag das Angebot nicht verbraucht.
+  const offerShown = retentionOffer(user.id).available;
   const result = await cancelSubscription(user.id);
+  if (result.ok && offerShown) declineRetentionOffer(user.id);
   logAudit({
     action: "subscription.cancel_requested",
     actorId: user.id,
     actorEmail: user.email,
-    meta: { ok: result.ok },
+    meta: { ok: result.ok, retentionOfferShown: offerShown },
   });
   revalidatePath("/dashboard/subscription");
   return { ok: result.ok, message: result.message };

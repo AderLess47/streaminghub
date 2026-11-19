@@ -1,5 +1,6 @@
 import { apiError, clientIp, isSameOrigin, json, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { trialConversionCoupon } from "@/lib/conversion";
 import { createWebCheckout } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { getSessionUser } from "@/lib/session";
@@ -16,10 +17,15 @@ export async function POST(request: Request) {
   const limit = rateLimit(rateLimitKey("checkout:user", user.id), 5, 600);
   if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds);
 
+  // Rabatt für die Umwandlung nach dem Trial – serverseitig bestimmt, damit
+  // die Preisänderung nicht von der Oberfläche abhängt.
+  const couponId = trialConversionCoupon(user.id);
+
   const outcome = await createWebCheckout({
     userId: user.id,
     email: user.email,
     locale: user.locale,
+    couponId,
   });
 
   logAudit({
@@ -27,7 +33,11 @@ export async function POST(request: Request) {
     actorId: user.id,
     actorEmail: user.email,
     ip,
-    meta: { ok: outcome.ok, code: outcome.ok ? null : outcome.code },
+    meta: {
+      ok: outcome.ok,
+      code: outcome.ok ? null : outcome.code,
+      coupon: couponId ? "conversion" : null,
+    },
   });
 
   if (!outcome.ok) {
