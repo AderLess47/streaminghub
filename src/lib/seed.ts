@@ -191,6 +191,7 @@ function syncLegacyPlaylistFaqCopy() {
 function seedFaq() {
   syncRetiredVpnFaqCopy();
   syncLegacyPlaylistFaqCopy();
+  syncPriceFaqCopy();
   const count = get<{ c: number }>(`SELECT COUNT(*) AS c FROM faq_items`)?.c ?? 0;
   if (count > 0) return;
   FAQ_SEED.forEach((item, index) => {
@@ -207,6 +208,38 @@ function seedFaq() {
       nowIso(),
     );
   });
+}
+
+/**
+ * Preis-FAQ aus der Zeit vor der Preisanpassung. Sie wird beim Start ersetzt,
+ * aber nur solange die Zeile noch dem ausgelieferten Text entspricht – manuelle
+ * Aenderungen im Admin bleiben unangetastet.
+ */
+const PREVIOUS_PRICE_FAQ_DE =
+  "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten.";
+const PREVIOUS_PRICE_FAQ_EN =
+  "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; premium is currently not offered in Amazon Appstore builds.";
+
+function syncPriceFaqCopy() {
+  const target = FAQ_SEED.find((item) => item.q_de === "Was kostet StreamingHub Premium?");
+  if (!target) return;
+
+  const current = get<{ answer_de: string; answer_en: string }>(
+    `SELECT answer_de, answer_en FROM faq_items WHERE question_de = ?`,
+    target.q_de,
+  );
+  if (!current) return;
+  if (current.answer_de !== PREVIOUS_PRICE_FAQ_DE || current.answer_en !== PREVIOUS_PRICE_FAQ_EN) {
+    return;
+  }
+
+  run(
+    `UPDATE faq_items SET answer_de = ?, answer_en = ?, updated_at = ? WHERE question_de = ?`,
+    target.a_de,
+    target.a_en,
+    nowIso(),
+    target.q_de,
+  );
 }
 
 function seedSettings() {
