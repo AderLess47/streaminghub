@@ -14,6 +14,8 @@ export default async function ContactPage() {
     <div className="shell py-12 sm:py-16">
       <PageHeader eyebrow="Support" title={t.contact.title} description={t.contact.subtitle} />
 
+      <p className="mt-4 max-w-2xl text-xs leading-relaxed text-muted">{t.contact.supportPremiumNote}</p>
+
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.7fr] lg:items-start">
         <ContactForm t={t.contact} privacyLabel={t.footer.privacy} />
 

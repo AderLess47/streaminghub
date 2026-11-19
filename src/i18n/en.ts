@@ -398,6 +398,8 @@ export const en: Dictionary = {
     error: "The message could not be sent. Please try again later.",
     spamNotice:
       "This request is validated server-side and protected against spam. Please never send passwords or payment data.",
+    supportPremiumNote:
+      "Email support is part of Premium. The help section answers the most common questions; account and contract matters as well as withdrawal and cancellation requests still go through this form.",
     responseTime: "Response time",
     responseTimeValue: "usually 1–2 business days",
     hours: "Support hours",
@@ -571,6 +573,11 @@ export const en: Dictionary = {
     support: {
       title: "Support requests",
       subtitle: "Your requests and replies from the support team.",
+      supportPremiumOnly: "Email support is part of Premium",
+      supportPremiumBody:
+        "Email support is part of Premium. You will find answers to the most common questions – installation, playlist, activation – in the help section; it also explains how to handle account and contract questions.",
+      supportFaqCta: "Go to help section",
+      supportPremiumCta: "See Premium",
       newTicket: "New request",
       subject: "Subject",
       category: "Category",

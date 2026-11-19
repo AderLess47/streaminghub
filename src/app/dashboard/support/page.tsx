@@ -4,6 +4,7 @@ import { EmptyState, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { createTicketAction } from "@/lib/actions/dashboard";
 import { all } from "@/lib/db";
+import { getEntitlements } from "@/lib/entitlements";
 import { requireUser } from "@/lib/session";
 
 type TicketRow = {
@@ -18,6 +19,10 @@ type TicketRow = {
 export default async function SupportPage() {
   const user = await requireUser();
   const { t, locale } = await getI18n();
+  // Support per E-Mail ist eine Premium-Leistung; Gratis- und Trial-Konten
+  // bekommen den Weg über den Hilfebereich statt eines Formulars.
+  const entitlements = getEntitlements(user.id);
+  const supportEntitled = entitlements.source !== "none" && entitlements.source !== "trial";
 
   const tickets = all<TicketRow>(
     `SELECT t.id, t.subject, t.category, t.status, t.created_at,
@@ -71,9 +76,23 @@ export default async function SupportPage() {
         </div>
 
         <div className="card p-5">
-          <h2 className="text-base font-semibold">{t.dashboard.support.newTicket}</h2>
+          <h2 className="text-base font-semibold">
+            {supportEntitled ? t.dashboard.support.newTicket : t.dashboard.support.supportPremiumOnly}
+          </h2>
           <div className="mt-4">
-            <NewTicketForm action={createTicketAction} t={t.dashboard.support} />
+            {supportEntitled ? (
+              <NewTicketForm action={createTicketAction} t={t.dashboard.support} />
+            ) : (
+              <div className="grid gap-3">
+                <p className="text-xs leading-relaxed text-muted">{t.dashboard.support.supportPremiumBody}</p>
+                <Link href="/help" className="btn btn-outline btn-sm btn-block">
+                  {t.dashboard.support.supportFaqCta}
+                </Link>
+                <Link href="/premium" className="btn btn-ghost btn-sm btn-block">
+                  {t.dashboard.support.supportPremiumCta}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

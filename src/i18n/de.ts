@@ -401,6 +401,8 @@ export const de = {
     error: "Die Nachricht konnte nicht gesendet werden. Bitte versuche es später erneut.",
     spamNotice:
       "Diese Anfrage wird serverseitig validiert und mit einem Spam-Schutz versehen. Bitte keine Passwörter oder Zahlungsdaten senden.",
+    supportPremiumNote:
+      "E-Mail-Support gehört zu Premium. Die häufigsten Fragen beantwortet der Hilfebereich; Konto- und Vertragsfragen sowie Anliegen zu Widerruf und Kündigung nimmst du weiterhin über dieses Formular auf.",
     responseTime: "Antwortzeit",
     responseTimeValue: "in der Regel 1–2 Werktage",
     hours: "Supportzeiten",
@@ -574,6 +576,11 @@ export const de = {
     support: {
       title: "Support-Anfragen",
       subtitle: "Deine Anfragen und Antworten des Support-Teams.",
+      supportPremiumOnly: "Support per E-Mail ist Teil von Premium",
+      supportPremiumBody:
+        "E-Mail-Support gehört zu Premium. Antworten auf die häufigsten Fragen – Installation, Playlist, Aktivierung – findest du im Hilfebereich; dort steht auch, wie du Konto- und Vertragsfragen klärst.",
+      supportFaqCta: "Zum Hilfebereich",
+      supportPremiumCta: "Premium ansehen",
       newTicket: "Neue Anfrage",
       subject: "Betreff",
       category: "Kategorie",
