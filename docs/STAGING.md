@@ -202,6 +202,17 @@ completed scheduled attempt and skips the canary when it is younger than 18 hour
 canary nor a second failure comment on the same day. A retry slot still appears
 as a run in which the `guard` job decided to skip; that is normal.
 
+The one exception is deploy drift. When the last completed scheduled attempt
+failed, the issue `Staging deploy drift` is open and `Staging canary failing` is
+not, the `guard` lets the next slot run the canary again. A drift run stopped at
+the commit comparison and never reached a billing check, so its slot proved
+nothing about billing; the retry means a deploy fix restores the daily scheduled
+success and its heartbeat on the same day instead of the next morning, and it
+closes the drift issue with `Auslöser: Zeitplan`. A genuine billing failure keeps
+its single daily run, because the open billing issue is the signal, and while the
+drift persists every retried slot comments on the drift issue again so the
+broken state stays visible.
+
 Even five slots only help while GitHub delivers *some* slot. Nothing inside
 Actions can notice that its own scheduler stopped, so the successful scheduled
 run additionally pings an external heartbeat (see below). That ping is the only
@@ -211,7 +222,7 @@ signal that still reaches someone when a whole day of slots is dropped.
 
 | Trigger | When it runs | What it produces on failure |
 | --- | --- | --- |
-| Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
+| Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day, plus a retry in each remaining slot while a drift issue is open | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
 | Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
 | Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging deploy drift` with the expected and served commit; never `Staging canary failing` |
@@ -234,7 +245,9 @@ The properties that hold across all of them:
   manual run from the Actions tab stays annotation-only; the fallback dispatch is
   not manual, it sends `source=external`.
 - At most one canary run and one failure comment per day, even when several
-  schedule slots fire or a deploy repeats an already reported commit.
+  schedule slots fire or a deploy repeats an already reported commit. Only an
+  unresolved drift reopens the schedule retries; those slots report on the drift
+  issue, never on the billing issue.
 - A failed deploy does not start the canary at all, so a red deploy never
   produces a second, misleading canary alarm.
 - Nothing here touches production: the canary refuses non-`sk_test_` keys,

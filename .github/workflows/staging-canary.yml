@@ -47,6 +47,8 @@ jobs:
     timeout-minutes: 5
     permissions:
       actions: read
+      # The retry decision reads the open drift and billing issues below.
+      issues: read
 
     outputs:
       run: ${{ steps.decide.outputs.run }}
@@ -63,15 +65,36 @@ jobs:
           MIN_INTERVAL_SECONDS: "64800"
         run: |
           set -euo pipefail
+          open_issue() {
+            gh issue list --state open --search "\"$1\" in:title" --json number,title --limit 100 \
+              | jq -r --arg title "$1" '[.[] | select(.title == $title)][0].number // empty'
+          }
           run="true"
           runs=$(gh api "repos/$GH_REPO/actions/workflows/staging-canary.yml/runs?event=schedule&per_page=30")
           last=$(printf '%s' "$runs" | jq -r --argjson id "$RUN_ID" '
-            [.workflow_runs[] | select(.id != $id and .status == "completed")][0].created_at // empty')
+            [.workflow_runs[] | select(.id != $id and .status == "completed")][0]
+            | if . == null then "" else "\(.created_at) \(.conclusion)" end')
           if [ -n "$last" ]; then
-            age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
-            echo "Last completed scheduled attempt: $last (${age}s ago)."
+            created=${last% *}
+            conclusion=${last##* }
+            age=$(( $(date -u +%s) - $(date -u -d "$created" +%s) ))
+            echo "Last completed scheduled attempt: $created ($conclusion, ${age}s ago)."
             if [ "$age" -lt "$MIN_INTERVAL_SECONDS" ]; then
               run="false"
+              # A drift attempt stopped at the commit comparison and never reached a
+              # billing check, so its slot proved nothing about billing. While the
+              # drift is unresolved, the next slot retries: a deploy fix then
+              # restores the daily scheduled success and its heartbeat on the same
+              # day instead of the next morning. A real billing failure keeps its
+              # single daily run, because the open billing issue is the signal.
+              if [ "$conclusion" = 'failure' ]; then
+                drift=$(open_issue "Staging deploy drift")
+                billing=$(open_issue "Staging canary failing")
+                if [ -n "$drift" ] && [ -z "$billing" ]; then
+                  echo "Drift issue #$drift is open and no billing issue is; this slot is the drift retry."
+                  run="true"
+                fi
+              fi
             fi
           else
             echo "No completed scheduled attempt yet."
