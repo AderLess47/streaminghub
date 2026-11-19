@@ -702,6 +702,7 @@ export const de = {
       settings: "Monetarisierung",
       status: "Systemstatus",
       audit: "Sicherheitsprotokoll",
+      backup: "Cloud-Backup",
       backToSite: "Zur Website",
     },
     monetization: {
@@ -996,6 +997,30 @@ export const de = {
       recoveryRemaining: "Verbleibende Wiederherstellungscodes",
       alreadyEnabled: "MFA ist für dieses Konto bereits aktiv.",
       notAuthorized: "Nur Mitarbeiterkonten können MFA einrichten.",
+    },
+    backup: {
+      title: "Cloud-Backup",
+      subtitle: "Nutzung und belegter Speicher der verschlüsselten Sicherungen.",
+      accountsPremium: "Premium-Konten",
+      accountsWithBackup: "Konten mit Sicherung",
+      backups: "Sicherungen gesamt",
+      storage: "Belegt",
+      lastBackup: "Letzte Sicherung",
+      lastRestore: "Letzte Wiederherstellung",
+      quotaNote:
+        "R2-Freibetrag: 10 GB pro Monat. „Belegt“ ist die Summe der verschlüsselten Objekte; die Datenbank speichert nur den Verweis darauf.",
+      tableTitle: "Sicherungen je Konto",
+      customer: "Kunde",
+      count: "Anzahl",
+      size: "Speicher",
+      created: "Angelegt",
+      restored: "Wiederhergestellt",
+      empty: "Noch keine Sicherung angelegt.",
+      flagOff:
+        "Cloud-Backup ist ausgeschaltet. Bestehende Sicherungen bleiben gespeichert, neue kann derzeit niemand anlegen.",
+      notConfigured: "Cloud-Backup ist nicht eingerichtet – die R2-Secrets fehlen.",
+      hintRetention: "3 Sicherungen je Konto, 365 Tage Aufbewahrung",
+      hintEncrypted: "AES-256-GCM, Schlüssel je Konto",
     },
   },
   accountDeletion: {

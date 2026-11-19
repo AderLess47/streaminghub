@@ -699,6 +699,7 @@ export const en: Dictionary = {
       settings: "Monetisation",
       status: "System status",
       audit: "Security log",
+      backup: "Cloud backup",
       backToSite: "Back to website",
     },
     monetization: {
@@ -993,6 +994,30 @@ export const en: Dictionary = {
       recoveryRemaining: "Remaining recovery codes",
       alreadyEnabled: "MFA is already active for this account.",
       notAuthorized: "Only staff accounts can set up MFA.",
+    },
+    backup: {
+      title: "Cloud backup",
+      subtitle: "Usage and storage taken up by the encrypted backups.",
+      accountsPremium: "Premium accounts",
+      accountsWithBackup: "Accounts with a backup",
+      backups: "Backups in total",
+      storage: "Stored",
+      lastBackup: "Last backup",
+      lastRestore: "Last restore",
+      quotaNote:
+        "R2 free tier: 10 GB per month. “Stored” is the sum of the encrypted objects; the database only keeps a reference.",
+      tableTitle: "Backups per account",
+      customer: "Customer",
+      count: "Count",
+      size: "Storage",
+      created: "Created",
+      restored: "Restored",
+      empty: "No backup created yet.",
+      flagOff:
+        "Cloud backup is switched off. Existing backups stay stored, but nobody can create new ones right now.",
+      notConfigured: "Cloud backup is not set up – the R2 secrets are missing.",
+      hintRetention: "3 backups per account, kept for 365 days",
+      hintEncrypted: "AES-256-GCM, one key per account",
     },
   },
   accountDeletion: {
