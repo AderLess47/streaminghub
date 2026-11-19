@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
+import { getSetting } from "@/lib/content";
 import { all, get, nowIso } from "@/lib/db";
+import { DEFAULT_FREE_DEVICE_LIMIT } from "@/lib/entitlements";
 import { isFeatureEnabled } from "@/lib/flags";
 import { REMINDER_WINDOW_HOURS } from "@/lib/trial-jobs";
 import { requireStaff } from "@/lib/session";
@@ -45,6 +47,20 @@ export default async function AdminTrialPage() {
   const ended = converted + expired;
   const rate = ended > 0 ? Math.round((converted / ended) * 100) : 0;
 
+  // Nach dem Trial gilt das Free-Limit. Die Geräte bleiben verknüpft (so steht
+  // es in der Abschlussmail), also zeigt diese Zahl, wie viele Konten darüber
+  // liegen – Grundlage für die Entscheidung, ob durchgegriffen werden soll.
+  const freeLimit = Number(
+    getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT)),
+  );
+  const overLimit =
+    get<{ c: number }>(
+      `SELECT COUNT(*) AS c FROM subscriptions s
+       WHERE s.trial_ended_at IS NOT NULL AND s.trial_converted_at IS NULL
+         AND (SELECT COUNT(*) FROM devices d WHERE d.user_id = s.user_id AND d.status = 'active') > ?`,
+      Number.isFinite(freeLimit) ? freeLimit : DEFAULT_FREE_DEVICE_LIMIT,
+    )?.c ?? 0;
+
   const rows = all<{
     user_id: string;
     email: string;
@@ -54,9 +70,11 @@ export default async function AdminTrialPage() {
     trial_reminder_sent_at: string | null;
     trial_ended_at: string | null;
     trial_converted_at: string | null;
+    devices: number;
   }>(
     `SELECT s.user_id, u.email, s.status, s.trial_source, s.trial_ends_at,
-            s.trial_reminder_sent_at, s.trial_ended_at, s.trial_converted_at
+            s.trial_reminder_sent_at, s.trial_ended_at, s.trial_converted_at,
+            (SELECT COUNT(*) FROM devices d WHERE d.user_id = s.user_id AND d.status = 'active') AS devices
      FROM subscriptions s JOIN users u ON u.id = s.user_id
      WHERE s.trial_ends_at IS NOT NULL
      ORDER BY s.trial_ended_at IS NOT NULL, s.trial_ends_at DESC
@@ -79,6 +97,7 @@ export default async function AdminTrialPage() {
       hint: ended > 0 ? `${rate} %` : null,
     },
     { label: copy.expired, value: expired },
+    { label: copy.overLimit, value: overLimit, hint: `${freeLimit}` },
   ];
 
   return (
@@ -87,7 +106,7 @@ export default async function AdminTrialPage() {
 
       {!isFeatureEnabled("trial") ? <Alert tone="warning">{copy.flagOff}</Alert> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="card p-4">
             <div className="flex items-baseline justify-between gap-2">
@@ -102,6 +121,7 @@ export default async function AdminTrialPage() {
       </div>
 
       <p className="text-xs leading-relaxed text-muted">{copy.hint}</p>
+      <p className="text-xs leading-relaxed text-muted">{copy.overLimitHint}</p>
 
       <section className="card overflow-x-auto">
         <table className="data-table">
@@ -114,6 +134,7 @@ export default async function AdminTrialPage() {
               <th>{copy.remindedAt}</th>
               <th>{copy.endedAt}</th>
               <th>{copy.convertedAt}</th>
+              <th>{copy.devices}</th>
             </tr>
           </thead>
           <tbody>
@@ -144,12 +165,20 @@ export default async function AdminTrialPage() {
                   </td>
                   <td className="whitespace-nowrap text-xs">{formatDate(row.trial_ended_at)}</td>
                   <td className="whitespace-nowrap text-xs">{formatDate(row.trial_converted_at)}</td>
+                  <td
+                    className={`whitespace-nowrap text-xs ${
+                      row.devices > freeLimit ? "text-amber-300" : ""
+                    }`}
+                    title={row.devices > freeLimit ? copy.overLimitRow : undefined}
+                  >
+                    {row.devices} / {freeLimit}
+                  </td>
                 </tr>
               );
             })}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-6 text-center text-xs text-muted">
+                <td colSpan={7} className="py-6 text-center text-xs text-muted">
                   {copy.empty}
                 </td>
               </tr>

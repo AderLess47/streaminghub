@@ -1042,6 +1042,11 @@ export const en: Dictionary = {
       stateConverted: "converted",
       stateExpired: "expired",
       empty: "No trial started yet.",
+      devices: "Devices",
+      overLimit: "Above free limit",
+      overLimitHint:
+        "“Above free limit” counts expired trials that still have more active devices than the free plan allows. The closing email promises that devices stay linked; this number shows how many accounts use that.",
+      overLimitRow: "More active devices than the free plan allows",
       flagOff: "The trial is switched off. Running trials still end on their stored date.",
     },
   },
