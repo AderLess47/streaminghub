@@ -527,6 +527,7 @@ export const de = {
       trialCta: "Testzeitraum starten",
       trialStarted: "Dein Testzeitraum läuft. Ende:",
       trialFailed: "Der Testzeitraum konnte nicht gestartet werden.",
+      statusTrial: "Testphase",
       title: "Abonnement",
       subtitle: "Status, Abrechnungskanal und Kündigung.",
       currentPlan: "Aktueller Plan",

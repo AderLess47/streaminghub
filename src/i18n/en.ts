@@ -524,6 +524,7 @@ export const en: Dictionary = {
       trialCta: "Start trial",
       trialStarted: "Your trial is running. Ends:",
       trialFailed: "The trial could not be started.",
+      statusTrial: "Trial",
       title: "Subscription",
       subtitle: "Status, billing channel and cancellation.",
       currentPlan: "Current plan",
