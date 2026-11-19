@@ -13,7 +13,11 @@ import { env } from "@/lib/env";
 import { isFeatureEnabled } from "@/lib/flags";
 import { retentionOffer } from "@/lib/retention";
 import { billingConfigured, effectiveStatus, ensureSubscription } from "@/lib/payments";
-import { LEGACY_PREMIUM_PRICE_EUR, PREMIUM_PRICE_EUR } from "@/lib/pricing";
+import {
+  billingIntervalOf,
+  LEGACY_PREMIUM_PRICE_EUR,
+  PREMIUM_PRICE_EUR,
+} from "@/lib/pricing";
 import { requireUser } from "@/lib/session";
 
 export default async function SubscriptionPage({
@@ -72,10 +76,17 @@ export default async function SubscriptionPage({
       ? Math.round(LEGACY_PREMIUM_PRICE_EUR * 100)
       : Math.round(PREMIUM_PRICE_EUR * 100));
   const priceEur = (priceCents / 100).toFixed(2);
-  const priceLabel =
-    locale === "de"
-      ? `${priceEur.replace(".", ",")} € / Monat; keine USt. (Kleinunternehmerregelung)`
-      : `€${priceEur} / month; no VAT (small business regulation)`;
+  // Das Intervall entscheidet über die Einheit: ein Jahresabo kostet 34,99 € im
+  // Jahr, nicht im Monat. Bei Store-Abos gibt es keinen hinterlegten Betrag –
+  // dort wäre jede Euro-Angabe erfunden.
+  const interval = billingIntervalOf(subscription.plan, subscription.billing_interval);
+  const storeChannel = subscription.channel === "amazon" || subscription.channel === "apple";
+  const unit = interval === "year" ? (locale === "de" ? "Jahr" : "year") : (locale === "de" ? "Monat" : "month");
+  const priceLabel = storeChannel
+    ? t.dashboard.subscription.storePriceNote
+    : locale === "de"
+      ? `${priceEur.replace(".", ",")} € / ${unit}; keine USt. (Kleinunternehmerregelung)`
+      : `€${priceEur} / ${unit}; no VAT (small business regulation)`;
 
   const periodEnd = subscription.current_period_end
     ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(

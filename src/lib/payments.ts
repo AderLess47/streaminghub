@@ -11,7 +11,12 @@ import {
   storeSubscriptionRefundedMail,
   subscriptionEndedMail,
 } from "./mail";
-import { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR } from "./pricing";
+import {
+  billingIntervalOf,
+  cents,
+  PREMIUM_PLAN_ID,
+  PREMIUM_PRICE_EUR,
+} from "./pricing";
 
 // Weiterhin von hier exportiert, damit bestehende Importe unverändert bleiben.
 export { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR };
@@ -628,12 +633,20 @@ async function sendPurchaseConfirmation(params: {
   if (!user) return;
   const key = `mail:purchase-confirmation:${params.subscriptionId ?? params.sessionId}`;
   if (!claimMailMarker(params.userId, key)) return;
+  // Betrag und Intervall stammen aus dem Abo, das der Webhook gerade
+  // geschrieben hat – ein Jahresabo darf nicht als Monatspreis in der
+  // Bestätigung stehen.
+  const subscription = getSubscription(params.userId);
+  const priceCents = subscription?.price_cents ?? cents(PREMIUM_PRICE_EUR);
+  const interval =
+    billingIntervalOf(subscription?.plan, subscription?.billing_interval) ?? "month";
   await sendMail({
     to: user.email,
     ...purchaseConfirmationMail({
       name: user.display_name,
       locale: user.locale,
-      priceEur: PREMIUM_PRICE_EUR,
+      priceEur: priceCents / 100,
+      interval,
       periodEnd: params.periodEnd,
     }),
     kind: "subscription",

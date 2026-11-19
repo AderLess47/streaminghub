@@ -567,6 +567,7 @@ export const en: Dictionary = {
       noSubscription:
         "No premium subscription is stored yet. Premium adds cross-device continue watching and device management.",
       priceNote: "€3.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
+      storePriceNote: "Price as billed by your store (App Store / Amazon Appstore).",
       conversionCouponNote:
         "A discount for the first billing periods is stored for your trial. It is applied automatically at checkout – no code needed.",
       retentionTitle: "Stay with Premium – at a discount",

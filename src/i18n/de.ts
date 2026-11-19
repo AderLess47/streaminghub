@@ -570,6 +570,7 @@ export const de = {
       noSubscription:
         "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
       priceNote: "3,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+      storePriceNote: "Preis laut Abrechnung deines Stores (App Store / Amazon Appstore).",
       conversionCouponNote:
         "Für deinen Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – du musst keinen Code eingeben.",
       retentionTitle: "Bleib bei Premium – mit Rabatt",

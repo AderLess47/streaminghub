@@ -179,3 +179,25 @@ test("store: repurchase sends nothing, the next expiry mails once", async () => 
   assert.match(markers[0], new RegExp(`amazon:receipt-1:${p1.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
   assert.match(markers[1], new RegExp(`amazon:receipt-1:${p2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
 });
+
+test("die Kaufbestätigung nennt das tatsächliche Intervall", async () => {
+  // Regression: Der Text sagte immer „/ Monat“, auch für ein Jahresabo.
+  const { purchaseConfirmationMail } = await import("./mail.ts");
+
+  const yearly = purchaseConfirmationMail({
+    name: "Testkonto",
+    locale: "de",
+    priceEur: 34.99,
+    interval: "year",
+  });
+  assert.match(yearly.text, /34,99\s*€ \/ Jahr/);
+  assert.doesNotMatch(yearly.text, /\/ Monat/);
+
+  const monthly = purchaseConfirmationMail({
+    name: "Testkonto",
+    locale: "en",
+    priceEur: 3.49,
+    interval: "month",
+  });
+  assert.match(monthly.text, /€3\.49 \/ month/);
+});
