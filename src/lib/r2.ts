@@ -143,6 +143,29 @@ export function signedObjectRequest(config: R2Config, options: RequestOptions) {
   };
 }
 
+/**
+ * Fehlerantwort des Speichers. R2 liefert im XML einen `<Code>` wie
+ * `SignatureDoesNotMatch` oder `NoSuchBucket` – genau der ist für die
+ * Fehlersuche entscheidend, der Body selbst bleibt im Log.
+ */
+export class R2RequestError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+
+  constructor(operation: string, status: number, code: string | null) {
+    super(`R2 ${operation} ${status}${code ? ` ${code}` : ""}`);
+    this.name = "R2RequestError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function responseError(operation: string, response: Response) {
+  const body = await response.text().catch(() => "");
+  const code = /<Code>([^<]{1,80})<\/Code>/.exec(body)?.[1] ?? null;
+  return new R2RequestError(operation, response.status, code);
+}
+
 export type R2ObjectStore = {
   put(key: string, data: Uint8Array, contentType: string): Promise<void>;
   /** `null`, wenn das Objekt nicht (mehr) existiert. */
@@ -164,24 +187,18 @@ export function r2Store(config: R2Config): R2ObjectStore {
   return {
     async put(key, data, contentType) {
       const response = await request(config, { method: "PUT", key, body: data, contentType });
-      if (!response.ok) {
-        throw new Error(`R2 PUT ${response.status}: ${(await response.text()).slice(0, 200)}`);
-      }
+      if (!response.ok) throw await responseError("PUT", response);
     },
     async get(key) {
       const response = await request(config, { method: "GET", key });
       if (response.status === 404) return null;
-      if (!response.ok) {
-        throw new Error(`R2 GET ${response.status}: ${(await response.text()).slice(0, 200)}`);
-      }
+      if (!response.ok) throw await responseError("GET", response);
       return new Uint8Array(await response.arrayBuffer());
     },
     async delete(key) {
       const response = await request(config, { method: "DELETE", key });
       // Ein bereits gelöschtes Objekt ist kein Fehler.
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`R2 DELETE ${response.status}: ${(await response.text()).slice(0, 200)}`);
-      }
+      if (!response.ok && response.status !== 404) throw await responseError("DELETE", response);
     },
   };
 }
