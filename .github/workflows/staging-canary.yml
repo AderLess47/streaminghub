@@ -525,6 +525,8 @@ jobs:
               exit 1
               ;;
           esac
-          # The ping URL is a credential for one check; it is never echoed.
-          curl --fail --silent --show-error --max-time 10 --retry 5 -o /dev/null "$HEARTBEAT_URL"
-          echo "Heartbeat pinged."
+          # The ping URL is a credential for one check; it is never echoed. Only
+          # the status is reported, so the log proves the check accepted the ping.
+          status=$(curl --fail --silent --show-error --max-time 10 --retry 5 \
+            --output /dev/null --write-out '%{http_code}' "$HEARTBEAT_URL")
+          echo "Heartbeat pinged (HTTP $status)."

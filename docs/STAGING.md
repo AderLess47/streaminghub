@@ -227,7 +227,7 @@ signal that still reaches someone when a whole day of slots is dropped.
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
 | Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging deploy drift` with the expected and served commit; never `Staging canary failing` |
 | External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
-| External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 8 hours |
+| External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 12 hours |
 
 The properties that hold across all of them:
 
@@ -314,8 +314,9 @@ is free for 20 checks and alerts by e-mail when the ping does not arrive.
 Set it up once:
 
 1. Create the free account and **Add Check**: name `staging-billing-canary`,
-   **Period** `1 day`, **Grace Time** `8 hours` (the canary runs once per day, so
-   an 8-hour grace keeps a late run from alerting).
+   **Period** `1 day`, **Grace Time** `12 hours` (the canary runs once per day,
+   and GitHub often starts a scheduled run hours late, so a 12-hour grace keeps a
+   late but healthy run from alerting).
 2. Copy the **ping URL** (`https://hc-ping.com/<uuid>`) and store it as the
    **repository** secret `CANARY_HEARTBEAT_URL` under Settings → Secrets and
    variables → Actions → Repository secrets. The `notify` job does not use the
@@ -332,8 +333,22 @@ logs a warning and skips, exactly like the Discord webhook. The ping URL is neve
 printed or committed, and the step rejects anything that is not a
 `https://hc-ping.com/…` URL.
 
-Check the wiring without waiting for the schedule by pinging once from a local
-shell where the URL is exported (never commit it or paste it into a workflow):
+Check the wiring without waiting for the schedule. The real proof is a workflow
+run, because it exercises the step exactly as it will run unattended: start one
+with the external trigger's payload and the `notify` job pings and logs what the
+check answered.
+
+```bash
+gh workflow run staging-canary.yml --ref main -f source=external
+```
+
+The step then logs `Heartbeat pinged (HTTP 200).` and the check shows **Up** with
+a fresh ping. A rejected or unreachable URL fails the step instead, and the ping
+URL itself never reaches the log. A manual run without `source=external`
+deliberately pings nothing.
+
+To check only the URL, ping once from a local shell where it is exported (never
+commit it or paste it into a workflow):
 
 ```bash
 export CANARY_HEARTBEAT_URL='https://hc-ping.com/...'
@@ -341,9 +356,9 @@ curl --fail --silent --show-error --max-time 10 -o /dev/null "$CANARY_HEARTBEAT_
 unset CANARY_HEARTBEAT_URL
 ```
 
-The check then shows **Up** with a fresh ping. To prove the alarm path, set
-Period to `1 minute` and Grace to `2 minutes` in the dashboard, wait, and confirm
-the e-mail arrives before restoring `1 day`/`8 hours`.
+To prove the alarm path as well, set Period to `1 hour` and Grace to `5 minutes`
+in the dashboard, let it sit without a ping, and confirm the e-mail arrives before
+restoring `1 day`/`12 hours`.
 
 ### External fallback trigger
 
