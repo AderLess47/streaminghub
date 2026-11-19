@@ -36,7 +36,7 @@ const {
   prunableBackups,
   restoreBackup,
 } = await import("./backup.ts");
-const { buildAuthorization } = await import("./r2.ts");
+const { buildAuthorization, normalizeEndpoint } = await import("./r2.ts");
 
 after(() => rmSync(directory, { recursive: true, force: true }));
 
@@ -136,6 +136,18 @@ test("SigV4 matches the official AWS example signature", () => {
     authorization,
     /Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41$/,
   );
+});
+
+test("a pasted endpoint is cleaned up instead of failing later", () => {
+  const host = "ff01094ec1a8c502d827f42987465e0e.r2.cloudflarestorage.com";
+  // Platzhalter-Klammern aus der Anleitung, fehlendes Schema, Bucket-Pfad.
+  assert.equal(normalizeEndpoint(`https://<${host}>`), `https://${host}`);
+  assert.equal(normalizeEndpoint(`  https://${host}/  `), `https://${host}`);
+  assert.equal(normalizeEndpoint(host), `https://${host}`);
+  assert.equal(normalizeEndpoint(`https://${host}/streaminghub-backups`), `https://${host}`);
+  // Unbrauchbare Werte gelten als nicht konfiguriert.
+  assert.equal(normalizeEndpoint(""), "");
+  assert.equal(normalizeEndpoint("https://<>"), "");
 });
 
 test("encryption round-trips and is bound to the account", () => {

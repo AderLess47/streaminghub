@@ -23,6 +23,29 @@ export type R2Config = {
 const sha256Hex = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 const hmac = (key: Buffer | string, data: string) => createHmac("sha256", key).update(data).digest();
 
+/**
+ * Räumt einen von Hand kopierten Endpoint auf.
+ *
+ * Zwei Fehler passieren dabei immer wieder: die spitzen Klammern aus der
+ * Anleitung bleiben stehen (`https://<account>.r2…`), oder es wird die
+ * komplette Bucket-URL kopiert. Beides ergibt einen ungültigen Host und würde
+ * sonst erst beim ersten Upload auffallen – hier fällt es sofort auf, und ein
+ * unbrauchbarer Wert gilt als „nicht konfiguriert“.
+ */
+export function normalizeEndpoint(value: string): string {
+  const cleaned = value.replace(/[<>\s"']/g, "");
+  if (!cleaned) return "";
+  const withScheme = /^https?:/i.test(cleaned) ? cleaned : `https://${cleaned}`;
+  try {
+    const url = new URL(withScheme);
+    // `new URL("https:")` wirft nicht, hat aber keinen Host.
+    if (!url.hostname.includes(".")) return "";
+    return url.origin;
+  } catch {
+    return "";
+  }
+}
+
 /** `20130524T000000Z` – das Format, das SigV4 im Header erwartet. */
 const amzTimestamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
