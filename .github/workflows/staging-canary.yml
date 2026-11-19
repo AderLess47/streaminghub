@@ -98,6 +98,11 @@ jobs:
       # The commit the canary actually verified: the artifact commit of the
       # triggering deploy, or the default-branch checkout of a scheduled run.
       commit: ${{ steps.deployed_commit.outputs.sha || github.sha }}
+      # Set when the canary stopped on deploy drift (staging serves another
+      # commit). Such a failure never ran a billing check, so it is reported on
+      # its own issue instead of `Staging canary failing`.
+      drift: ${{ steps.run_canary.outputs.drift }}
+      served: ${{ steps.run_canary.outputs.served }}
 
     steps:
       - name: Resolve deployed commit
@@ -201,6 +206,7 @@ jobs:
           node scripts/staging-canary-db-preflight-summary.mjs "$RUNNER_TEMP/staging-canary-db-sweep.json"
 
       - name: Run canary
+        id: run_canary
         env:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
           STAGING_APP: streaminghub-staging
@@ -231,7 +237,31 @@ jobs:
               exit 1
               ;;
           esac
-          node scripts/staging-canary.mjs
+          # Exit code 3 is deploy drift: the commit comparison failed before any
+          # billing check. Report it as its own signal and keep it out of the
+          # billing issue, which must mean "billing is broken".
+          log="$RUNNER_TEMP/staging-canary.log"
+          set +e
+          node scripts/staging-canary.mjs 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 3 ]; then
+            served=$(sed -n 's/.*staging deploy drift: served=\([^ ]*\) expected=.*/\1/p' "$log" | head -1)
+            served="${served:-unknown}"
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "served=$served" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Staging deploy drift"
+              echo
+              echo "- staging serves: \`$served\`"
+              echo "- expected commit: \`$CANARY_EXPECT_COMMIT\`"
+              echo
+              echo "The commit comparison failed, so the billing checks did not run."
+              echo "This is deploy drift, not a billing failure: it is reported on its own"
+              echo "issue and never comments on \`Staging canary failing\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
       - name: Summary
         if: always()
@@ -259,7 +289,8 @@ jobs:
 
     steps:
       - name: Open or update the failure issue
-        if: needs.canary.result == 'failure' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        # Drift never reaches a billing check, so it stays out of this issue.
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -300,6 +331,49 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
 
+      - name: Open or update the drift issue
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          SERVED: ${{ needs.canary.outputs.served }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging deploy drift"
+          case "$TRIGGER" in
+            schedule) summary='Staging stellt beim täglichen Canary nicht den erwarteten Commit bereit.'; label='Zeitplan' ;;
+            workflow_run) summary='Staging stellt nach dem Deploy nicht den deployten Commit bereit.'; label='Deploy' ;;
+            workflow_dispatch) summary='Staging stellt beim externen Nachhol-Lauf nicht den erwarteten Commit bereit.'; label='externer Auslöser' ;;
+            *) summary='Staging stellt nicht den erwarteten Commit bereit.'; label="$TRIGGER" ;;
+          esac
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          # A repeated drift for the same expected commit adds nothing; a daily run
+          # still comments so a persistent drift keeps producing its heartbeat.
+          if [ -n "$existing" ] && [ "$TRIGGER" != 'schedule' ] \
+            && gh issue view "$existing" --json comments --jq '.comments[].body' | grep -qF "Erwartet: $COMMIT"; then
+            echo "Drift for commit $COMMIT is already reported on issue #$existing; nothing to add."
+            exit 0
+          fi
+          body=$(printf '%s\n' \
+            "$summary" \
+            '' \
+            "- Lauf: $RUN_URL" \
+            "- Erwartet: $COMMIT" \
+            "- Staging liefert: $SERVED" \
+            "- Auslöser: $label" \
+            '' \
+            'Der Commit-Vergleich ist fehlgeschlagen, bevor eine Billing-Prüfung lief: auf Staging lief ein älterer, zurückgerollter oder unvollständiger Stand. Das ist eine Deploy-Abweichung und kein Billing-Fehler; das Issue `Staging canary failing` bleibt dafür unberührt.' \
+            '' \
+            'Bitte den Staging-Deploy wiederholen (Actions → Deploy staging) und den Drift-Report des Deploys prüfen. Sobald Staging den erwarteten Commit ausliefert, schließt der nächste erfolgreiche unbeaufsichtigte Lauf dieses Issue; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
       - name: Annotate a failed manual run
         if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'external'
         env:
@@ -320,7 +394,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Discord
-        if: needs.canary.result == 'failure' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        # Drift has its own issue and the deploy run reports it; posting the
+        # billing alert for it would name the wrong problem.
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -375,6 +451,34 @@ jobs:
             *) trigger="$TRIGGER" ;;
           esac
           gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
+          gh issue close "$existing" --reason completed
+
+      - name: Close the drift issue after recovery
+        # A green unattended run proves staging now serves the expected commit,
+        # so a drift issue left over from an earlier run is resolved as well.
+        if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging deploy drift"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          if [ -z "$existing" ]; then
+            echo "No open staging drift issue."
+            exit 0
+          fi
+          case "$TRIGGER" in
+            schedule) trigger='Zeitplan' ;;
+            workflow_run) trigger='Deploy' ;;
+            workflow_dispatch) trigger='externer Auslöser' ;;
+            *) trigger="$TRIGGER" ;;
+          esac
+          gh issue comment "$existing" --body "Staging liefert wieder den erwarteten Commit \`$COMMIT\` und der Canary läuft erfolgreich (Auslöser: $trigger): $RUN_URL"
           gh issue close "$existing" --reason completed
 
       - name: Report the daily success to the heartbeat

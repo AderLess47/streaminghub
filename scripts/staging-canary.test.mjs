@@ -457,7 +457,7 @@ test("canary success and failure paths keep cleanup single and complete", async 
   }
 });
 
-test("deployed environment or commit mismatch fails before registration", async () => {
+test("a deployed environment mismatch fails as an ordinary failure", async () => {
   const server = createServer((request, response) => {
     if (request.method === "GET" && request.url?.startsWith("/v1/webhook_endpoints")) {
       response.writeHead(200, { "content-type": "application/json", connection: "close" });
@@ -504,8 +504,73 @@ test("deployed environment or commit mismatch fails before registration", async 
       STRIPE_API_BASE: base,
     });
 
-    assert.notEqual(result.status, 0, "a deployment metadata mismatch must fail the canary");
-    assert.match(result.stderr, /deployed environment or commit does not match/);
+    assert.equal(result.status, 1, "a wrong environment must fail the canary like any other check");
+    assert.match(result.stderr, /deployed environment is production, expected staging/);
+  } finally {
+    server.closeAllConnections?.();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("a commit mismatch is reported as deploy drift with its own exit code", async () => {
+  let registerCalls = 0;
+  const servedCommit = "feedfacefeedfacefeedfacefeedfacefeedface";
+  const server = createServer((request, response) => {
+    if (request.method === "GET" && request.url?.startsWith("/v1/webhook_endpoints")) {
+      response.writeHead(200, { "content-type": "application/json", connection: "close" });
+      response.end(
+        JSON.stringify({
+          data: [
+            {
+              url: `http://${request.headers.host}/api/webhooks/stripe`,
+              livemode: false,
+              status: "enabled",
+              enabled_events: [
+                "checkout.session.completed",
+                "customer.subscription.created",
+                "customer.subscription.updated",
+                "customer.subscription.deleted",
+                "invoice.paid",
+                "invoice.payment_failed",
+              ],
+            },
+          ],
+          has_more: false,
+        }),
+      );
+      return;
+    }
+    if (request.method === "GET" && request.url === "/status") {
+      return sendHtml(response, deploymentHtml({ commit: servedCommit }));
+    }
+    if (request.method === "POST" && request.url === "/api/auth/register") {
+      registerCalls += 1;
+    }
+    response.writeHead(404, { "content-type": "application/json", connection: "close" });
+    response.end(JSON.stringify({ error: { message: "unexpected request" } }));
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const { port } = server.address();
+    const base = `http://127.0.0.1:${port}`;
+
+    const result = await runCanary({
+      ...baseEnv(),
+      STAGING_BASE_URL: base,
+      STRIPE_API_BASE: base,
+    });
+
+    assert.equal(result.status, 3, "drift must exit with its own code: " + result.stderr);
+    assert.match(result.stderr, /::error title=Staging deploy drift::/);
+    assert.match(
+      result.stderr,
+      new RegExp(`staging deploy drift: served=${servedCommit} expected=commit-test`),
+    );
+    assert.equal(registerCalls, 0, "drift must stop before a synthetic account is created");
   } finally {
     server.closeAllConnections?.();
     await new Promise((resolve) => server.close(resolve));

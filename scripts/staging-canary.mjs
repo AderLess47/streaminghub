@@ -28,6 +28,13 @@
  *   CANARY_TIMEOUT_MS       default 90000
  *   CANARY_LOCAL_ASSERT=1   run the assert helper locally (for development)
  *   FLYCTL_BIN              default flyctl
+ *
+ * Exit codes:
+ *   0  every billing check passed and cleanup completed
+ *   1  a billing, provider or cleanup check failed
+ *   3  deploy drift: staging serves a commit other than the expected one, so no
+ *      billing check ran. The workflow reports this on its own issue instead of
+ *      calling it a billing failure.
  */
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
@@ -65,6 +72,7 @@ const password = `Canary-${randomBytes(18).toString("base64url")}!`;
 let checks = 0;
 let failures = 0;
 let cleanupRuns = 0;
+let driftDetected = false;
 
 function ok(condition, label, detail = "") {
   checks += 1;
@@ -78,6 +86,21 @@ function ok(condition, label, detail = "") {
 
 function fail(message) {
   throw new Error(message);
+}
+
+/**
+ * Staging serving another commit means the image was built from a different SHA
+ * (older, rolled back or half-deployed), so none of the billing checks below ran.
+ * That is a deploy drift, not a billing failure: it exits with code 3 and the
+ * workflow reports it on its own issue.
+ */
+function failDrift(served, expected) {
+  driftDetected = true;
+  ok(false, `deployed commit is ${expected} (${served})`);
+  console.error(
+    `::error title=Staging deploy drift::Staging serves ${served} instead of ${expected}; the billing checks did not run.`,
+  );
+  throw new Error(`staging deploy drift: served=${served} expected=${expected}`);
 }
 
 /**
@@ -355,13 +378,13 @@ async function main() {
       deployment.environment === EXPECTED_ENV,
       `deployed environment is ${EXPECTED_ENV} (${deployment.environment})`,
     );
-    ok(
-      deployment.commit === EXPECTED_COMMIT,
-      `deployed commit is ${EXPECTED_COMMIT} (${deployment.commit})`,
-    );
-    if (deployment.environment !== EXPECTED_ENV || deployment.commit !== EXPECTED_COMMIT) {
-      fail("deployed environment or commit does not match the canary");
+    if (deployment.environment !== EXPECTED_ENV) {
+      fail(`deployed environment is ${deployment.environment}, expected ${EXPECTED_ENV}`);
     }
+    if (deployment.commit !== EXPECTED_COMMIT) {
+      failDrift(deployment.commit ?? "unknown", EXPECTED_COMMIT);
+    }
+    ok(true, `deployed commit is ${EXPECTED_COMMIT} (${deployment.commit})`);
 
     cleanupNeeded = true;
     const registration = await request(
@@ -626,5 +649,5 @@ try {
 } finally {
   const total = Math.max(checks, failures);
   console.log(`\n${Math.max(0, checks - failures)}/${total} checks passed (cleanup calls: ${cleanupRuns}).`);
-  if (failures > 0) process.exitCode = 1;
+  if (failures > 0) process.exitCode = driftDetected ? 3 : 1;
 }

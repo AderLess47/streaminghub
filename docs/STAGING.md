@@ -137,6 +137,17 @@ The `/status` page exposes its deployed environment and commit as
 `CANARY_EXPECT_COMMIT`; a stale or incorrectly targeted staging image fails
 before a synthetic user is created.
 
+The two mismatches are deliberately not the same failure:
+
+- a **wrong environment** is an ordinary failure (`exit 1`), because the canary
+  is pointed at something it must never test;
+- a **different commit** is deploy drift (`exit 3`): staging serves an older,
+  rolled-back or half-deployed image, no billing check ran, and billing is not
+  implicated. The workflow reports it on the separate issue `Staging deploy
+  drift` and leaves `Staging canary failing` alone. This separation exists
+  because the first real scheduled run failed on a stale staging commit and
+  opened `Staging canary failing`, which named the wrong problem.
+
 The canary creates a real Stripe test-mode Checkout Session through the app,
 creates a test subscription with a test payment method, and sends the signed
 `checkout.session.completed` and `customer.subscription.deleted` events. It
@@ -203,6 +214,7 @@ signal that still reaches someone when a whole day of slots is dropped.
 | Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
 | Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
+| Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging deploy drift` with the expected and served commit; never `Staging canary failing` |
 | External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
 | External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 8 hours |
 
@@ -210,6 +222,10 @@ The properties that hold across all of them:
 
 - The issue is the primary alarm and needs nothing but the workflow's own
   `GITHUB_TOKEN`; it works without any chat or monitoring integration.
+- `Staging canary failing` always means a billing, provider or cleanup check
+  failed. A run that stops on the commit comparison never reaches a billing
+  check, so it opens `Staging deploy drift` instead; that issue names the
+  expected and the served commit and asks for a fresh deploy.
 - `DISCORD_WEBHOOK_URL` and `CANARY_HEARTBEAT_URL` are optional. When they are
   missing the step logs a warning and skips, so a missing secret can never
   suppress or delay the issue.
@@ -225,6 +241,13 @@ The properties that hold across all of them:
   `livemode: true` sessions and a non-staging base URL.
 
 The subsections below describe each part in detail.
+
+A run that fails on deploy drift opens (or updates) `Staging deploy drift` with
+the expected commit, the commit staging actually served and the run link. It is
+the same single-issue bookkeeping as the billing alarm: unattended triggers only,
+repeated drift for the same expected commit adds no second comment, the daily run
+comments again, and the next successful unattended run comments on and closes it
+— a green run also closes the drift issue of an earlier failure.
 
 A failed run opens (or updates) the issue `Staging canary failing` with the run
 link and commit. Both unattended paths do this: the daily scheduled run and the
