@@ -213,9 +213,9 @@ export const en: Dictionary = {
     },
     premium: {
       eyebrow: "StreamingHub Premium",
-      title: "More control for €2.49 per month",
+      title: "More control for €3.49 per month",
       subtitle:
-        "€2.49 per month. Final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Cancel monthly.",
+        "€3.49 per month. Final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Cancel monthly.",
       ctaPrimary: "Discover Premium",
       ctaSecondary: "Manage my subscription",
       note: "Premium currently includes continue watching on every device and cross-device account management. Payments are processed only after server-side confirmation.",
@@ -238,7 +238,7 @@ export const en: Dictionary = {
     title: "StreamingHub Premium",
     subtitle:
       "A subscription for cross-device continue watching and managing your devices.",
-    price: "€2.49",
+    price: "€3.49",
     period: "per month",
     vat: "Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
     ctaPrimary: "Discover Premium",
@@ -251,7 +251,7 @@ export const en: Dictionary = {
     billingNotice:
       "Note: no payment provider is connected yet. The web checkout is technically prepared but does not trigger a payment. Your subscription status stays “not active” until a real payment has been confirmed server-side.",
     billingLiveNotice:
-      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount of €2.49. No VAT is charged.",
+      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount of €3.49. No VAT is charged.",
     featuresTitle: "Premium features",
     features: [
       {
@@ -558,7 +558,7 @@ export const en: Dictionary = {
         "This subscription is managed through the Amazon Appstore. Cancellations and changes happen in your Amazon account.",
       noSubscription:
         "No premium subscription is stored yet. Premium adds cross-device continue watching and device management.",
-      priceNote: "€2.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
+      priceNote: "€3.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
       conversionCouponNote:
         "A discount for the first billing periods is stored for your trial. It is applied automatically at checkout – no code needed.",
       retentionTitle: "Stay with Premium – at a discount",
