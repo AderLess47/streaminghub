@@ -1045,7 +1045,7 @@ export const en: Dictionary = {
       devices: "Devices",
       overLimit: "Above free limit",
       overLimitHint:
-        "“Above free limit” counts expired trials that still have more active devices than the free plan allows. The closing email promises that devices stay linked; this number shows how many accounts use that.",
+        "“Above free limit” counts expired trials with more active devices than allowed – for example because the trial ended before this rule or the limit was lowered. On expiry, surplus devices are unlinked automatically; the most recently used ones stay.",
       overLimitRow: "More active devices than the free plan allows",
       flagOff: "The trial is switched off. Running trials still end on their stored date.",
     },

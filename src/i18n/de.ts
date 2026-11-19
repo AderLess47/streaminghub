@@ -1048,7 +1048,7 @@ export const de = {
       devices: "Geräte",
       overLimit: "Über Free-Limit",
       overLimitHint:
-        "„Über Free-Limit“ zählt abgelaufene Trials, die noch mehr aktive Geräte haben, als der kostenlose Tarif erlaubt. Die Abschlussmail sagt zu, dass Geräte verknüpft bleiben; die Zahl zeigt, wie viele Konten davon Gebrauch machen.",
+        "„Über Free-Limit“ zählt abgelaufene Trials mit mehr aktiven Geräten als erlaubt – etwa weil der Trial vor dieser Regel endete oder das Limit gesenkt wurde. Beim Ablauf werden überzählige Geräte automatisch abgemeldet, die zuletzt genutzten bleiben.",
       overLimitRow: "Mehr aktive Geräte als im kostenlosen Tarif",
       flagOff:
         "Der Testzeitraum ist ausgeschaltet. Laufende Trials enden trotzdem zum hinterlegten Datum.",

@@ -129,6 +129,8 @@ test("a trial ending inside the window gets exactly one reminder", async () => {
   assert.equal(mails.length, 1);
   assert.match(mails[0].subject, /endet bald/);
   assert.match(mails[0].body_text, /2 Geräten/);
+  assert.match(mails[0].body_text, /abgemeldet/);
+  assert.doesNotMatch(mails[0].body_text, /bleiben gekoppelt/);
   assert.match(mails[0].body_text, /monatlich kündbar/);
 
   // Zweiter Lauf am selben Tag: kein zweiter Versand.
@@ -222,4 +224,80 @@ test("the job token is required, compared exactly and never empty", () => {
   assert.equal(authorizeJob("secre", "secret"), "forbidden");
   assert.equal(authorizeJob("secret2", "secret"), "forbidden");
   assert.equal(authorizeJob("secret", "secret"), "ok");
+});
+
+function seedDevice(userId: string, id: string, seenHoursAgo: number, status = "active") {
+  const base = Date.now();
+  run(
+    `INSERT INTO devices (id, user_id, name, platform, status, activated_at, last_seen_at, created_at)
+     VALUES (?, ?, ?, 'android', ?, ?, ?, ?)`,
+    id,
+    userId,
+    id,
+    status,
+    new Date(base - 30 * DAY).toISOString(),
+    new Date(base - seenHoursAgo * HOUR).toISOString(),
+    new Date(base - 30 * DAY).toISOString(),
+  );
+}
+
+function activeDevices(userId: string) {
+  return all<{ id: string }>(
+    `SELECT id FROM devices WHERE user_id = ? AND status = 'active' ORDER BY id`,
+    userId,
+  ).map((device) => device.id);
+}
+
+test("an ended trial keeps only the most recently used devices", async () => {
+  seedUser("job-devices");
+  seedTrial("job-devices", { endsInMs: -HOUR });
+  seedDevice("job-devices", "dev-new", 1);
+  seedDevice("job-devices", "dev-mid", 5);
+  seedDevice("job-devices", "dev-old", 40);
+  seedDevice("job-devices", "dev-oldest", 400);
+  seedDevice("job-devices", "dev-gone", 0, "revoked");
+
+  const summary = await runTrialJobs();
+  assert.equal(summary.devicesRevoked, 2);
+  assert.deepEqual(activeDevices("job-devices"), ["dev-mid", "dev-new"]);
+
+  const mail = mailsTo("job-devices@example.test")[0];
+  assert.match(mail.body_text, /2 Geräten/);
+  assert.match(mail.body_text, /2 weitere Geräte wurden deshalb abgemeldet/);
+  assert.doesNotMatch(mail.body_text, /bleiben gekoppelt/);
+
+  // Zweiter Lauf meldet nichts erneut ab.
+  const second = await runTrialJobs();
+  assert.equal(second.devicesRevoked, 0);
+  assert.deepEqual(activeDevices("job-devices"), ["dev-mid", "dev-new"]);
+});
+
+test("a trial that converts keeps every device", async () => {
+  seedUser("job-devices-paid");
+  seedTrial("job-devices-paid", {
+    endsInMs: -HOUR,
+    status: "active",
+    periodEnd: new Date(Date.now() + 20 * DAY).toISOString(),
+  });
+  for (const [index, id] of ["paid-1", "paid-2", "paid-3", "paid-4"].entries()) {
+    seedDevice("job-devices-paid", id, index + 1);
+  }
+
+  const summary = await runTrialJobs();
+  assert.equal(summary.devicesRevoked, 0);
+  assert.equal(activeDevices("job-devices-paid").length, 4);
+});
+
+test("dryRun counts surplus devices without unlinking them", async () => {
+  seedUser("job-devices-dry");
+  seedTrial("job-devices-dry", { endsInMs: -HOUR });
+  for (const [index, id] of ["dry-1", "dry-2", "dry-3"].entries()) {
+    seedDevice("job-devices-dry", id, index + 1);
+  }
+
+  const summary = await runTrialJobs({ dryRun: true });
+  assert.equal(summary.devicesRevoked, 1);
+  assert.equal(activeDevices("job-devices-dry").length, 3);
+  assert.equal(mailsTo("job-devices-dry@example.test").length, 0);
+  assert.equal(row("job-devices-dry")?.trial_ended_at, null);
 });
