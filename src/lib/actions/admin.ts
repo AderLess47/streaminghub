@@ -12,6 +12,8 @@ import {
   type ContactMessageStatus,
 } from "@/lib/contact-messages";
 import { all, get, nowIso, run } from "@/lib/db";
+import { FEATURE_FLAGS } from "@/lib/flags";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trial";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
 import { requireAdmin, requireStaff, getSessionUser } from "@/lib/session";
@@ -658,3 +660,43 @@ export async function confirmMfaSetupAction(_prev: MfaState, formData: FormData)
   return { ok: true, message: "MFA ist aktiv.", recoveryCodes };
 }
 
+
+/**
+ * Schaltet die Monetarisierungs-Flags und die Testdauer.
+ *
+ * Die Checkboxen kommen als vollständiges Formular: fehlt ein Feld, ist der
+ * Flag aus. Der Vorgang wird auditiert, damit sichtbar bleibt, wer wann welche
+ * Funktion aktiviert hat.
+ */
+export async function saveMonetizationAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const values: Record<string, string> = {};
+  for (const key of Object.values(FEATURE_FLAGS)) {
+    values[key] = formData.get(key) === "on" ? "1" : "0";
+  }
+  const requested = Number(formData.get("trial_days") ?? DEFAULT_TRIAL_DAYS);
+  const days = Number.isFinite(requested) ? Math.min(60, Math.max(1, Math.floor(requested))) : DEFAULT_TRIAL_DAYS;
+  values.trial_days = String(days);
+
+  const timestamp = nowIso();
+  for (const [key, value] of Object.entries(values)) {
+    run(
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      key,
+      value,
+      timestamp,
+    );
+  }
+
+  logAudit({
+    action: "admin.monetization_updated",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    meta: values,
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/premium");
+  revalidatePath("/dashboard/subscription");
+  redirect("/admin/settings?ok=1");
+}

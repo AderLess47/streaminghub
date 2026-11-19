@@ -520,6 +520,13 @@ export const de = {
       pairingSubtitle: "Code aus der App eingeben.",
     },
     subscription: {
+      trialTitle: "14 Tage kostenlos testen",
+      trialBody:
+        "Teste Premium zwei Wochen lang ohne Zahlungsdaten. Danach gilt automatisch wieder der kostenlose Tarif – es wird nichts abgebucht.",
+      trialRunningNote: "Dein Testzeitraum läuft bis",
+      trialCta: "Testzeitraum starten",
+      trialStarted: "Dein Testzeitraum läuft. Ende:",
+      trialFailed: "Der Testzeitraum konnte nicht gestartet werden.",
       title: "Abonnement",
       subtitle: "Status, Abrechnungskanal und Kündigung.",
       currentPlan: "Aktueller Plan",
@@ -640,9 +647,25 @@ export const de = {
       emails: "E-Mail-Ausgang",
       roles: "Rollen & Rechte",
       content: "Inhalte & FAQ",
+      settings: "Monetarisierung",
       status: "Systemstatus",
       audit: "Sicherheitsprotokoll",
       backToSite: "Zur Website",
+    },
+    monetization: {
+      title: "Monetarisierung",
+      subtitle:
+        "Flags für Testzeitraum, Rabatte und Zusatzfunktionen. Änderungen gelten sofort, ohne Deploy.",
+      trial: "Kostenloser Testzeitraum",
+      conversion: "Rabatt nach dem Testzeitraum",
+      retention: "Kündigungs-Rettung",
+      cloudBackup: "Cloud-Backup",
+      annual: "Jahresabo",
+      trialDays: "Testzeitraum in Tagen (1–60)",
+      hint:
+        "Ein Flag aus bedeutet: Das Verhalten bleibt wie ohne die Funktion. Rabatte greifen nur, wenn zusätzlich der passende Stripe-Coupon konfiguriert ist.",
+      save: "Speichern",
+      saved: "Gespeichert. Die Änderung gilt ab dem nächsten Seitenaufruf.",
     },
     overview: {
       customers: "Kunden",

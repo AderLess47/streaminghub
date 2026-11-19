@@ -4,10 +4,12 @@ import { CheckoutButton } from "@/components/checkout-button";
 import { CheckoutSync } from "@/components/checkout-sync";
 import { Icon } from "@/components/icons";
 import { RetentionOffer } from "@/components/retention-offer";
+import { StartTrialButton } from "@/components/start-trial-button";
 import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { cancelSubscriptionAction } from "@/lib/actions/dashboard";
 import { trialConversionCoupon } from "@/lib/conversion";
+import { isFeatureEnabled } from "@/lib/flags";
 import { retentionOffer } from "@/lib/retention";
 import { billingConfigured, effectiveStatus, ensureSubscription, PREMIUM_PRICE_EUR } from "@/lib/payments";
 import { requireUser } from "@/lib/session";
@@ -27,6 +29,17 @@ export default async function SubscriptionPage({
   // rendert die Seite unverändert.
   const offer = retentionOffer(user.id);
   const conversionCoupon = trialConversionCoupon(user.id);
+
+  // Testzeitraum: nur anbieten, wenn die Funktion freigeschaltet ist und das
+  // Konto die Bedingungen erfüllt. Die Entscheidung selbst trifft der Server.
+  const trialEnd = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+  const trialRunning = Boolean(trialEnd && trialEnd.getTime() > Date.now());
+  const trialAvailable =
+    isFeatureEnabled("trial") && user.emailVerified && !trialRunning && !subscription.trial_used_at;
+  const trialEndLabel =
+    trialEnd && Number.isFinite(trialEnd.getTime())
+      ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(trialEnd)
+      : null;
 
   const statusLabel =
     status === "active"
@@ -166,6 +179,26 @@ export default async function SubscriptionPage({
               (already_active) – dann wird die Handlung auch nicht angeboten.
               Bei fehlgeschlagener Zahlung ebenso: Ein neuer Checkout würde ein
               zweites Abo anlegen, statt die offene Zahlung zu klären. */}
+          {status !== "active" && status !== "past_due" && (trialRunning || trialAvailable) ? (
+            <div className="card p-5">
+              <h2 className="text-sm font-semibold">{t.dashboard.subscription.trialTitle}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {trialRunning && trialEndLabel
+                  ? `${t.dashboard.subscription.trialRunningNote} ${trialEndLabel}`
+                  : t.dashboard.subscription.trialBody}
+              </p>
+              {trialRunning ? null : (
+                <div className="mt-4">
+                  <StartTrialButton
+                    label={t.dashboard.subscription.trialCta}
+                    startedLabel={t.dashboard.subscription.trialStarted}
+                    failedLabel={t.dashboard.subscription.trialFailed}
+                  />
+                </div>
+              )}
+            </div>
+          ) : null}
+
           {status !== "active" && status !== "past_due" ? (
             <div className="card p-5">
               <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
