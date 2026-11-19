@@ -517,6 +517,13 @@ export const en: Dictionary = {
       pairingSubtitle: "Enter the code from the app.",
     },
     subscription: {
+      trialTitle: "Try Premium free for 14 days",
+      trialBody:
+        "Test Premium for two weeks without payment details. Afterwards the free plan applies again automatically – nothing is charged.",
+      trialRunningNote: "Your trial runs until",
+      trialCta: "Start trial",
+      trialStarted: "Your trial is running. Ends:",
+      trialFailed: "The trial could not be started.",
       title: "Subscription",
       subtitle: "Status, billing channel and cancellation.",
       currentPlan: "Current plan",
@@ -637,9 +644,25 @@ export const en: Dictionary = {
       emails: "Email outbox",
       roles: "Roles & permissions",
       content: "Content & FAQ",
+      settings: "Monetisation",
       status: "System status",
       audit: "Security log",
       backToSite: "Back to website",
+    },
+    monetization: {
+      title: "Monetisation",
+      subtitle:
+        "Flags for trial, discounts and add-ons. Changes apply immediately, without a deploy.",
+      trial: "Free trial period",
+      conversion: "Discount after the trial",
+      retention: "Cancellation retention",
+      cloudBackup: "Cloud backup",
+      annual: "Annual plan",
+      trialDays: "Trial length in days (1–60)",
+      hint:
+        "A flag that is off means the behaviour stays as without the feature. Discounts only apply when the matching Stripe coupon is configured as well.",
+      save: "Save",
+      saved: "Saved. The change applies from the next page view.",
     },
     overview: {
       customers: "Customers",
