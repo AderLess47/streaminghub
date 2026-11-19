@@ -381,7 +381,7 @@ live.
 | `AMAZON_IAP_SKU` | Fly env (optional) | Defaults to `premium_monthly`; must match the console IAP item |
 | `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
-| `TRIAL_JOB_TOKEN` | Fly secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 |
+| `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial jobs* workflow skips |
 
 The easiest path needs no local tooling: add the values under *GitHub → Settings
 → Secrets and variables → Actions* as `AMAZON_RVS_SHARED_SECRET`,
@@ -508,7 +508,7 @@ fly secrets set NAME=… -a streaminghub-org      # Wert aus dem eigenen Passwor
 | `OPERATOR_LEGAL_NAME`, `OPERATOR_REPRESENTATIVE`, `OPERATOR_STREET`, `OPERATOR_POSTAL_CODE`, `OPERATOR_CITY`, `OPERATOR_PHONE` | für den Livegang | Betreiberdaten im Impressum; ohne sie stehen dort Platzhalter |
 | `AMAZON_RVS_SHARED_SECRET` | für Fire-TV-Käufe | Shared Key aus der Amazon Developer Console |
 | `AMAZON_SYNC_TOKEN` | für den täglichen Abgleich | derselbe Wert zusätzlich als GitHub-Actions-Secret |
-| `TRIAL_JOB_TOKEN` | für die Trial-Jobs | gemeinsames Token für `POST /api/internal/trial-jobs` (Erinnerung und Ablauf); ohne es antwortet der Endpunkt 503 |
+| `TRIAL_JOB_TOKEN` | für die Trial-Jobs | gemeinsames Token für `POST /api/internal/trial-jobs` (Erinnerung und Ablauf), derselbe Wert zusätzlich als GitHub-Actions-Secret |
 | `AMAZON_RTN_TOPIC_ARN` | nach der RTN-Registrierung | SNS-Topic; vorher leer lassen (siehe 11.4) |
 
 Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,

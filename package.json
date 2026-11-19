@@ -25,6 +25,7 @@
     "test:trial-jobs": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/trial-jobs.test.ts",
     "test:contracts": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/contract-requests.test.ts",
     "amazon:sync": "node --env-file-if-exists=.env.local scripts/amazon-sync.mjs",
+    "trial:jobs": "node --env-file-if-exists=.env.local scripts/trial-jobs.mjs",
     "db:init": "node scripts/init-db.mjs",
     "release:apk": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.release scripts/release-apk.mjs",
     "release:sync": "node scripts/release-sync.mjs",
