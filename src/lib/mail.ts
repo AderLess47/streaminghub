@@ -1,5 +1,6 @@
 import { randomToken } from "./auth";
 import { get, nowIso, run } from "./db";
+import { DEFAULT_FREE_DEVICE_LIMIT } from "./entitlements";
 import { env, isEmailConfigured } from "./env";
 
 export type MailKind =
@@ -476,9 +477,12 @@ export function trialReminderMail(input: {
   locale: string;
   trialEndsAt: string;
   priceEur: number;
+  /** Limit des kostenlosen Tarifs; steht so auch im Fließtext. */
+  deviceLimit?: number;
 }): MailTemplate {
   const de = input.locale !== "en";
   const link = `${env.appUrl}/premium`;
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const end = new Date(input.trialEndsAt);
   const endDate = Number.isFinite(end.getTime())
     ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
@@ -496,8 +500,8 @@ export function trialReminderMail(input: {
       ? "Dein Testzeitraum endet bald – StreamingHub"
       : "Your trial ends soon – StreamingHub",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium${endDate ? ` endet am ${endDate}` : " endet in Kürze"}. Danach gilt wieder der kostenlose Tarif mit 2 Geräten.\n\nEs wird nichts abgebucht: Ohne Abo endet der Testzeitraum automatisch. Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert – es entfallen nur die Premium-Extras wie das fünfte Gerät.\n\nWenn du Premium behalten willst, sind es ${price} pro Monat, monatlich kündbar:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium${endDate ? ` ends on ${endDate}` : " ends soon"}. Afterwards the free plan with 2 devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. Your devices stay linked and your playlist stays stored – you only lose the Premium extras such as the fifth device.\n\nIf you want to keep Premium, it costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium${endDate ? ` endet am ${endDate}` : " endet in Kürze"}. Danach gilt wieder der kostenlose Tarif mit ${limit} Geräten.\n\nEs wird nichts abgebucht: Ohne Abo endet der Testzeitraum automatisch. Aktiv bleiben dann die ${limit} zuletzt genutzten Geräte; alle weiteren werden beim Ablauf abgemeldet. Deine Playlist bleibt gespeichert; ein abgemeldetes Gerät kannst du in der App neu koppeln, sobald du im Konto ein anderes entfernst.\n\nWenn du Premium behalten willst, sind es ${price} pro Monat, monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium${endDate ? ` ends on ${endDate}` : " ends soon"}. Afterwards the free plan with ${limit} devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. The ${limit} most recently used devices stay active; any others are unlinked when the trial ends. Your playlist stays stored; an unlinked device can be paired again in the app once you remove another one in your account.\n\nIf you want to keep Premium, it costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
   };
 }
 
@@ -509,9 +513,15 @@ export function trialEndedMail(input: {
   name: string;
   locale: string;
   priceEur: number;
+  /** Limit des kostenlosen Tarifs; steht so auch im Fließtext. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ablauf abgemeldet wurden. */
+  devicesRevoked?: number;
 }): MailTemplate {
   const de = input.locale !== "en";
   const link = `${env.appUrl}/premium`;
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const revoked = input.devicesRevoked ?? 0;
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
     style: "currency",
     currency: "EUR",
@@ -520,8 +530,8 @@ export function trialEndedMail(input: {
   return {
     subject: de ? "Dein Testzeitraum ist beendet – StreamingHub" : "Your trial has ended – StreamingHub",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit 2 Geräten. Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with 2 devices applies from now on. Your devices stay linked and your playlist stays stored, so you can keep watching at any time.\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit ${limit} Geräten. ${revoked > 0 ? `Davon bleiben die zuletzt genutzten aktiv; ${revoked} weitere ${revoked === 1 ? "Gerät wurde" : "Geräte wurden"} deshalb abgemeldet. ` : "Deine Geräte bleiben gekoppelt "}Deine Playlist bleibt gespeichert. Im Konto kannst du Geräte entfernen und in der App neu koppeln – ein abgemeldetes Gerät also, sobald wieder Platz ist.\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with ${limit} devices applies from now on. ${revoked > 0 ? `The most recently used ones stay active; ${revoked} other ${revoked === 1 ? "device was" : "devices were"} unlinked for that reason. ` : "Your devices stay linked "}Your playlist stays stored. You can remove devices in your account and pair them again in the app – so an unlinked device can come back once there is room.\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
   };
 }
 

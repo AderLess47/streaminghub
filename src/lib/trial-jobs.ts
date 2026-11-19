@@ -10,13 +10,18 @@
  *
  * Der Abo-Status bleibt unberührt: Nach dem Ende greift automatisch der
  * kostenlose Tarif, weil `getEntitlements()` nur ein laufendes `trial_ends_at`
- * zählt. Widerrufen wird nichts – Geräte und Playlist bleiben.
+ * zählt. Geräte über dem kostenlosen Limit werden dabei abgemeldet – aktiv
+ * bleiben die zuletzt genutzten, die Abschlussmail nennt die Zahl. Die Playlist
+ * bleibt gespeichert, und ein abgemeldetes Gerät lässt sich im Konto wieder
+ * aktivieren, sobald ein anderes entfernt ist.
  *
  * Aufruf über `POST /api/internal/trial-jobs` aus einem Scheduler; jede
  * Ausführung ist wiederholbar. Nur serverseitig verwenden.
  */
 import { timingSafeEqual } from "node:crypto";
+import { getSetting } from "./content";
 import { all, run } from "./db";
+import { DEFAULT_FREE_DEVICE_LIMIT } from "./entitlements";
 import { sendMail, trialEndedMail, trialReminderMail } from "./mail";
 import { PREMIUM_PRICE_EUR } from "./pricing";
 
@@ -52,6 +57,8 @@ export type TrialJobSummary = {
   skipped: number;
   /** Zeilen mit unbrauchbarem Datum oder fehlgeschlagenem Versand. */
   failed: number;
+  /** Geräte, die über das kostenlose Limit hinaus abgemeldet wurden. */
+  devicesRevoked: number;
 };
 
 export type TrialJobInput = {
@@ -65,7 +72,15 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
   const now = input.now ?? Date.now();
   const dryRun = input.dryRun === true;
   const nowDate = new Date(now).toISOString();
-  const summary: TrialJobSummary = { dryRun, reminders: 0, expired: 0, skipped: 0, failed: 0 };
+  const summary: TrialJobSummary = {
+    dryRun,
+    reminders: 0,
+    expired: 0,
+    skipped: 0,
+    failed: 0,
+    devicesRevoked: 0,
+  };
+  const freeLimit = freeDeviceLimit();
 
   // Zuerst abgelaufene Trials: Ein Trial, der genau jetzt endet, soll keine
   // Erinnerung mehr bekommen.
@@ -94,6 +109,23 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
       continue;
     }
 
+    // Nach dem Trial gilt das kostenlose Limit: Die zuletzt genutzten Geräte
+    // bleiben angemeldet, der Rest wird abgemeldet. Ein laufendes Gerät, das
+    // weiter schaut, ist damit keine Dauerfreigabe über das Abo hinaus.
+    const surplus = devicesOverLimit(row.user_id, freeLimit);
+    summary.devicesRevoked += surplus.length;
+    if (!dryRun && surplus.length > 0) {
+      for (const device of surplus) {
+        run(
+          `UPDATE devices SET status = 'revoked', revoked_at = ?
+           WHERE id = ? AND user_id = ? AND status = 'active'`,
+          nowDate,
+          device.id,
+          row.user_id,
+        );
+      }
+    }
+
     if (!dryRun) {
       try {
         await sendMail({
@@ -102,6 +134,8 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
             name: row.display_name,
             locale: row.locale,
             priceEur: PREMIUM_PRICE_EUR,
+            deviceLimit: freeLimit,
+            devicesRevoked: surplus.length,
           }),
           kind: "subscription",
         });
@@ -143,6 +177,7 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
             locale: row.locale,
             trialEndsAt: row.trial_ends_at,
             priceEur: PREMIUM_PRICE_EUR,
+            deviceLimit: freeLimit,
           }),
           kind: "subscription",
         });
@@ -183,6 +218,28 @@ function reminderTrials(now: number, nowDate: string): TrialRow[] {
      LIMIT ${BATCH_LIMIT}`,
     nowDate,
     until,
+  );
+}
+
+/** Limit aus den Einstellungen, mit dem Standardwert als Rückfall. */
+function freeDeviceLimit(): number {
+  const raw = Number(getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT)));
+  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : DEFAULT_FREE_DEVICE_LIMIT;
+}
+
+/**
+ * Aktive Geräte jenseits des Limits – die am längsten ungenutzten zuerst.
+ * Sortiert wird nach letzter Nutzung, damit das Gerät, mit dem jemand gerade
+ * schaut, nicht abgemeldet wird.
+ */
+function devicesOverLimit(userId: string, limit: number): { id: string }[] {
+  return all<{ id: string }>(
+    `SELECT id FROM devices
+      WHERE user_id = ? AND status = 'active'
+      ORDER BY COALESCE(last_seen_at, activated_at, created_at) DESC, created_at DESC
+      LIMIT -1 OFFSET ?`,
+    userId,
+    Math.max(0, Math.floor(limit)),
   );
 }
 
