@@ -13,6 +13,16 @@ const bool = (value: string | undefined) => value === "1" || value?.toLowerCase(
 const boundedNumber = (value: number, min: number, max: number, fallback: number) =>
   Number.isFinite(value) && value > 0 ? Math.min(Math.max(Math.floor(value), min), max) : fallback;
 
+/**
+ * Endpoints werden von Hand kopiert: „acct.r2.cloudflarestorage.com“ ohne
+ * Schema ist der häufigste Fehler. `new URL` würde daran scheitern.
+ */
+const asEndpoint = (value: string) => {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 export const env = {
   appUrl: (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
   deployEnv:
@@ -73,10 +83,10 @@ export const env = {
   },
   backup: {
     /** Cloudflare R2 (S3-kompatibel) für die verschlüsselten Sicherungen. */
-    r2Endpoint: (process.env.R2_ENDPOINT ?? "").replace(/\/$/, ""),
-    r2Bucket: process.env.R2_BUCKET ?? "",
-    r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
-    r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
+    r2Endpoint: asEndpoint(process.env.R2_ENDPOINT ?? ""),
+    r2Bucket: (process.env.R2_BUCKET ?? "").trim(),
+    r2AccessKeyId: (process.env.R2_ACCESS_KEY_ID ?? "").trim(),
+    r2SecretAccessKey: (process.env.R2_SECRET_ACCESS_KEY ?? "").trim(),
     /** Mindestens 32 Zeichen; ein Verlust macht bestehende Sicherungen unlesbar. */
     encryptionKey: process.env.BACKUP_ENCRYPTION_KEY ?? "",
     maxBytes: boundedNumber(Number(process.env.BACKUP_MAX_BYTES ?? 1048576), 1024, 10485760, 1048576),

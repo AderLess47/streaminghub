@@ -1,5 +1,6 @@
 import { apiError } from "@/lib/api";
 import { BackupError } from "@/lib/backup";
+import { R2RequestError } from "@/lib/r2";
 
 /**
  * Übersetzt Backup-Fehler in API-Antworten. Bewusst ohne Details aus dem
@@ -21,6 +22,14 @@ export function backupFailure(error: unknown) {
       case "corrupt":
         return apiError("server_error", "Diese Sicherung ist nicht lesbar.");
     }
+  }
+  if (error instanceof R2RequestError) {
+    // Status und Fehlercode helfen bei der Einrichtung, ohne den Body zu zeigen.
+    console.error("cloud backup storage failed:", error.message);
+    return apiError(
+      "server_error",
+      `Der Speicher hat abgelehnt (${error.status}${error.code ? ` ${error.code}` : ""}).`,
+    );
   }
   console.error("cloud backup failed:", error instanceof Error ? error.message : error);
   return apiError("server_error", "Das Backup ist fehlgeschlagen.");
