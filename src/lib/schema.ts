@@ -325,6 +325,18 @@ CREATE TABLE IF NOT EXISTS watch_progress (
 );
 CREATE INDEX IF NOT EXISTS idx_watch_progress_user ON watch_progress(user_id, updated_at);
 
+-- Cloud-Backup: der Snapshot selbst liegt verschlüsselt in R2, hier steht nur
+-- der Zeiger darauf. Nur Konto und Besitzer werden gespeichert.
+CREATE TABLE IF NOT EXISTS cloud_backups (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  object_key TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  restored_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cloud_backups_user ON cloud_backups(user_id, created_at);
+
 CREATE TABLE IF NOT EXISTS request_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   route TEXT NOT NULL,
