@@ -11,9 +11,10 @@ import {
   storeSubscriptionRefundedMail,
   subscriptionEndedMail,
 } from "./mail";
+import { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR } from "./pricing";
 
-export const PREMIUM_PRICE_EUR = 2.49;
-export const PREMIUM_PLAN_ID = "premium_monthly";
+// Weiterhin von hier exportiert, damit bestehende Importe unverändert bleiben.
+export { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR };
 const STRIPE_TIMEOUT_MS = 10_000;
 
 export type CheckoutOutcome =

@@ -36,43 +36,52 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
+/** Spalten einer Tabelle; eine noch fehlende Tabelle liefert eine leere Menge. */
+function tableColumns(db: DatabaseSync, table: string) {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return new Set(rows.map((row) => row.name));
+}
+
+/**
+ * Additive Migration: legt die Spalte nur an, wenn sie fehlt.
+ * `CREATE TABLE IF NOT EXISTS` ändert bestehende Tabellen nicht, deshalb braucht
+ * jede neue Spalte diesen Weg. Tabellen- und Spaltennamen sind interne
+ * Konstanten, niemals Nutzereingaben.
+ */
+function addColumn(db: DatabaseSync, table: string, name: string, definition: string) {
+  if (tableColumns(db, table).has(name)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+}
+
 /**
  * Additive migrations for databases created before a column existed.
  * `CREATE TABLE IF NOT EXISTS` does not alter existing tables.
  */
 function migrate(db: DatabaseSync) {
-  const columns = db.prepare("PRAGMA table_info(outbox_emails)").all() as { name: string }[];
-  const existing = new Set(columns.map((column) => column.name));
-  const additions: [string, string][] = [
-    ["provider_id", "provider_id TEXT"],
-    ["provider_status", "provider_status TEXT"],
-    ["attempts", "attempts INTEGER NOT NULL DEFAULT 0"],
-    ["last_attempt_at", "last_attempt_at TEXT"],
+  const outboxAdditions: [string, string][] = [
+    ["provider_id", "TEXT"],
+    ["provider_status", "TEXT"],
+    ["attempts", "INTEGER NOT NULL DEFAULT 0"],
+    ["last_attempt_at", "TEXT"],
   ];
-  for (const [name, definition] of additions) {
-    if (!existing.has(name)) db.exec(`ALTER TABLE outbox_emails ADD COLUMN ${definition}`);
+  for (const [name, definition] of outboxAdditions) {
+    addColumn(db, "outbox_emails", name, definition);
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_outbox_provider ON outbox_emails(provider_id)");
 
-  const playlistColumns = db.prepare("PRAGMA table_info(customer_playlists)").all() as { name: string }[];
-  if (!playlistColumns.some((column) => column.name === "customer_requested")) {
-    db.exec("ALTER TABLE customer_playlists ADD COLUMN customer_requested INTEGER NOT NULL DEFAULT 0");
-  }
-  if (!playlistColumns.some((column) => column.name === "device_id")) {
-    db.exec("ALTER TABLE customer_playlists ADD COLUMN device_id TEXT REFERENCES devices(id) ON DELETE CASCADE");
-  }
+  addColumn(db, "customer_playlists", "customer_requested", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(
+    db,
+    "customer_playlists",
+    "device_id",
+    "TEXT REFERENCES devices(id) ON DELETE CASCADE",
+  );
   db.exec("CREATE INDEX IF NOT EXISTS idx_customer_playlists_device ON customer_playlists(device_id)");
 
   // Widerrufe und Kündigungen: „erledigt“ kam später dazu, alte Datenbanken
   // kennen die Spalten noch nicht.
-  const contractColumns = db.prepare("PRAGMA table_info(contract_requests)").all() as { name: string }[];
-  const contractExisting = new Set(contractColumns.map((column) => column.name));
-  if (!contractExisting.has("handled_at")) {
-    db.exec("ALTER TABLE contract_requests ADD COLUMN handled_at TEXT");
-  }
-  if (!contractExisting.has("handled_by")) {
-    db.exec("ALTER TABLE contract_requests ADD COLUMN handled_by TEXT");
-  }
+  addColumn(db, "contract_requests", "handled_at", "TEXT");
+  addColumn(db, "contract_requests", "handled_by", "TEXT");
 }
 
 function prepare(sql: string): Statement {

@@ -219,6 +219,10 @@ function seedSettings() {
       "StreamingHub is a technical IPTV player for Fire TV, Android TV and Android mobile devices. Import your own playlists, manage them clearly and use hardware-aware playback.",
     free_device_limit: "2",
     premium_device_limit: "5",
+    // Monetarisierung startet aus: Der Deploy allein ändert kein Verhalten.
+    trial_enabled: "0",
+    cloud_backup_enabled: "0",
+    annual_enabled: "0",
   };
   for (const [key, value] of Object.entries(defaults)) {
     run(
