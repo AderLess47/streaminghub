@@ -7,6 +7,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { bit, get, nowIso, run, transaction } from "./db";
+import { getEntitlements } from "./entitlements";
 import {
   effectiveStatus,
   ensureSubscription,
@@ -263,6 +264,6 @@ export function appleSubscriptionView(userId: string): AppleSubscriptionView {
     status,
     channel: subscription?.channel ?? "web",
     currentPeriodEnd: subscription?.current_period_end ?? null,
-    premiumActive: status === "active",
+    premiumActive: getEntitlements(userId).premium,
   };
 }

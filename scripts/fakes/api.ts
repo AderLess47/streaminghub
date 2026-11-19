@@ -32,14 +32,26 @@ export async function requireUser(): Promise<SessionUser> {
 /* -------------------------------- Premium -------------------------------- */
 
 const premiumUsers = new Set<string>();
+/** Konto -> Trial-Ende; entspricht `subscriptions.trial_ends_at`. */
+const trialUsers = new Map<string, string>();
 
 export function __setPremium(userId: string, active: boolean): void {
   if (active) premiumUsers.add(userId);
   else premiumUsers.delete(userId);
 }
 
+export function __setTrial(userId: string, endsAt: string | null): void {
+  if (endsAt) trialUsers.set(userId, endsAt);
+  else trialUsers.delete(userId);
+}
+
 export function getSubscription(userId: string): { userId: string; status: string; channel: string } {
-  return { userId, status: premiumUsers.has(userId) ? "active" : "inactive", channel: "web" };
+  const status = premiumUsers.has(userId)
+    ? "active"
+    : trialUsers.has(userId)
+      ? "none"
+      : "inactive";
+  return { userId, status, channel: "web" };
 }
 
 export function effectiveStatus(subscription: { status: string }): string {
@@ -48,16 +60,19 @@ export function effectiveStatus(subscription: { status: string }): string {
 
 /* ------------------------------- Ansprüche ------------------------------- */
 
-/** Gleiche Form wie `Entitlements`; Trial wird in diesen Tests nicht gefahren. */
+/** Gleiche Form wie `Entitlements`; ein laufender Trial zählt als Premium. */
 export function getEntitlements(userId: string) {
-  const premium = premiumUsers.has(userId);
+  const paid = premiumUsers.has(userId);
+  const trialEndsAt = paid ? null : (trialUsers.get(userId) ?? null);
+  const trialActive = trialEndsAt !== null;
+  const premium = paid || trialActive;
   return {
     plan: premium ? "standard" : "free",
-    source: premium ? "stripe" : "none",
+    source: paid ? "stripe" : trialActive ? "trial" : "none",
     premium,
-    trialActive: false,
-    trialEndsAt: null,
-    billingInterval: premium ? "month" : null,
+    trialActive,
+    trialEndsAt,
+    billingInterval: paid ? "month" : null,
     // Entspricht den Defaults aus seed.ts (free 2 / premium 5).
     deviceLimit: premium ? 5 : 2,
     cloudBackup: premium,
@@ -66,7 +81,7 @@ export function getEntitlements(userId: string) {
 }
 
 export function hasPremiumAccess(userId: string): boolean {
-  return premiumUsers.has(userId);
+  return premiumUsers.has(userId) || trialUsers.has(userId);
 }
 
 /* ------------------------------ API-Antworten ---------------------------- */

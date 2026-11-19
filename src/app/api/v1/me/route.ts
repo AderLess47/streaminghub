@@ -1,6 +1,7 @@
 import { apiError, json } from "@/lib/api";
 import { get } from "@/lib/db";
 import { verifyDeviceToken } from "@/lib/device-auth";
+import { getEntitlements } from "@/lib/entitlements";
 import { effectiveStatus, getSubscription } from "@/lib/payments";
 
 export const runtime = "nodejs";
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
 
   const subscription = getSubscription(payload.userId);
   const status = effectiveStatus(subscription);
+  // Rechte kommen aus den Ansprüchen, nicht aus dem Abo-Status: während des
+  // Testzeitraums ist der Status `none`, Premium gilt aber trotzdem.
+  const entitlements = getEntitlements(payload.userId);
   const playlist = get<{ url: string; updated_at: string }>(
     `SELECT url, updated_at FROM customer_playlists
      WHERE user_id = ? AND customer_requested = 1
@@ -53,7 +57,7 @@ export async function GET(request: Request) {
       status,
       channel: subscription?.channel ?? "web",
       currentPeriodEnd: subscription?.current_period_end ?? null,
-      premiumActive: status === "active",
+      premiumActive: entitlements.premium,
     },
     playlist: playlist ? { url: playlist.url, updatedAt: playlist.updated_at } : null,
   });
