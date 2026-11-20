@@ -4,9 +4,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomToken } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { setContractRequestHandled } from "@/lib/contract-requests";
+import {
+  CONTACT_MESSAGE_STATUSES,
+  deleteContactMessage,
+  setContactMessageStatus,
+  type ContactMessageStatus,
+} from "@/lib/contact-messages";
 import { all, get, nowIso, run } from "@/lib/db";
+import { FEATURE_FLAGS } from "@/lib/flags";
+import { DEFAULT_TRIAL_DAYS } from "@/lib/trial";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
+import { cleanupOverLimitDevices } from "@/lib/device-cleanup";
 import { requireAdmin, requireStaff, getSessionUser } from "@/lib/session";
 import { m3uPlaylistSchema } from "@/lib/validation";
 
@@ -34,6 +44,13 @@ type RoleValue = (typeof ROLE_VALUES)[number];
 function adminPath(formData: FormData, fallback: string) {
   const raw = String(formData.get("returnTo") ?? "");
   return raw.startsWith("/admin") ? raw : fallback;
+}
+
+/** Erhält den Listenfilter und hängt die Rückmeldung an. */
+function withOk(formData: FormData, fallback: string, ok: string) {
+  const target = new URL(adminPath(formData, fallback), "https://streaminghub.invalid");
+  target.searchParams.set("ok", ok);
+  return `${target.pathname}${target.search}`;
 }
 
 /**
@@ -274,7 +291,11 @@ export async function revokeDeviceAction(formData: FormData) {
   );
   if (!device) return;
 
-  run(`UPDATE devices SET status = 'revoked', revoked_at = ? WHERE id = ?`, nowIso(), deviceId);
+  run(
+    `UPDATE devices SET status = 'revoked', revoked_at = ?, revoked_reason = 'admin' WHERE id = ?`,
+    nowIso(),
+    deviceId,
+  );
   run(`UPDATE device_tokens SET revoked_at = ? WHERE device_id = ?`, nowIso(), deviceId);
   logAudit({
     action: "admin.device_revoked",
@@ -286,6 +307,30 @@ export async function revokeDeviceAction(formData: FormData) {
   });
   revalidatePath("/admin/devices");
   redirect(`${adminPath(formData, "/admin/devices")}?ok=revoked`);
+}
+
+/**
+ * Einmaliger Lauf für den Altbestand: meldet Geräte über dem kostenlosen Limit
+ * bei Konten ab, deren Abo schon vor der automatischen Abmeldung ausgelaufen
+ * ist. Ohne Mail, mit Audit-Eintrag und der Zahl als Rückmeldung.
+ */
+export async function cleanupOverLimitDevicesAction(formData: FormData) {
+  const staff = await requireAdmin();
+  if (String(formData.get("confirm") ?? "") !== "revoke") return;
+
+  const result = cleanupOverLimitDevices();
+  logAudit({
+    action: "admin.devices_cleanup_over_limit",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "devices",
+    targetId: "over-limit",
+    meta: { accounts: result.accounts, devices: result.devices, limit: result.limit },
+  });
+  revalidatePath("/admin/trial");
+  redirect(
+    `/admin/trial?ok=cleanup&accounts=${result.accounts}&devices=${result.devices}`,
+  );
 }
 
 export async function setSubscriptionStatusAction(formData: FormData) {
@@ -401,6 +446,34 @@ export async function setTicketStatusAction(formData: FormData) {
   redirect(`/admin/tickets/${ticketId}?ok=status`);
 }
 
+/**
+ * Erledigt-Vermerk für Widerrufe und Kündigungen. Die Erklärung selbst bleibt
+ * unverändert; erfasst wird nur, wer sie wann bearbeitet hat.
+ */
+export async function setContractRequestHandledAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const handled = String(formData.get("handled") ?? "") === "1";
+  if (!id) return;
+
+  const changed = setContractRequestHandled({ id, handled, by: staff.email });
+  if (changed) {
+    logAudit({
+      action: handled ? "admin.contract_request_handled" : "admin.contract_request_reopened",
+      actorId: staff.id,
+      actorEmail: staff.email,
+      targetType: "contract_request",
+      targetId: id,
+    });
+  }
+
+  revalidatePath("/admin/contracts");
+  // Filter aus der Liste erhalten und die Rückmeldung anhängen.
+  const target = new URL(adminPath(formData, "/admin/contracts"), "https://streaminghub.invalid");
+  target.searchParams.set("ok", handled ? "handled" : "reopened");
+  redirect(`${target.pathname}${target.search}`);
+}
+
 export async function releaseEmailSuppressionAction(formData: FormData) {
   const admin = await requireAdmin();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -415,6 +488,43 @@ export async function releaseEmailSuppressionAction(formData: FormData) {
   });
   revalidatePath("/admin/emails");
   redirect("/admin/emails?ok=suppression");
+}
+
+export async function setContactMessageStatusAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as ContactMessageStatus;
+  if (!CONTACT_MESSAGE_STATUSES.includes(status)) return;
+  if (!setContactMessageStatus(id, status)) return;
+
+  logAudit({
+    action: "admin.contact_message_status_changed",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "contact_message",
+    targetId: id,
+    meta: { status },
+  });
+  revalidatePath("/admin/contacts");
+  redirect(withOk(formData, "/admin/contacts", "status"));
+}
+
+export async function deleteContactMessageAction(formData: FormData) {
+  const staff = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const message = deleteContactMessage(id);
+  if (!message) return;
+
+  logAudit({
+    action: "admin.contact_message_deleted",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "contact_message",
+    targetId: id,
+    meta: { subject: message.subject.slice(0, 120), email: message.email },
+  });
+  revalidatePath("/admin/contacts");
+  redirect(withOk(formData, "/admin/contacts", "deleted"));
 }
 
 export async function retryEmailAction(formData: FormData) {
@@ -579,3 +689,43 @@ export async function confirmMfaSetupAction(_prev: MfaState, formData: FormData)
   return { ok: true, message: "MFA ist aktiv.", recoveryCodes };
 }
 
+
+/**
+ * Schaltet die Monetarisierungs-Flags und die Testdauer.
+ *
+ * Die Checkboxen kommen als vollständiges Formular: fehlt ein Feld, ist der
+ * Flag aus. Der Vorgang wird auditiert, damit sichtbar bleibt, wer wann welche
+ * Funktion aktiviert hat.
+ */
+export async function saveMonetizationAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const values: Record<string, string> = {};
+  for (const key of Object.values(FEATURE_FLAGS)) {
+    values[key] = formData.get(key) === "on" ? "1" : "0";
+  }
+  const requested = Number(formData.get("trial_days") ?? DEFAULT_TRIAL_DAYS);
+  const days = Number.isFinite(requested) ? Math.min(60, Math.max(1, Math.floor(requested))) : DEFAULT_TRIAL_DAYS;
+  values.trial_days = String(days);
+
+  const timestamp = nowIso();
+  for (const [key, value] of Object.entries(values)) {
+    run(
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      key,
+      value,
+      timestamp,
+    );
+  }
+
+  logAudit({
+    action: "admin.monetization_updated",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    meta: values,
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/premium");
+  revalidatePath("/dashboard/subscription");
+  redirect("/admin/settings?ok=1");
+}

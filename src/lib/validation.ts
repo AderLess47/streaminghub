@@ -25,6 +25,16 @@ export const amazonPurchaseSchema = z.object({
   productId: z.string().trim().min(1, "productId fehlt.").max(120),
 });
 
+export const applePurchaseSchema = z.object({
+  // StoreKit liefert ein kompaktes JWS; alles darunter ist kein Beleg.
+  jws: z.string().trim().min(100, "Der Kaufbeleg fehlt.").max(20_000),
+});
+
+export const appleNotificationSchema = z.object({
+  // App Store Server Notifications V2 schicken genau ein signiertes Feld.
+  signedPayload: z.string().trim().min(100, "signedPayload fehlt.").max(20_000),
+});
+
 export const loginSchema = z.object({
   email,
   password: z.string().min(1).max(200),
@@ -82,9 +92,31 @@ export const contactSchema = z.object({
   privacyAccepted: z.literal(true, {
     errorMap: () => ({ message: "Bitte bestätige die Datenschutzhinweise." }),
   }),
-  /** Honeypot: must stay empty (bots fill it). */
-  website: z.string().max(0).optional().or(z.literal("")),
+  /** Honeypot: muss leer bleiben. Inhalt wird von der Route still verworfen. */
+  website: z.string().max(500).optional().default(""),
   /** Timestamp of form render – submissions faster than 3 s are rejected. */
+  renderedAt: z.coerce.number().optional(),
+});
+
+/** Widerruf über die Website (§ 356a BGB). */
+export const withdrawalSchema = z.object({
+  name: z.string().trim().min(2, "Bitte gib deinen Namen an.").max(80),
+  email,
+  contract: z.enum(["web", "apple", "amazon", "other"], {
+    errorMap: () => ({ message: "Bitte wähle den Vertrag aus." }),
+  }),
+  note: z.string().trim().max(1000).optional().default(""),
+  privacyAccepted: z.literal(true, {
+    errorMap: () => ({ message: "Bitte bestätige die Datenschutzhinweise." }),
+  }),
+  website: z.string().max(500).optional().default(""),
+  renderedAt: z.coerce.number().optional(),
+});
+
+/** Kündigung über die Schaltfläche „Jetzt kündigen“ (§ 312k BGB). */
+export const cancellationSchema = z.object({
+  email,
+  website: z.string().max(500).optional().default(""),
   renderedAt: z.coerce.number().optional(),
 });
 

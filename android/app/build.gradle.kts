@@ -4,6 +4,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -15,14 +16,14 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "de.streaminghub.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.streaminghub.app"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 11
-        versionName = "1.4.0"
+        targetSdk = 36
+        versionCode = 13
+        versionName = "1.6.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -40,6 +41,9 @@ android {
             dimension = "distribution"
             buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"web\"")
+            // Nur die direkt verteilte APK bringt ihren eigenen Updater mit;
+            // Amazon und Google Play aktualisieren über ihren Store.
+            buildConfigField("boolean", "SELF_UPDATE", "true")
         }
         create("amazon") {
             dimension = "distribution"
@@ -47,6 +51,16 @@ android {
             // settings screen shows the purchase card (see docs/IAP-AMAZON.md).
             buildConfigField("boolean", "PREMIUM_SALES", "true")
             buildConfigField("String", "PREMIUM_CHANNEL", "\"amazon\"")
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+        create("play") {
+            dimension = "distribution"
+            // Google Play erlaubt keinen Verweis auf den Web-Checkout. Der
+            // Play-Build zeigt deshalb keinen Kaufweg; Google Play Billing ist
+            // noch nicht angebunden (siehe docs/IAP-GOOGLE-PLAY.md).
+            buildConfigField("boolean", "PREMIUM_SALES", "false")
+            buildConfigField("String", "PREMIUM_CHANNEL", "\"play\"")
+            buildConfigField("boolean", "SELF_UPDATE", "false")
         }
     }
 
@@ -117,6 +131,14 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
+
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.room:room-paging:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    implementation("androidx.paging:paging-runtime:3.3.6")
+    implementation("androidx.paging:paging-compose:3.3.6")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 

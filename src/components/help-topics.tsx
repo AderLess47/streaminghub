@@ -59,7 +59,10 @@ export function HelpTopics({
                 <h2 className="text-[0.98rem] font-medium text-fg">{topic.title}</h2>
                 <p className="mt-0.5 text-[0.8rem] text-muted">{topic.description}</p>
               </div>
-              <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full border border-line text-muted transition-transform group-open:rotate-45 group-open:border-cyan/50 group-open:text-cyan">
+              <span
+                aria-hidden="true"
+                className="mt-1 grid size-6 shrink-0 place-items-center rounded-full border border-line text-muted transition-transform group-open:rotate-45 group-open:border-cyan/50 group-open:text-cyan"
+              >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                   <path d="M12 5v14M5 12h14" />
                 </svg>

@@ -4,13 +4,16 @@
  *
  *   STRIPE_SECRET_KEY=sk_test_stub STRIPE_PRICE_ID=price_stub \
  *   STRIPE_WEBHOOK_SECRET=whsec_stub_secret \
- *   STRIPE_API_BASE=http://127.0.0.1:4026 npm run dev
+ *   STRIPE_API_BASE=http://127.0.0.1:4026 \
+ *   EMAIL_API_KEY=test EMAIL_API_BASE=http://127.0.0.1:4025 npm run dev
  *
  *   npm run stripe:smoke
  *
  * Covers: checkout session creation, server-side success confirmation,
  * signed webhooks (completed / past_due / invoice paid / deleted),
- * cancellation at period end, idempotency and ownership checks.
+ * cancellation at period end, idempotency and ownership checks. It also starts
+ * an email stub on EMAIL_STUB_PORT (default 4025), so the purchase confirmation
+ * must be accepted by the provider and stored as sent.
  */
 import http from "node:http";
 import { createHmac } from "node:crypto";
@@ -19,6 +22,7 @@ import path from "node:path";
 
 const BASE = process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000";
 const STUB_PORT = Number(process.env.STRIPE_STUB_PORT ?? 4026);
+const EMAIL_STUB_PORT = Number(process.env.EMAIL_STUB_PORT ?? 4025);
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 const runId = Date.now();
 const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "streaminghub.db");
@@ -122,7 +126,35 @@ await new Promise((resolve, reject) => {
   stub.once("error", reject);
   stub.listen(STUB_PORT, "127.0.0.1", resolve);
 });
-console.log(`Stripe billing test → ${BASE} (API stub on :${STUB_PORT})\n`);
+
+const emailRequests = [];
+const emailStub = http.createServer(async (request, response) => {
+  let raw = "";
+  for await (const chunk of request) raw += chunk;
+  if (request.method !== "POST" || request.url !== "/emails") {
+    response.writeHead(404, { "content-type": "application/json" });
+    response.end(JSON.stringify({ message: "Unknown stub route" }));
+    return;
+  }
+
+  let body = {};
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    /* keep empty */
+  }
+  const providerId = `email_${emailRequests.length + 1}`;
+  emailRequests.push({ body, providerId, headers: request.headers });
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(JSON.stringify({ id: providerId }));
+});
+await new Promise((resolve, reject) => {
+  emailStub.once("error", reject);
+  emailStub.listen(EMAIL_STUB_PORT, "127.0.0.1", resolve);
+});
+console.log(
+  `Stripe billing test → ${BASE} (API stub on :${STUB_PORT}, email stub on :${EMAIL_STUB_PORT})\n`,
+);
 
 /* --------------------------------- helpers -------------------------------- */
 
@@ -203,20 +235,32 @@ function subscriptionRow(userId) {
     .get(userId);
 }
 
-async function register(label) {
+function purchaseMails(userId) {
+  return db
+    .prepare(
+      `SELECT subject, body_text, status FROM outbox_emails
+       WHERE kind = 'subscription'
+         AND to_email = (SELECT email FROM users WHERE id = ?)
+       ORDER BY created_at`,
+    )
+    .all(userId);
+}
+
+async function register(label, locale = "de") {
   const stamp = Date.now();
+  const email = `stripe-${label}-${stamp}@example.com`;
   const response = await post(
     "/api/auth/register",
     {
       displayName: `Stripe ${label}`,
-      email: `stripe-${label}-${stamp}@example.com`,
+      email,
       password: "StripeTest-2026!Ab",
-      locale: "de",
+      locale,
       acceptTerms: true,
     },
     false,
   );
-  return response;
+  return { ...response, email };
 }
 
 /* ---------------------------------- flow ---------------------------------- */
@@ -272,6 +316,57 @@ ok(row?.status === "active", `subscription active after confirmation (${row?.sta
 ok(row?.provider_subscription_id === subA, "subscription id stored");
 ok(row?.provider_customer_id === cusA, "customer id stored");
 ok(Boolean(row?.current_period_end), "period end stored");
+
+const confirmationA = purchaseMails(userAId);
+ok(confirmationA.length === 1, `purchase confirmation created once (${confirmationA.length})`);
+ok(/Willkommen bei StreamingHub Premium/.test(confirmationA[0]?.subject ?? ""), "purchase confirmation is German");
+ok(
+  /2,49/.test(confirmationA[0]?.body_text ?? "") &&
+    String(confirmationA[0]?.body_text ?? "").includes("/dashboard/subscription"),
+  "purchase confirmation contains price and management link",
+);
+ok(
+  emailRequests.some(
+    (entry) =>
+      entry.body?.to?.[0] === userA.email &&
+      /Willkommen bei StreamingHub Premium/.test(entry.body?.subject ?? ""),
+  ),
+  "purchase confirmation was accepted by the email provider",
+);
+ok(
+  confirmationA[0]?.status === "sent",
+  `purchase confirmation is stored as sent (${confirmationA[0]?.status})`,
+);
+
+const confirmA = await post("/api/subscription/confirm", {
+  sessionId: checkoutA.json?.sessionId,
+});
+ok(
+  confirmA.status === 200 && confirmA.json?.status === "active",
+  `success confirmation is idempotent (${confirmA.status})`,
+);
+ok(purchaseMails(userAId).length === 1, "success redirect does not duplicate the confirmation mail");
+
+const duplicateCompleted = await sendEvent({
+  id: `evt_completed_again_${runId}`,
+  type: "checkout.session.completed",
+  data: {
+    object: {
+      id: checkoutA.json?.sessionId,
+      object: "checkout.session",
+      payment_status: "paid",
+      customer: cusA,
+      subscription: subA,
+      metadata: { userId: userAId },
+      client_reference_id: userAId,
+    },
+  },
+});
+ok(
+  duplicateCompleted.status === 200 && duplicateCompleted.json?.handled === true,
+  "duplicate checkout completion accepted",
+);
+ok(purchaseMails(userAId).length === 1, "purchase confirmation is idempotent across webhook retries");
 
 const pastDue = await sendEvent({
   id: `evt_past_due_${runId}`,
@@ -349,14 +444,56 @@ ok(forged.status === 400, `forged signature rejected (${forged.status})`);
 ok(subscriptionRow(userAId)?.status === "canceled", "forged event does not change state");
 
 console.log("\nServer-side success confirmation and ownership");
-const userB = await register("b");
+const userB = await register("b", "en");
 ok(userB.status === 200, "second test customer created");
 const userBId = userB.json?.userId;
 const checkoutB = await post("/api/subscription/checkout");
 ok(checkoutB.status === 200, "second checkout created");
+const sessionB = sessions.get(checkoutB.json?.sessionId);
+const subB = sessionB?.subscription?.id;
+const cusB = sessionB?.customer;
 const confirmB = await post("/api/subscription/confirm", { sessionId: checkoutB.json?.sessionId });
 ok(confirmB.status === 200 && confirmB.json?.status === "active", `session confirmed server-side (${confirmB.status})`);
 ok(subscriptionRow(userBId)?.status === "active", "confirmation activates the subscription");
+
+const confirmationB = purchaseMails(userBId);
+ok(confirmationB.length === 1, `localised purchase confirmation created once (${confirmationB.length})`);
+ok(/Welcome to StreamingHub Premium/.test(confirmationB[0]?.subject ?? ""), "purchase confirmation follows the customer locale");
+ok(
+  /2[.,]49/.test(confirmationB[0]?.body_text ?? "") &&
+    String(confirmationB[0]?.body_text ?? "").includes("/dashboard/subscription"),
+  "English purchase confirmation contains price and management link",
+);
+ok(
+  emailRequests.some(
+    (entry) =>
+      entry.body?.to?.[0] === userB.email &&
+      /Welcome to StreamingHub Premium/.test(entry.body?.subject ?? ""),
+  ),
+  "English purchase confirmation was accepted by the email provider",
+);
+ok(confirmationB[0]?.status === "sent", `English purchase confirmation is stored as sent (${confirmationB[0]?.status})`);
+
+const completedAfterConfirmB = await sendEvent({
+  id: `evt_completed_after_confirm_${runId}`,
+  type: "checkout.session.completed",
+  data: {
+    object: {
+      id: checkoutB.json?.sessionId,
+      object: "checkout.session",
+      payment_status: "paid",
+      customer: cusB,
+      subscription: subB,
+      metadata: { userId: userBId },
+      client_reference_id: userBId,
+    },
+  },
+});
+ok(
+  completedAfterConfirmB.status === 200 && completedAfterConfirmB.json?.handled === true,
+  "webhook after success confirmation is handled",
+);
+ok(purchaseMails(userBId).length === 1, "webhook after success redirect does not duplicate the mail");
 
 const foreign = await post(
   "/api/subscription/confirm",
@@ -366,7 +503,40 @@ const foreign = await post(
 ok(foreign.status === 403, `foreign session rejected (${foreign.status})`);
 ok(subscriptionRow(userBId)?.status === "active", "foreign attempt does not change state");
 
+console.log("\nInactive subscription");
+const userC = await register("c");
+ok(userC.status === 200, "third test customer created");
+const userCId = userC.json?.userId;
+const checkoutC = await post("/api/subscription/checkout");
+ok(checkoutC.status === 200, "third checkout created");
+const sessionC = sessions.get(checkoutC.json?.sessionId);
+const subC = sessionC?.subscription?.id;
+if (sessionC?.subscription) sessionC.subscription.status = "incomplete";
+if (subC) subscriptions.get(subC).status = "incomplete";
+const completedC = await sendEvent({
+  id: `evt_completed_inactive_${runId}`,
+  type: "checkout.session.completed",
+  data: {
+    object: {
+      id: checkoutC.json?.sessionId,
+      object: "checkout.session",
+      payment_status: "unpaid",
+      customer: sessionC?.customer,
+      subscription: subC,
+      metadata: { userId: userCId },
+      client_reference_id: userCId,
+    },
+  },
+});
+ok(
+  completedC.status === 200 && completedC.json?.handled === true,
+  "inactive checkout completion is handled without granting premium",
+);
+ok(subscriptionRow(userCId)?.status === "incomplete", "inactive subscription keeps its status");
+ok(purchaseMails(userCId).length === 0, "no purchase confirmation for an inactive subscription");
+
 stub.close();
+emailStub.close();
 db.close();
 
 console.log(`\n${checks - failures}/${checks} checks passed.`);

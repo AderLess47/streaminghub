@@ -55,6 +55,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import de.streaminghub.app.MainViewModel
@@ -68,6 +69,10 @@ import de.streaminghub.app.ui.theme.Line
 import de.streaminghub.app.ui.theme.Muted
 import de.streaminghub.app.ui.theme.Panel
 import kotlinx.coroutines.delay
+import de.streaminghub.app.data.AppLog
+import de.streaminghub.app.data.PlaybackErrors
+import de.streaminghub.app.data.PlaybackRetry
+import de.streaminghub.app.data.ResilientLoadErrorPolicy
 
 @Composable
 fun PlayerScreen(
@@ -78,12 +83,35 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // Zählt die automatischen Neustarts und stößt den nächsten Versuch an.
+    var autoRetries by remember { mutableStateOf(0) }
+    var retrySignal by remember { mutableStateOf(0) }
     val startPosition = remember(channel.url) { viewModel.progressFor(channel) }
 
-    val exoPlayer = remember(channel.url, lowSpecMode) {
+    val mediaItem = remember(channel.url, channel.drm) {
+        val builder = MediaItem.Builder().setUri(channel.url)
+        channel.drm?.let { drm ->
+            builder.setDrmConfiguration(
+                MediaItem.DrmConfiguration.Builder(drm.scheme.uuid)
+                    .setLicenseUri(drm.licenseUrl)
+                    .setLicenseRequestHeaders(drm.headers)
+                    .build(),
+            )
+        }
+        builder.build()
+    }
+
+    // Der Player wird nur gebaut, wenn Sender oder Modus wechseln. Jedes
+    // `prepare()` auf einem DRM-Sender kostet eine Lizenzanfrage, deshalb darf
+    // dieser Block nicht bei jeder Recomposition (Fortschritt, Fehlermeldung)
+    // erneut laufen.
+    val exoPlayer = remember(mediaItem, lowSpecMode) {
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)
+        val mediaSourceFactory = DefaultMediaSourceFactory(context)
+            .setLoadErrorHandlingPolicy(ResilientLoadErrorPolicy())
         val builder = ExoPlayer.Builder(context, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
 
         if (lowSpecMode) {
             builder.setLoadControl(
@@ -99,7 +127,7 @@ fun PlayerScreen(
         }
 
         builder.build().apply {
-            setMediaItem(MediaItem.fromUri(channel.url), startPosition)
+            setMediaItem(mediaItem, startPosition)
             prepare()
             playWhenReady = true
         }
@@ -107,14 +135,26 @@ fun PlayerScreen(
 
     val listener = remember(exoPlayer) {
         object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // Läuft wieder: Der nächste Fehler darf erneut automatisch starten.
+                if (playbackState == Player.STATE_READY) autoRetries = 0
+            }
+
             override fun onPlayerError(error: PlaybackException) {
-                errorMessage = buildString {
-                    append("Die Quelle konnte nicht abgespielt werden.")
-                    error.localizedMessage?.takeIf { it.isNotBlank() }?.let {
-                        append("\n")
-                        append(it)
-                    }
-                }
+                AppLog.error(
+                    "player",
+                    error,
+                    "${AppLog.redactUrl(channel.url)} drm=${channel.drm?.scheme?.label ?: "keins"}",
+                )
+                val retryable = PlaybackRetry.isNetworkError(error.errorCode) &&
+                    PlaybackRetry.canRetryAutomatically(autoRetries)
+                errorMessage = PlaybackErrors.describe(
+                    errorCode = error.errorCode,
+                    detail = error.localizedMessage,
+                    hasDrm = channel.drm != null,
+                    insecure = channel.url.startsWith("http://", ignoreCase = true),
+                ) + if (retryable) "\n" + PlaybackRetry.HINT else ""
+                if (retryable) retrySignal += 1
             }
         }
     }
@@ -142,6 +182,24 @@ fun PlayerScreen(
             viewModel.syncWatchProgress(channel, exoPlayer.currentPosition, exoPlayer.duration)
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+        }
+    }
+
+    // Während eines Netzausfalls bleibt der Fehlerbildschirm stehen, die App
+    // versucht es aber selbst weiter: erst wenn wieder ein Netz gemeldet wird,
+    // kostet der nächste Versuch keine sinnlose Anfrage.
+    LaunchedEffect(retrySignal) {
+        if (retrySignal == 0) return@LaunchedEffect
+        delay(PlaybackRetry.POLL_MS)
+        // Der Nutzer war schneller da (Knopf oder neue Wiedergabe): nicht doppelt starten.
+        if (errorMessage == null) return@LaunchedEffect
+        if (PlaybackRetry.isOnline(context)) {
+            autoRetries += 1
+            errorMessage = null
+            exoPlayer.prepare()
+            exoPlayer.play()
+        } else {
+            retrySignal += 1
         }
     }
 
@@ -271,6 +329,7 @@ fun PlayerScreen(
                             text = "Erneut versuchen",
                             icon = Icons.Rounded.Replay,
                             onClick = {
+                                autoRetries = 0
                                 errorMessage = null
                                 exoPlayer.prepare()
                                 exoPlayer.play()

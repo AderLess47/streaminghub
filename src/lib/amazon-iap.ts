@@ -202,6 +202,19 @@ export function decideReceiptApplication(
   return { ok: true };
 }
 
+/**
+ * Ein frisch geprüfter Beleg wird nur wiederholt, solange er aktiv ist. Nach
+ * einer Absage (410) oder einem erkannten Ablauf ist `verified_at` frisch, der
+ * Status aber `canceled` – ein Wiederkauf mit demselben Beleg muss zu RVS und
+ * darf nicht mit dem alten Status quittiert werden.
+ */
+export function isReplayableReceipt(
+  known: { status: string; verified_at: string | null },
+  now = Date.now(),
+) {
+  return known.status === "active" && isReplayable(known.verified_at, now);
+}
+
 /** A receipt verified moments ago is replayed instead of hitting RVS again. */
 export function isReplayable(verifiedAt: string | null, now = Date.now(), windowMs = 10 * 60_000) {
   if (!verifiedAt) return false;

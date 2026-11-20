@@ -1,8 +1,17 @@
 package de.streaminghub.app.data
 
 import android.content.Context
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
+import androidx.room.withTransaction
 import de.streaminghub.app.model.Channel
+import de.streaminghub.app.model.ChannelDrm
+import de.streaminghub.app.model.DrmScheme
 import de.streaminghub.app.model.MediaKind
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -13,34 +22,21 @@ data class StoredPlaylist(
     val updatedAt: Long?,
 )
 
-class PlaylistRepository(context: Context) {
+class PlaylistRepository(
+    context: Context,
+    private val database: PlaylistDatabase = PlaylistDatabase.get(context),
+) {
 
     private val preferences = context.applicationContext
         .getSharedPreferences("streaminghub", Context.MODE_PRIVATE)
+    private val channelDao = database.channelDao()
 
-    fun loadPlaylist(): StoredPlaylist {
+    suspend fun loadPlaylist(): StoredPlaylist {
+        runCatching { migrateLegacyChannelsIfNeeded() }
+            .onFailure { throwable -> AppLog.error("playlist", throwable, "Room-Migration") }
+
         val channels = runCatching {
-            val raw = preferences.getString(KEY_CHANNELS, null) ?: return@runCatching emptyList()
-            val array = JSONArray(raw)
-            buildList(array.length()) {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val name = item.optString("name").takeIf { it.isNotBlank() } ?: continue
-                    val url = item.optString("url").takeIf { it.isNotBlank() } ?: continue
-                    add(
-                        Channel(
-                            name = name,
-                            url = url,
-                            logo = item.optString("logo").takeIf { it.isNotBlank() },
-                            group = item.optString("group").ifBlank { "Ohne Kategorie" },
-                            tvgId = item.optString("tvgId").takeIf { it.isNotBlank() },
-                            kind = runCatching {
-                                MediaKind.valueOf(item.optString("kind"))
-                            }.getOrDefault(MediaKind.LIVE),
-                        ),
-                    )
-                }
-            }
+            channelDao.loadAll().map(ChannelEntity::toChannel)
         }.getOrDefault(emptyList())
 
         return StoredPlaylist(
@@ -51,34 +47,41 @@ class PlaylistRepository(context: Context) {
         )
     }
 
-    fun savePlaylist(
+    fun pagedChannels(
+        category: String?,
+        kind: MediaKind?,
+        query: String,
+        pageSize: Int,
+    ): Flow<PagingData<Channel>> = Pager(
+        config = PagingConfig(
+            pageSize = pageSize.coerceAtLeast(1),
+            prefetchDistance = (pageSize / 2).coerceAtLeast(1),
+            enablePlaceholders = false,
+        ),
+        pagingSourceFactory = {
+            channelDao.pagingSource(category, kind?.name, query.trim())
+        },
+    ).flow.map { pagingData -> pagingData.map(ChannelEntity::toChannel) }
+
+    fun observeCategories(): Flow<List<String>> = channelDao.observeCategories()
+
+    suspend fun savePlaylist(
         channels: List<Channel>,
         sourceUrl: String?,
         sourceLabel: String,
     ) {
-        val array = JSONArray()
-        channels.forEach { channel ->
-            array.put(
-                JSONObject().apply {
-                    put("name", channel.name)
-                    put("url", channel.url)
-                    put("logo", channel.logo ?: "")
-                    put("group", channel.group)
-                    put("tvgId", channel.tvgId ?: "")
-                    put("kind", channel.kind.name)
-                },
-            )
-        }
+        replaceChannels(channels)
 
         preferences.edit()
-            .putString(KEY_CHANNELS, array.toString())
+            .remove(KEY_CHANNELS)
             .putString(KEY_SOURCE_URL, sourceUrl)
             .putString(KEY_SOURCE_LABEL, sourceLabel)
             .putLong(KEY_UPDATED_AT, System.currentTimeMillis())
             .apply()
     }
 
-    fun clearPlaylist() {
+    suspend fun clearPlaylist() {
+        database.withTransaction { channelDao.clear() }
         preferences.edit()
             .remove(KEY_CHANNELS)
             .remove(KEY_SOURCE_URL)
@@ -86,6 +89,64 @@ class PlaylistRepository(context: Context) {
             .remove(KEY_UPDATED_AT)
             .remove(KEY_FAVORITES)
             .apply()
+    }
+
+    /**
+     * Ältere App-Versionen haben die Kanäle als JSON in den Preferences
+     * gespeichert. Beim ersten Start nach dem Update werden sie einmalig in
+     * Room übernommen und der alte JSON-String entfernt.
+     */
+    private suspend fun migrateLegacyChannelsIfNeeded() {
+        val raw = preferences.getString(KEY_CHANNELS, null) ?: return
+        val legacyChannels = parseLegacyChannels(raw)
+
+        if (legacyChannels.isNotEmpty() && channelDao.loadAll().isEmpty()) {
+            replaceChannels(legacyChannels)
+        }
+        preferences.edit().remove(KEY_CHANNELS).apply()
+    }
+
+    private suspend fun replaceChannels(channels: List<Channel>) {
+        database.withTransaction {
+            channelDao.clear()
+            channelDao.insertAll(channels.mapIndexed { index, channel -> channel.toEntity(index) })
+        }
+    }
+
+    private fun parseLegacyChannels(raw: String): List<Channel> = runCatching {
+        val array = JSONArray(raw)
+        buildList(array.length()) {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val name = item.optString("name").takeIf { it.isNotBlank() } ?: continue
+                val url = item.optString("url").takeIf { it.isNotBlank() } ?: continue
+                add(
+                    Channel(
+                        name = name,
+                        url = url,
+                        logo = item.optString("logo").takeIf { it.isNotBlank() },
+                        group = item.optString("group").ifBlank { "Ohne Kategorie" },
+                        tvgId = item.optString("tvgId").takeIf { it.isNotBlank() },
+                        kind = runCatching {
+                            MediaKind.valueOf(item.optString("kind"))
+                        }.getOrDefault(MediaKind.LIVE),
+                        drm = readDrm(item.optJSONObject("drm")),
+                    ),
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    private fun readDrm(item: JSONObject?): ChannelDrm? {
+        if (item == null) return null
+        val scheme = DrmScheme.fromKodiprop(item.optString("scheme")) ?: return null
+        val licenseUrl = item.optString("licenseUrl").takeIf { it.isNotBlank() } ?: return null
+        val headers = item.optJSONObject("headers")?.let { stored ->
+            buildMap {
+                stored.keys().forEach { key -> put(key, stored.optString(key)) }
+            }
+        } ?: emptyMap()
+        return ChannelDrm(scheme = scheme, licenseUrl = licenseUrl, headers = headers)
     }
 
     fun loadFavorites(): Set<String> =

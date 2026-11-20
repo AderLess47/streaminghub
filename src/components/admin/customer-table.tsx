@@ -135,7 +135,7 @@ export function CustomerTable({
       <ScrollRegion
         label={t.admin.customers.title}
         describedBy="customers-result-summary"
-        className="card overflow-x-auto"
+        className="card hidden overflow-x-auto xl:block"
       >
         <table className="data-table">
           <caption className="sr-only">{t.admin.customers.title}</caption>
@@ -143,7 +143,6 @@ export function CustomerTable({
             <tr>
               <th>{t.admin.customers.email}</th>
               <th>{t.admin.customers.role}</th>
-              <th>{t.admin.customers.verified}</th>
               <th>{t.admin.customers.devices}</th>
               <th>{t.admin.customers.subscription}</th>
               <th>{t.admin.customers.created}</th>
@@ -153,16 +152,29 @@ export function CustomerTable({
           <tbody>
             {visible.map((row) => (
               <tr key={row.id}>
-                <td>
+                <td className="max-w-[14rem]">
                   <Link
                     href={`/admin/customers/${row.id}`}
-                    className="link inline-flex min-h-9 items-center text-[0.82rem]"
+                    className="link inline-flex min-h-9 max-w-full items-center text-[0.82rem]"
+                    title={row.email}
                   >
-                    {row.email}
+                    <span className="truncate">{row.email}</span>
                   </Link>
-                  <p className="text-[0.68rem] text-muted">
-                    {row.displayName || "—"}
-                    {row.disabled ? " · deaktiviert" : ""}
+                  <p className="flex items-center gap-1.5 text-[0.68rem] text-muted">
+                    <span className="truncate">
+                      {row.displayName || "—"}
+                      {row.disabled ? " · deaktiviert" : ""}
+                    </span>
+                    <span
+                      title={row.verified ? t.admin.customers.verified : t.admin.customers.notVerified}
+                    >
+                      <Badge tone={row.verified ? "ok" : "warn"}>
+                        <span aria-hidden="true">{row.verified ? "✓" : "—"}</span>
+                        <span className="sr-only">
+                          {row.verified ? t.admin.customers.verified : t.admin.customers.notVerified}
+                        </span>
+                      </Badge>
+                    </span>
                   </p>
                 </td>
                 <td>
@@ -189,7 +201,6 @@ export function CustomerTable({
                     </button>
                   </form>
                 </td>
-                <td>{row.verified ? <Badge tone="ok">✓</Badge> : <Badge tone="warn">—</Badge>}</td>
                 <td>{row.devices}</td>
                 <td>
                   <Badge tone={row.subscriptionStatus === "active" ? "ok" : "neutral"}>
@@ -238,7 +249,7 @@ export function CustomerTable({
             ))}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-6 text-center text-xs text-muted">
+                <td colSpan={6} className="py-6 text-center text-xs text-muted">
                   {t.ui.noResults}
                 </td>
               </tr>
@@ -246,6 +257,104 @@ export function CustomerTable({
           </tbody>
         </table>
       </ScrollRegion>
+
+      {/* Bis 1280px passt die Tabelle nicht in den Inhaltsbereich; dort stehen die Konten als Karten. */}
+      <ul className="grid gap-3 md:grid-cols-2 xl:hidden">
+        {visible.map((row) => (
+          <li key={row.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  href={`/admin/customers/${row.id}`}
+                  className="link inline-flex min-h-9 max-w-full items-center text-[0.82rem]"
+                >
+                  <span className="truncate">{row.email}</span>
+                </Link>
+                <p className="truncate text-[0.68rem] text-muted">
+                  {row.displayName || "—"}
+                  {row.disabled ? " · deaktiviert" : ""}
+                </p>
+              </div>
+              <span className="shrink-0">
+                <Badge tone={row.subscriptionStatus === "active" ? "ok" : "neutral"}>
+                  {row.subscriptionStatus}
+                </Badge>
+              </span>
+            </div>
+
+            <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <dt className="text-muted">{t.admin.customers.devices}</dt>
+                <dd>{row.devices}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t.admin.customers.verified}</dt>
+                <dd>{row.verified ? <Badge tone="ok">✓</Badge> : <Badge tone="warn">—</Badge>}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t.admin.customers.created}</dt>
+                <dd className="whitespace-nowrap">{row.created}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <form action={updateCustomerRoleAction} className="flex items-center gap-1.5">
+                <input type="hidden" name="userId" value={row.id} />
+                <input type="hidden" name="returnTo" value="/admin/customers" />
+                <select
+                  name="role"
+                  defaultValue={row.role}
+                  className="field min-h-11 !w-auto !text-xs"
+                  aria-label={`${t.admin.customers.role}: ${row.email}`}
+                >
+                  <option value="customer">customer</option>
+                  <option value="support">support</option>
+                  <option value="admin">admin</option>
+                </select>
+                <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
+                  <Icon name="check" size={13} />
+                </button>
+              </form>
+
+              <div className="flex items-center gap-1">
+                <form action={toggleCustomerDisabledAction}>
+                  <input type="hidden" name="userId" value={row.id} />
+                  <input type="hidden" name="disable" value={row.disabled ? "0" : "1"} />
+                  <input type="hidden" name="returnTo" value="/admin/customers" />
+                  <button
+                    type="submit"
+                    className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                    title={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
+                  >
+                    <Icon name={row.disabled ? "check" : "close"} size={13} />
+                  </button>
+                </form>
+                <form action={resetCustomerMfaAction}>
+                  <input type="hidden" name="userId" value={row.id} />
+                  <input type="hidden" name="returnTo" value="/admin/customers" />
+                  <button
+                    type="submit"
+                    className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                    title={t.admin.customers.resetMfa}
+                  >
+                    <Icon name="shield" size={13} />
+                  </button>
+                </form>
+                <Link
+                  href={`/admin/customers/${row.id}`}
+                  className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                  title={t.ui.details}
+                >
+                  <Icon name="arrow-right" size={13} />
+                </Link>
+              </div>
+            </div>
+          </li>
+        ))}
+        {visible.length === 0 ? (
+          <li className="card p-6 text-center text-xs text-muted">{t.ui.noResults}</li>
+        ) : null}
+      </ul>
     </>
   );
 }

@@ -3,10 +3,21 @@ import { CancelSubscriptionForm } from "@/components/cancel-subscription-form";
 import { CheckoutButton } from "@/components/checkout-button";
 import { CheckoutSync } from "@/components/checkout-sync";
 import { Icon } from "@/components/icons";
+import { RetentionOffer } from "@/components/retention-offer";
+import { StartTrialButton } from "@/components/start-trial-button";
 import { Alert, Badge, InfoRow, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { cancelSubscriptionAction } from "@/lib/actions/dashboard";
-import { billingConfigured, effectiveStatus, ensureSubscription, PREMIUM_PRICE_EUR } from "@/lib/payments";
+import { trialConversionCoupon } from "@/lib/conversion";
+import { env } from "@/lib/env";
+import { isFeatureEnabled } from "@/lib/flags";
+import { retentionOffer } from "@/lib/retention";
+import { billingConfigured, effectiveStatus, ensureSubscription } from "@/lib/payments";
+import {
+  billingIntervalOf,
+  LEGACY_PREMIUM_PRICE_EUR,
+  PREMIUM_PRICE_EUR,
+} from "@/lib/pricing";
 import { requireUser } from "@/lib/session";
 
 export default async function SubscriptionPage({
@@ -20,6 +31,23 @@ export default async function SubscriptionPage({
   const subscription = ensureSubscription(user.id);
   const status = effectiveStatus(subscription);
   const configured = billingConfigured();
+  // Beide Angebote sind hinter Flags und einem Stripe-Coupon; ohne beides
+  // rendert die Seite unverändert.
+  const offer = retentionOffer(user.id);
+  const conversionCoupon = trialConversionCoupon(user.id);
+
+  // Testzeitraum: nur anbieten, wenn die Funktion freigeschaltet ist und das
+  // Konto die Bedingungen erfüllt. Die Entscheidung selbst trifft der Server.
+  const trialEnd = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+  const trialRunning = Boolean(trialEnd && trialEnd.getTime() > Date.now());
+  const trialAvailable =
+    isFeatureEnabled("trial") && user.emailVerified && !trialRunning && !subscription.trial_used_at;
+  // Jahresabo nur anbieten, wenn der Preis hinterlegt und der Flag gesetzt ist.
+  const annualAvailable = isFeatureEnabled("annualBilling") && Boolean(env.billing.stripeAnnualPriceId);
+  const trialEndLabel =
+    trialEnd && Number.isFinite(trialEnd.getTime())
+      ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(trialEnd)
+      : null;
 
   const statusLabel =
     status === "active"
@@ -27,10 +55,38 @@ export default async function SubscriptionPage({
       : status === "pending"
         ? t.dashboard.overview.planPending
         : status === "past_due"
-          ? "past_due"
+          ? t.dashboard.subscription.statusPastDue
           : status === "canceled"
-            ? "canceled"
-            : t.dashboard.overview.planNone;
+            ? t.dashboard.subscription.statusEnded
+            : status === "incomplete"
+              ? t.dashboard.subscription.statusIncomplete
+              : t.dashboard.overview.planNone;
+
+  // Während des Trials bleibt der Abo-Status in der Datenbank unverändert;
+  // für die Anzeige ist „Testphase“ die ehrliche Beschreibung, und unter
+  // „Läuft bis“ steht das Trial-Ende statt eines nicht vorhandenen
+  // Periodenendes.
+  const displayStatus = trialRunning ? t.dashboard.subscription.statusTrial : statusLabel;
+
+  // Gezahlter Betrag, falls bekannt; Abos aus der Zeit vor der Preisanpassung
+  // haben keinen Betrag in der Datenbank und behalten den alten Preis.
+  const priceCents =
+    subscription.price_cents ??
+    (subscription.provider_subscription_id
+      ? Math.round(LEGACY_PREMIUM_PRICE_EUR * 100)
+      : Math.round(PREMIUM_PRICE_EUR * 100));
+  const priceEur = (priceCents / 100).toFixed(2);
+  // Das Intervall entscheidet über die Einheit: ein Jahresabo kostet 34,99 € im
+  // Jahr, nicht im Monat. Bei Store-Abos gibt es keinen hinterlegten Betrag –
+  // dort wäre jede Euro-Angabe erfunden.
+  const interval = billingIntervalOf(subscription.plan, subscription.billing_interval);
+  const storeChannel = subscription.channel === "amazon" || subscription.channel === "apple";
+  const unit = interval === "year" ? (locale === "de" ? "Jahr" : "year") : (locale === "de" ? "Monat" : "month");
+  const priceLabel = storeChannel
+    ? t.dashboard.subscription.storePriceNote
+    : locale === "de"
+      ? `${priceEur.replace(".", ",")} € / ${unit}; keine USt. (Kleinunternehmerregelung)`
+      : `€${priceEur} / ${unit}; no VAT (small business regulation)`;
 
   const periodEnd = subscription.current_period_end
     ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(
@@ -64,39 +120,45 @@ export default async function SubscriptionPage({
           {t.dashboard.subscription.checkoutCanceled}
         </Alert>
       ) : null}
-      {/* Statischer Hinweis: keine Statusrolle, sonst wird er bei jedem Laden als
-          Aktualisierung angesagt und konkurriert mit der Fehlermeldung des
-          Checkout-Knopfs. */}
-      {!configured ? (
-        <Alert tone="warning" live={false}>
-          {t.dashboard.subscription.checkoutNotConfigured}
-        </Alert>
-      ) : null}
+      {/* Der Hinweis auf den fehlenden Zahlungsanbieter steht am deaktivierten
+          Checkout-Knopf; oben würde derselbe Satz ein zweites Mal erscheinen. */}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div className="card p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">StreamingHub Premium</h2>
-            <Badge tone={status === "active" ? "ok" : status === "pending" ? "warn" : "neutral"}>{statusLabel}</Badge>
+            <Badge
+              tone={
+                trialRunning ? "brand" : status === "active" ? "ok" : status === "pending" ? "warn" : "neutral"
+              }
+            >
+              {displayStatus}
+            </Badge>
           </div>
           <div className="mt-4">
             <InfoRow label={t.dashboard.subscription.currentPlan} value="Premium" />
-            <InfoRow label={t.dashboard.subscription.status} value={statusLabel} />
+            <InfoRow label={t.dashboard.subscription.status} value={displayStatus} />
             <InfoRow
               label={t.dashboard.subscription.channel}
               value={
                 subscription.channel === "amazon"
                   ? t.dashboard.subscription.channelAmazon
-                  : t.dashboard.subscription.channelWeb
+                  : subscription.channel === "apple"
+                    ? t.dashboard.subscription.channelApple
+                    : t.dashboard.subscription.channelWeb
               }
             />
-            <InfoRow label={t.dashboard.subscription.renewsAt} value={periodEnd ?? "—"} />
+            <InfoRow
+              label={t.dashboard.subscription.renewsAt}
+              value={trialRunning ? (trialEndLabel ?? "—") : (periodEnd ?? "—")}
+            />
             <InfoRow
               label={t.premium.price}
-              value={locale === "de" ? "2,49 € / Monat; keine USt. (Kleinunternehmerregelung)" : `€${PREMIUM_PRICE_EUR.toFixed(2)} / month; no VAT (small business regulation)`}
+              value={priceLabel}
             />
           </div>
-          {subscription.cancel_at_period_end ? (
+          {/* Nach dem Periodenende ist die Kündigung vorbei, nicht mehr vorgemerkt. */}
+          {subscription.cancel_at_period_end && status === "active" ? (
             <p className="mt-3 text-xs text-amber-300">{t.dashboard.subscription.cancelAtPeriodEnd}</p>
           ) : null}
 
@@ -106,33 +168,124 @@ export default async function SubscriptionPage({
             </p>
           ) : null}
 
-          {status === "active" && subscription.channel === "web" ? (
-            <CancelSubscriptionForm
-              action={cancelSubscriptionAction}
-              label={t.dashboard.subscription.cancelCta}
-              busy={t.ui.saving}
-            />
+          {subscription.channel === "apple" ? (
+            <p className="mt-4 rounded-xl border border-line/60 bg-white/2 px-3.5 py-3 text-xs leading-relaxed text-muted">
+              {t.dashboard.subscription.appleNotice}
+            </p>
           ) : null}
 
-          {status !== "active" ? (
-            <p className="mt-4 text-xs leading-relaxed text-muted">{t.dashboard.subscription.noSubscription}</p>
+          {/* Nach der Kündigung ist die Handlung erledigt; der Hinweis oben nennt
+              bereits das Periodenende, ein zweiter Klick wäre nur ein Duplikat. */}
+          {status === "active" && subscription.channel === "web" && !subscription.cancel_at_period_end ? (
+            offer.available ? (
+              <div className="mt-4 rounded-xl border border-brand/40 bg-brand/10 p-4">
+                <h3 className="text-sm font-semibold">{t.dashboard.subscription.retentionTitle}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  {t.dashboard.subscription.retentionBody}
+                </p>
+                <div className="mt-3">
+                  <RetentionOffer
+                    label={t.dashboard.subscription.retentionCta}
+                    acceptedMessage={t.dashboard.subscription.retentionAccepted}
+                    failedMessage={t.dashboard.subscription.retentionFailed}
+                  />
+                </div>
+                {/* Die Kündigung bleibt unverändert daneben stehen; das Angebot
+                    ist ein Vorschlag, keine Hürde. */}
+                <CancelSubscriptionForm
+                  action={cancelSubscriptionAction}
+                  label={t.dashboard.subscription.cancelCta}
+                  busy={t.ui.saving}
+                />
+              </div>
+            ) : (
+              <CancelSubscriptionForm
+                action={cancelSubscriptionAction}
+                label={t.dashboard.subscription.cancelCta}
+                busy={t.ui.saving}
+              />
+            )
+          ) : null}
+
+          {status === "canceled" ? (
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              {t.dashboard.subscription.subscriptionEnded}
+            </p>
+          ) : status === "past_due" ? (
+            <div className="mt-4 grid gap-2">
+              <p className="text-xs leading-relaxed text-muted">
+                {t.dashboard.subscription.paymentFailed}
+              </p>
+              <Link href="/dashboard/support" className="btn btn-outline btn-sm w-fit">
+                {t.dashboard.overview.contactSupport}
+              </Link>
+            </div>
+          ) : status !== "active" ? (
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              {trialRunning
+                ? t.dashboard.subscription.trialInfo
+                : t.dashboard.subscription.noSubscription}
+            </p>
           ) : null}
         </div>
 
         <div className="grid gap-4">
           {/* Bei aktivem Abo bietet der Server keinen zweiten Abschluss an
-              (already_active) – dann wird die Handlung auch nicht angeboten. */}
-          {status !== "active" ? (
+              (already_active) – dann wird die Handlung auch nicht angeboten.
+              Bei fehlgeschlagener Zahlung ebenso: Ein neuer Checkout würde ein
+              zweites Abo anlegen, statt die offene Zahlung zu klären. */}
+          {status !== "active" && status !== "past_due" && (trialRunning || trialAvailable) ? (
+            <div className="card p-5">
+              <h2 className="text-sm font-semibold">
+                {trialRunning
+                  ? t.dashboard.subscription.trialRunningTitle
+                  : t.dashboard.subscription.trialTitle}
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {trialRunning
+                  ? t.dashboard.subscription.trialRunningBody
+                  : t.dashboard.subscription.trialBody}
+              </p>
+              {trialRunning ? null : (
+                <div className="mt-4">
+                  <StartTrialButton
+                    label={t.dashboard.subscription.trialCta}
+                    startedLabel={t.dashboard.subscription.trialStarted}
+                    failedLabel={t.dashboard.subscription.trialFailed}
+                  />
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {status !== "active" && status !== "past_due" ? (
             <div className="card p-5">
               <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
-              <div className="mt-4">
+              {conversionCoupon ? (
+                <p className="mt-2 text-xs leading-relaxed text-emerald-300">
+                  {t.dashboard.subscription.conversionCouponNote}
+                </p>
+              ) : null}
+              <div className="mt-4 grid gap-2">
                 <CheckoutButton
                   label={t.dashboard.subscription.startCta}
                   disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
                   configured={configured}
                   signedIn
                 />
+                {annualAvailable ? (
+                  <div className="grid gap-1">
+                    <CheckoutButton
+                      label={t.premium.annualCta}
+                      disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+                      configured={configured}
+                      signedIn
+                      interval="year"
+                    />
+                    <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
+                  </div>
+                ) : null}
               </div>
               <Link href="/premium" className="btn btn-ghost btn-sm btn-block mt-2">
                 {t.nav.premium}

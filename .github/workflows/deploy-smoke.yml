@@ -1,4 +1,4 @@
-name: Deploy smoke
+name: Deploy-Smoke-Test
 
 on:
   schedule:
@@ -15,19 +15,19 @@ concurrency:
 
 jobs:
   smoke:
-    name: Check the deployed release
+    name: Deployten Release prüfen
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       # No dependency install: the script uses fetch and node:crypto only.
-      - name: Compare /download, /api/release and /app.apk
+      - name: /download, /api/release und /app.apk vergleichen
         run: node scripts/deploy-smoke.mjs --wait 120

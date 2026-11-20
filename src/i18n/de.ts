@@ -161,12 +161,12 @@ export const de = {
         premium: {
           title: "Premium-Zusatzfunktionen",
           description:
-            "Erweiterte Optimierung, geräteübergreifende Kontoverwaltung und zukünftige Erweiterungen.",
+            "Geräteübergreifende Kontoverwaltung, Weiterschauen auf allen Geräten und zukünftige Erweiterungen.",
         },
         continueWatching: {
           title: "Geräteübergreifendes Weiterschauen",
           description:
-            "Auf dem Fernseher beginnen, auf dem Tablet fortsetzen. Diese Funktion befindet sich in Entwicklung.",
+            "Auf dem Fernseher beginnen, auf dem Tablet weiterschauen. Der Stand liegt im Konto und wird auf jedem gekoppelten Gerät übernommen (Premium).",
         },
       },
     },
@@ -218,12 +218,12 @@ export const de = {
     },
     premium: {
       eyebrow: "StreamingHub Premium",
-      title: "Mehr Kontrolle für 2,49 € im Monat",
+      title: "Mehr Kontrolle für 3,49 € im Monat",
       subtitle:
-        "2,49 € pro Monat. Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.",
+        "3,49 € pro Monat. Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.",
       ctaPrimary: "Premium entdecken",
       ctaSecondary: "Mein Abonnement verwalten",
-      note: "Einige Premiumfunktionen sind noch in Entwicklung. Wir kennzeichnen den Status transparent; Zahlungen werden über Stripe abgewickelt.",
+      note: "Premium umfasst derzeit Weiterschauen auf allen Geräten und die geräteübergreifende Kontoverwaltung. Zahlungen werden erst nach serverseitiger Bestätigung abgewickelt.",
     },
     transparency: {
       title: "Was StreamingHub nicht ist",
@@ -242,8 +242,11 @@ export const de = {
   premium: {
     title: "StreamingHub Premium",
     subtitle:
-      "Ein Abonnement, das die Verwaltung deiner Geräte und die Verbindungsoptimierung ergänzt.",
-    price: "2,49 €",
+      "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
+    price: "3,49 €",
+    annualCta: "Jährlich für 34,99 € (2 Monate frei)",
+    annualNote:
+      "34,99 € pro Jahr statt 41,88 € – entspricht 2,92 € pro Monat. Verlängert sich jährlich; kündbar zum Laufzeitende.",
     period: "pro Monat",
     vat: "Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
     ctaPrimary: "Premium entdecken",
@@ -251,12 +254,12 @@ export const de = {
     channelTitle: "Wo du Premium abschließen kannst",
     channels: {
       web: "Sideload-Version: Web-Checkout über Stripe",
-      amazon: "Amazon-Appstore-Version: Premium ist dort nicht erhältlich",
+      amazon: "Amazon-Appstore-Version: Kauf über Amazon In-App Purchasing",
     },
     billingNotice:
       "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Dein Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",
     billingLiveNotice:
-      "Zahlungen werden über Stripe abgewickelt. Dein Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout siehst du den Gesamtbetrag von 2,49 €. Es wird keine Umsatzsteuer ausgewiesen.",
+      "Zahlungen werden über Stripe abgewickelt. Dein Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout siehst du den Gesamtbetrag von 3,49 €. Es wird keine Umsatzsteuer ausgewiesen.",
     featuresTitle: "Premiumfunktionen",
     features: [
       {
@@ -264,18 +267,6 @@ export const de = {
         description:
           "Die Wiedergabeposition wird im Konto gespeichert: im Wohnzimmer angefangen, im Schlafzimmer an derselben Stelle weiter.",
         status: "Verfügbar",
-      },
-      {
-        title: "Integrierte VPN-/Proxy-Funktion",
-        description:
-          "Automatisch konfigurierte Verbindung zur Unterstützung geeigneter Streaming-Verbindungen – direkt in der App.",
-        status: "In Entwicklung",
-      },
-      {
-        title: "Erweiterte Streaming-Optimierung",
-        description:
-          "Zusätzliche Puffer- und Verbindungsstrategien für instabile Netzwerke.",
-        status: "In Entwicklung",
       },
       {
         title: "Geräteübergreifende Kontoverwaltung",
@@ -415,6 +406,8 @@ export const de = {
     error: "Die Nachricht konnte nicht gesendet werden. Bitte versuche es später erneut.",
     spamNotice:
       "Diese Anfrage wird serverseitig validiert und mit einem Spam-Schutz versehen. Bitte keine Passwörter oder Zahlungsdaten senden.",
+    supportPremiumNote:
+      "E-Mail-Support gehört zu Premium. Die häufigsten Fragen beantwortet der Hilfebereich; Konto- und Vertragsfragen sowie Anliegen zu Widerruf und Kündigung nimmst du weiterhin über dieses Formular auf.",
     responseTime: "Antwortzeit",
     responseTimeValue: "in der Regel 1–2 Werktage",
     hours: "Supportzeiten",
@@ -494,6 +487,7 @@ export const de = {
       subscription: "Abonnement",
       support: "Support",
       settings: "Einstellungen",
+      backup: "Cloud-Backup",
       security: "Sicherheit",
       currentPage: "aktuelle Seite",
     },
@@ -516,6 +510,22 @@ export const de = {
       verifyEmailNow: "Jetzt bestätigen",
     },
     devices: {
+      revokedNoticeTitleOne: "Ein Gerät wurde abgemeldet",
+      revokedNoticeTitleMany: "{n} Geräte wurden abgemeldet",
+      revokedNoticeBodyOne:
+        "Weil dein Premium-Zugang geendet hat, wurde ein Gerät über dem kostenlosen Limit abgemeldet. Aktiv geblieben sind die zuletzt genutzten; im kostenlosen Tarif sind {limit} Geräte erlaubt. Du kannst es wieder koppeln, sobald du oben ein anderes entfernst.",
+      revokedNoticeBodyMany:
+        "Weil dein Premium-Zugang geendet hat, wurden {n} Geräte über dem kostenlosen Limit abgemeldet. Aktiv geblieben sind die zuletzt genutzten; im kostenlosen Tarif sind {limit} Geräte erlaubt. Ein abgemeldetes Gerät kannst du wieder koppeln, sobald du oben ein anderes entfernst.",
+      revokedNoticeLink: "Premium wieder aktivieren",
+      preNoticeTitle: "Beim Ablauf bleiben {limit} Geräte aktiv",
+      preNoticeBody:
+        "Du hast {count} aktive Geräte. Endet dein Testzeitraum oder dein Abo, bleiben die zuletzt genutzten {limit} aktiv – die übrigen werden abgemeldet, genau wie es in der Abschlussmail steht. Die Markierung unten zeigt, welche das betrifft. Willst du alle behalten, entferne eines der Geräte oder verlängere Premium.",
+      preNoticeEndsAt: "Dein Testzeitraum endet am {date}.",
+      preNoticeSubscriptionEndsAt: "Dein Abo endet am {date}.",
+      preNoticeSubscriptionRenewsAt:
+        "Dein Abo verlängert sich am {date} automatisch – ohne Kündigung bleibt Premium bestehen.",
+      keepsBadge: "bleibt",
+      willUnlinkBadge: "wird abgemeldet",
       title: "Geräte",
       subtitle: "Verknüpfte Geräte und Aktivierungsstatus.",
       empty: "Noch keine Geräte verknüpft.",
@@ -534,6 +544,18 @@ export const de = {
       pairingSubtitle: "Code aus der App eingeben.",
     },
     subscription: {
+      trialTitle: "14 Tage kostenlos testen",
+      trialBody:
+        "Teste Premium zwei Wochen lang ohne Zahlungsdaten. Danach gilt automatisch wieder der kostenlose Tarif – es wird nichts abgebucht.",
+      trialRunningTitle: "Testzeitraum läuft",
+      trialRunningBody:
+        "Danach gilt automatisch der kostenlose Tarif. Geräte und Playlist bleiben erhalten; es wird nichts abgebucht. Abschließen kannst du jederzeit oben.",
+      trialInfo:
+        "Dein Testzeitraum läuft; danach gilt automatisch der kostenlose Tarif – es wird nichts abgebucht. Premium-Rechte gelten für die gesamte Laufzeit.",
+      trialCta: "Testzeitraum starten",
+      trialStarted: "Dein Testzeitraum läuft. Ende:",
+      trialFailed: "Der Testzeitraum konnte nicht gestartet werden.",
+      statusTrial: "Testphase",
       title: "Abonnement",
       subtitle: "Status, Abrechnungskanal und Kündigung.",
       currentPlan: "Aktueller Plan",
@@ -541,8 +563,17 @@ export const de = {
       channel: "Kanal",
       channelWeb: "Web / Sideload",
       channelAmazon: "Amazon Appstore",
+      channelApple: "App Store",
+      appleNotice: "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Kündigen kannst du es in deinen Apple-Konto-Einstellungen.",
       renewsAt: "Läuft bis",
       cancelAtPeriodEnd: "Kündigung zum Periodenende vorgemerkt",
+      statusEnded: "Beendet",
+      statusPastDue: "Zahlung fehlgeschlagen",
+      statusIncomplete: "Zahlung nicht abgeschlossen",
+      paymentFailed:
+        "Die letzte Zahlung ist fehlgeschlagen, deshalb ruht Premium derzeit. Prüfe deine Zahlungsmethode beim Zahlungsanbieter oder schreib dem Support – nach erfolgreicher Zahlung wird Premium wieder freigeschaltet.",
+      subscriptionEnded:
+        "Dein Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
       startCta: "Premium im Web abschließen",
       manageCta: "Im Kundenkonto verwalten",
       cancelCta: "Abonnement kündigen",
@@ -555,12 +586,28 @@ export const de = {
       amazonNotice:
         "Dieses Abonnement wird über den Amazon Appstore verwaltet. Kündigung und Änderungen erfolgen in deinem Amazon-Konto.",
       noSubscription:
-        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifende Verwaltung und Optimierungsfunktionen.",
-      priceNote: "2,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
+      priceNote: "3,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+      storePriceNote: "Preis laut Abrechnung deines Stores (App Store / Amazon Appstore).",
+      conversionCouponNote:
+        "Für deinen Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – du musst keinen Code eingeben.",
+      retentionTitle: "Bleib bei Premium – mit Rabatt",
+      retentionBody:
+        "Bevor du kündigst: Wir können dir auf die nächsten Abrechnungen einen Rabatt hinterlegen. Dein Abo läuft zu reduziertem Preis weiter und bleibt monatlich kündbar.",
+      retentionCta: "Rabatt sichern",
+      retentionAccepted:
+        "Der Rabatt ist hinterlegt. Dein Abo läuft zu reduziertem Preis weiter – danke, dass du bleibst!",
+      retentionFailed:
+        "Der Rabatt konnte nicht hinterlegt werden. Du kannst es erneut versuchen oder wie gewohnt kündigen.",
     },
     support: {
       title: "Support-Anfragen",
       subtitle: "Deine Anfragen und Antworten des Support-Teams.",
+      supportPremiumOnly: "Support per E-Mail ist Teil von Premium",
+      supportPremiumBody:
+        "E-Mail-Support gehört zu Premium. Antworten auf die häufigsten Fragen – Installation, Playlist, Aktivierung – findest du im Hilfebereich; dort steht auch, wie du Konto- und Vertragsfragen klärst.",
+      supportFaqCta: "Zum Hilfebereich",
+      supportPremiumCta: "Premium ansehen",
       newTicket: "Neue Anfrage",
       subject: "Betreff",
       category: "Kategorie",
@@ -620,6 +667,41 @@ export const de = {
       sessionsCleared: "Andere Sitzungen wurden abgemeldet.",
       dangerTitle: "Konto deaktivieren",
     },
+    backup: {
+      title: "Cloud-Backup",
+      description:
+        "Sichere deinen Fortschritt und deine Playlist verschlüsselt in der Cloud und hol sie auf jedem Gerät zurück.",
+      listTitle: "Deine Sicherungen",
+      limitNote:
+        "Es bleiben die {keep} neuesten Sicherungen; ältere werden beim Anlegen ersetzt.",
+      createCta: "Sicherung anlegen",
+      creating: "Wird gesichert …",
+      created: "Sicherung angelegt – sie steht jetzt in der Liste.",
+      failed: "Das hat nicht geklappt. Bitte versuche es später erneut.",
+      empty: "Noch keine Sicherung vorhanden. Die erste dauert nur einen Moment.",
+      restoreCta: "Wiederherstellen",
+      restoring: "Wird hergestellt …",
+      restored: "{count} Fortschritte wiederhergestellt.",
+      restoredNothing: "Dein Konto war bereits aktueller – es gab nichts zu ändern.",
+      playlistRestored: "Playlist ergänzt.",
+      deleteCta: "Löschen",
+      deleting: "Wird gelöscht …",
+      confirmDelete: "Diese Sicherung endgültig löschen?",
+      createdAtLabel: "Angelegt",
+      sizeLabel: "Größe",
+      restoredAtLabel: "Wiederhergestellt",
+      lockedTitle: "Cloud-Backup ist nicht verfügbar",
+      lockedPremium:
+        "Cloud-Backup gehört zu Premium. Mit einem Abo oder während der Testphase kannst du sichern.",
+      lockedDisabled: "Cloud-Backup ist derzeit nicht freigeschaltet.",
+      lockedNotConfigured: "Cloud-Backup ist noch nicht eingerichtet.",
+      lockedListNote: "Sobald Cloud-Backup verfügbar ist, erscheinen hier deine Sicherungen.",
+      aboutTitle: "Was gesichert wird",
+      aboutBody:
+        "Gesichert werden dein Weiterschauen-Fortschritt und deine eigene Playlist. Die Datei verlässt den Server nur verschlüsselt – ohne den Schlüssel des Servers ist sie nicht lesbar.",
+      retentionNote:
+        "Wiederherstellen überschreibt nur ältere Stände: ein neuerer Fortschritt bleibt erhalten, eine bereits hinterlegte Playlist wird nicht ersetzt.",
+    },
   },
   admin: {
     title: "Administration",
@@ -631,18 +713,39 @@ export const de = {
       subscriptions: "Abonnements",
       pairing: "Aktivierungscodes",
       tickets: "Support",
+      contracts: "Widerruf & Kündigung",
       emails: "E-Mail-Ausgang",
       roles: "Rollen & Rechte",
       content: "Inhalte & FAQ",
+      settings: "Monetarisierung",
       status: "Systemstatus",
       audit: "Sicherheitsprotokoll",
+      backup: "Cloud-Backup",
+      trial: "Testzeitraum",
       backToSite: "Zur Website",
+    },
+    monetization: {
+      title: "Monetarisierung",
+      subtitle:
+        "Flags für Testzeitraum, Rabatte und Zusatzfunktionen. Änderungen gelten sofort, ohne Deploy.",
+      trial: "Kostenloser Testzeitraum",
+      conversion: "Rabatt nach dem Testzeitraum",
+      retention: "Kündigungs-Rettung",
+      cloudBackup: "Cloud-Backup",
+      annual: "Jahresabo",
+      trialDays: "Testzeitraum in Tagen (1–60)",
+      hint:
+        "Ein Flag aus bedeutet: Das Verhalten bleibt wie ohne die Funktion. Rabatte greifen nur, wenn zusätzlich der passende Stripe-Coupon konfiguriert ist.",
+      save: "Speichern",
+      saved: "Gespeichert. Die Änderung gilt ab dem nächsten Seitenaufruf.",
     },
     overview: {
       customers: "Kunden",
       devices: "Aktive Geräte",
       subscriptions: "Aktive Abonnements",
       tickets: "Offene Anfragen",
+      contractsOpen: "Offene Erklärungen",
+      contractsNone: "Keine offenen Widerrufe oder Kündigungen.",
       recentAudit: "Letzte sicherheitsrelevante Ereignisse",
       recentSignups: "Neueste Registrierungen",
       systemTitle: "Systemstatus",
@@ -656,6 +759,7 @@ export const de = {
       name: "Name",
       role: "Rolle",
       verified: "Verifiziert",
+      notVerified: "Nicht verifiziert",
       created: "Registriert",
       devices: "Geräte",
       subscription: "Abonnement",
@@ -773,6 +877,37 @@ export const de = {
       internalNote: "Als interne Notiz speichern",
       internalSaved: "Notiz gespeichert.",
     },
+    contracts: {
+      title: "Widerrufe und Kündigungen",
+      subtitle:
+        "Erklärungen von der Website. Sie sind ohne Anmeldung abgegeben worden und gelten mit dem Eingang; hier wird nur die Bearbeitung vermerkt.",
+      kind: "Art",
+      withdrawal: "Widerruf",
+      cancellation: "Kündigung",
+      customer: "Kunde",
+      contract: "Vertrag",
+      received: "Eingegangen",
+      outcome: "Ergebnis",
+      processing: "Bearbeitung",
+      open: "Offen",
+      handled: "Erledigt",
+      markHandled: "Als erledigt markieren",
+      reopen: "Wieder öffnen",
+      filterAll: "Alle",
+      filterOpen: "Offen",
+      filterHandled: "Erledigt",
+      empty: "Keine Erklärungen in dieser Auswahl.",
+      handledNotice: "Erklärung als erledigt markiert.",
+      reopenedNotice: "Erklärung wieder geöffnet.",
+      handledBy: "Erledigt von",
+      note: "Hinweis",
+      reference: "Referenz",
+      openSummary: "noch offen",
+      withdrawals: "Widerrufe",
+      cancellations: "Kündigungen",
+      statOpenWithdrawals: "offene Widerrufe",
+      statOpenCancellations: "offene Kündigungen",
+    },
     emails: {
       title: "E-Mail-Ausgang",
       subtitle:
@@ -882,6 +1017,70 @@ export const de = {
       alreadyEnabled: "MFA ist für dieses Konto bereits aktiv.",
       notAuthorized: "Nur Mitarbeiterkonten können MFA einrichten.",
     },
+    backup: {
+      title: "Cloud-Backup",
+      subtitle: "Nutzung und belegter Speicher der verschlüsselten Sicherungen.",
+      accountsPremium: "Premium-Konten",
+      accountsWithBackup: "Konten mit Sicherung",
+      backups: "Sicherungen gesamt",
+      storage: "Belegt",
+      lastBackup: "Letzte Sicherung",
+      lastRestore: "Letzte Wiederherstellung",
+      quotaNote:
+        "R2-Freibetrag: 10 GB pro Monat. „Belegt“ ist die Summe der verschlüsselten Objekte; die Datenbank speichert nur den Verweis darauf.",
+      tableTitle: "Sicherungen je Konto",
+      customer: "Kunde",
+      count: "Anzahl",
+      size: "Speicher",
+      created: "Angelegt",
+      restored: "Wiederhergestellt",
+      empty: "Noch keine Sicherung angelegt.",
+      flagOff:
+        "Cloud-Backup ist ausgeschaltet. Bestehende Sicherungen bleiben gespeichert, neue kann derzeit niemand anlegen.",
+      notConfigured: "Cloud-Backup ist nicht eingerichtet – die R2-Secrets fehlen.",
+      hintRetention: "3 Sicherungen je Konto, 365 Tage Aufbewahrung",
+      hintEncrypted: "AES-256-GCM, Schlüssel je Konto",
+    },
+    trial: {
+      title: "Testzeitraum",
+      subtitle: "Laufende Trials, verschickte Erinnerungen und abgeschlossene Testphase.",
+      running: "Laufende Trials",
+      reminderDue: "Erinnerung fällig",
+      reminded: "Erinnert",
+      converted: "Konvertiert",
+      expired: "Abgelaufen ohne Abschluss",
+      hint:
+        "„Erinnerung fällig“ sind Trials, die in den nächsten 48 Stunden enden und noch keine Mail hatten. Der tägliche Job läuft um 03:17 UTC; die Zahlen hier stammen aus der Datenbank, nicht aus dem Log.",
+      tableTitle: "Trials je Konto",
+      customer: "Kunde",
+      state: "Zustand",
+      endsAt: "Endet am",
+      remindedAt: "Erinnert am",
+      endedAt: "Beendet am",
+      convertedAt: "Konvertiert am",
+      stateRunning: "läuft",
+      stateDue: "läuft, Erinnerung offen",
+      stateConverted: "konvertiert",
+      stateExpired: "abgelaufen",
+      empty: "Noch kein Testzeitraum gestartet.",
+      devices: "Geräte",
+      overLimit: "Über Free-Limit",
+      overLimitHint:
+        "„Über Free-Limit“ zählt abgelaufene Trials mit mehr aktiven Geräten als erlaubt – etwa weil der Trial vor dieser Regel endete oder das Limit gesenkt wurde. Beim Ablauf werden überzählige Geräte automatisch abgemeldet, die zuletzt genutzten bleiben.",
+      overLimitRow: "Mehr aktive Geräte als im kostenlosen Tarif",
+      cleanupTitle: "Altbestand bereinigen",
+      cleanupBody:
+        "Konten ohne Premium-Zugang, deren Abo schon vor der automatischen Abmeldung ausgelaufen ist, behalten ihre Geräte. Dieser Lauf meldet die überzähligen ab – die zuletzt genutzten bleiben – und verschickt bewusst keine Mail, weil die Abschlussmails längst raus sind. Wiederholbar: Er ändert nur, was noch über dem Limit liegt.",
+      cleanupCount: "{n} Konten betroffen",
+      cleanupButton: "Altbestand bereinigen",
+      cleanupDone: "Bereinigt: {devices} Geräte bei {accounts} Konten abgemeldet.",
+      cleanupEmpty: "Kein Altbestand: alle Konten ohne Premium-Zugang liegen im Limit.",
+      subscriptionOverLimit: "Abo beendet, über Limit",
+      subscriptionOverLimitHint:
+        "„Abo beendet, über Limit“ zählt Konten ohne Premium-Zugang – ausgelaufenes Abo, fehlgeschlagene Zahlung oder nie abgeschlossen – mit mehr aktiven Geräten als der kostenlose Tarif erlaubt. Solche Konten stammen aus der Zeit vor der automatischen Abmeldung; sie werden nicht rückwirkend bereinigt, sondern erst, wenn das jeweilige Abo erneut endet.",
+      flagOff:
+        "Der Testzeitraum ist ausgeschaltet. Laufende Trials enden trotzdem zum hinterlegten Datum.",
+    },
   },
   accountDeletion: {
     eyebrow: "Kontolöschung",
@@ -948,6 +1147,8 @@ export const de = {
     terms: "Nutzungsbedingungen",
     subscriptionTerms: "Abonnementbedingungen",
     withdrawal: "Widerrufsinformationen",
+    withdrawContract: "Vertrag widerrufen",
+    cancelSubscription: "Abo kündigen",
     accountDeletion: "Konto löschen",
     accessibility: "Barrierefreiheit",
     cookies: "Cookie-Einstellungen",

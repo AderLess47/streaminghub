@@ -1,4 +1,4 @@
-name: Amazon IAP sync
+name: Amazon-IAP-Abgleich
 
 on:
   schedule:
@@ -16,35 +16,35 @@ concurrency:
 
 jobs:
   sync:
-    name: Re-verify Amazon subscriptions
+    name: Amazon-Abos erneut prüfen
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       # No dependency install: the script uses fetch only.
-      - name: Run the sync
+      - name: Abgleich ausführen
         env:
           APP_URL: ${{ vars.APP_URL || 'https://streaminghub.org' }}
           AMAZON_SYNC_TOKEN: ${{ secrets.AMAZON_SYNC_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${AMAZON_SYNC_TOKEN}" ]; then
-            echo "::notice title=Amazon sync skipped::AMAZON_SYNC_TOKEN is not set, so no Amazon subscription is syncable yet. Add it once IAP is configured, see docs/DEPLOYMENT.md section 11."
+            echo "::notice title=Amazon-IAP-Abgleich übersprungen::AMAZON_SYNC_TOKEN ist nicht gesetzt, deshalb lässt sich noch kein Amazon-Abo abgleichen. Setze ihn, sobald IAP eingerichtet ist, siehe docs/DEPLOYMENT.md Abschnitt 11."
             exit 0
           fi
 
           output=$(node scripts/amazon-sync.mjs)
           echo "${output}"
           {
-            echo "### Amazon IAP sync"
+            echo "### Amazon-IAP-Abgleich"
             echo
             echo '```json'
             echo "${output}"
@@ -53,5 +53,5 @@ jobs:
 
           failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
           if [ "${failed}" != "0" ]; then
-            echo "::warning title=Amazon sync had failures::${failed} receipt(s) could not be verified. Check AMAZON_RVS_SHARED_SECRET and RVS availability."
+            echo "::warning title=Amazon-IAP-Abgleich mit Fehlern::${failed} Beleg(e) konnten nicht geprüft werden. Prüfe AMAZON_RVS_SHARED_SECRET und die Erreichbarkeit von RVS."
           fi

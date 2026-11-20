@@ -27,3 +27,6 @@ android/build/
 android/app/build/
 *.jks
 *.keystore
+
+# Logs des Vega-Smoke-Tests (scripts/verify-shaka.mjs)
+/artifacts/vega-logs/

@@ -4,6 +4,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { bit, get, nowIso, run, transaction } from "./db";
+import { getEntitlements } from "./entitlements";
 import {
   effectiveStatus,
   ensureSubscription,
@@ -36,7 +37,7 @@ export type ReceiptRow = {
 export type SubscriptionView = {
   plan: "premium";
   status: SubscriptionStatus;
-  channel: "web" | "amazon";
+  channel: "web" | "amazon" | "apple";
   currentPeriodEnd: string | null;
   premiumActive: boolean;
 };
@@ -214,6 +215,8 @@ export function subscriptionView(userId: string): SubscriptionView {
     status,
     channel: subscription?.channel ?? "web",
     currentPeriodEnd: subscription?.current_period_end ?? null,
-    premiumActive: status === "active",
+    // Wie auf der Website: der Testzeitraum zählt als Premium, auch wenn der
+    // Abo-Status noch `none` ist.
+    premiumActive: getEntitlements(userId).premium,
   };
 }

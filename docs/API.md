@@ -110,6 +110,53 @@ accounts. A device resumes at the later of its local and the synced position, so
 offline progress is never lost. Playlist content and stream URLs stay on the
 device.
 
+## 3b. App Store purchase (premium, Apple platforms)
+
+`POST /api/v1/apple/purchase` with `Authorization: Bearer <activationToken>`
+
+```json
+{ "jws": "<StoreKit 2 signed transaction>" }
+```
+
+The server verifies the JWS signature chain against Apple Root CA G3, checks
+`bundleId`, `productId`, `type = Auto-Renewable Subscription`, the sandbox flag
+and the validity period, and only then stores the subscription. The app never
+unlocks premium on its own. Answer:
+
+```json
+{ "ok": true, "subscription": { "plan": "premium", "status": "active", "channel": "apple", "currentPeriodEnd": "2026-12-13T10:00:00.000Z", "premiumActive": true } }
+```
+
+`409` means the subscription already belongs to another account or another
+channel is active; both are resolved by support, never by silently merging.
+
+`POST /api/v1/apple/refresh` re-evaluates the stored period (no body). A renewal
+arrives as a new signed transaction via `/api/v1/apple/purchase`; an elapsed
+period without a reported renewal ends premium here.
+
+## 3c. App Store Server Notifications (webhook)
+
+`POST /api/v1/apple/notifications` – called by Apple, not by the app, and
+therefore without a bearer token. The body is what Notifications V2 deliver:
+
+```json
+{ "signedPayload": "<JWS>" }
+```
+
+The outer notification, the signed transaction inside it and the optional signed
+renewal info are each verified against Apple Root CA G3, together with
+`bundleId`, `productId`, subscription type and environment. `200` is returned for
+messages that were applied **and** for those intentionally skipped (unknown
+transaction, other channel, duplicate, older period), so Apple stops retrying.
+`400` marks a payload that failed verification.
+
+| Notification | Effect |
+| --- | --- |
+| `SUBSCRIBED`, `DID_RENEW`, `OFFER_REDEEMED`, `RENEWAL_EXTENDED`, `REFUND_REVERSED`, `TEST` | subscription follows the transaction |
+| `REFUND`, `REVOKE` | premium ends immediately |
+| `EXPIRED`, `GRACE_PERIOD_EXPIRED` | premium ends once the period is over |
+| `DID_CHANGE_RENEWAL_STATUS`, `DID_FAIL_TO_RENEW`, `CONSUMPTION_REQUEST`, `PRICE_INCREASE` | acknowledged, no change |
+
 ## 4. Website-side redemption (already implemented)
 
 `POST /api/devices/activate` with the customer session cookie:
@@ -134,4 +181,6 @@ logged-in account.
 
 - No content, EPG or stream URLs are served.
 - The only playlist-related value is the optional admin-managed M3U source URL returned to the selected active paired device; playlist content is not served.
-- No payment initiation from the app (web checkout only for sideload builds).
+- No payment initiation from the app. Store purchases are verified server-side
+  (`apple`) or via Amazon RVS (`amazon`); the web checkout stays on the website.
+- The webhook is public by design; it trusts nothing but the signed payload.

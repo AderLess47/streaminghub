@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Daily pull sync for Amazon IAP subscriptions.
+ * Täglicher Pull-Abgleich für Amazon-IAP-Abos.
  *
- * The work happens in `/api/internal/amazon-sync` (RVS re-verification, receipt
- * and subscription updates); this script only triggers it and reports counts.
- * Run it from a scheduler: `APP_URL=… AMAZON_SYNC_TOKEN=… npm run amazon:sync`.
+ * Die Arbeit passiert in `/api/internal/amazon-sync` (RVS-Nachprüfung, Beleg-
+ * und Abo-Aktualisierungen); dieses Skript stößt sie nur an und meldet Zähler.
+ * Aus einem Scheduler aufrufen: `APP_URL=… AMAZON_SYNC_TOKEN=… npm run amazon:sync`.
  */
 const baseUrl = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const token = process.env.AMAZON_SYNC_TOKEN ?? "";
 
 if (!token) {
-  console.error("AMAZON_SYNC_TOKEN is not set – nothing to do.");
+  console.error("AMAZON_SYNC_TOKEN ist nicht gesetzt – nichts zu tun.");
   process.exit(2);
 }
 
@@ -21,13 +21,13 @@ try {
     headers: { "x-amazon-sync-token": token },
   });
 } catch (error) {
-  console.error("Amazon sync could not reach the server:", error.message);
+  console.error("Amazon-IAP-Abgleich konnte den Server nicht erreichen:", error.message);
   process.exit(1);
 }
 
 const body = await response.json().catch(() => null);
 if (!response.ok) {
-  console.error("Amazon sync failed:", response.status, body?.error?.code ?? "");
+  console.error("Amazon-IAP-Abgleich fehlgeschlagen:", response.status, body?.error?.code ?? "");
   process.exit(1);
 }
 

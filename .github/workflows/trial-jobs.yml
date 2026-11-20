@@ -1,0 +1,69 @@
+name: Trial-Jobs
+
+on:
+  schedule:
+    # Daily at 03:17 UTC: reminders inside the 48 hour window and expiry of
+    # finished trials. Entitlements fall back by date anyway, so a late run
+    # never grants anything extra.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Nur melden, was der Job tun würde
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-jobs
+  cancel-in-progress: false
+
+jobs:
+  trial-jobs:
+    name: Trials erinnern und ablaufen lassen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No dependency install: the script uses fetch only.
+      - name: Trial-Jobs ausführen
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://streaminghub.org' }}
+          TRIAL_JOB_TOKEN: ${{ secrets.TRIAL_JOB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TRIAL_JOB_TOKEN}" ]; then
+            echo "::notice title=Trial-Jobs übersprungen::TRIAL_JOB_TOKEN ist nicht gesetzt, deshalb wird noch kein Trial erinnert oder beendet. Setze denselben Wert wie das Fly-Secret, siehe docs/DEPLOYMENT.md."
+            exit 0
+          fi
+
+          args=()
+          if [ "${DRY_RUN}" = "1" ]; then
+            args+=("--dry-run")
+          fi
+
+          output=$(node scripts/trial-jobs.mjs "${args[@]}")
+          echo "${output}"
+          {
+            echo "### Trial-Jobs"
+            echo
+            echo '```json'
+            echo "${output}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
+          if [ "${failed}" != "0" ]; then
+            echo "::warning title=Trial-Jobs mit Fehlern::${failed} Trial(s) konnten nicht erinnert oder beendet werden. Prüfe TRIAL_JOB_TOKEN und das Server-Log."
+          fi

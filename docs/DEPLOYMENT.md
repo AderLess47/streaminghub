@@ -127,17 +127,21 @@ the Stripe API. Complete the payment manually with test card
 unless `ALLOW_LIVE_STRIPE=1` is set.
 
 Without any keys, the full flow can be exercised locally against a Stripe API
-stub: start the app with `STRIPE_SECRET_KEY=sk_test_stub`,
-`STRIPE_PRICE_ID=price_stub`, `STRIPE_WEBHOOK_SECRET=whsec_stub_secret` and
-`STRIPE_API_BASE=http://127.0.0.1:4026`, then run:
+stub and an email stub: start the app with `STRIPE_SECRET_KEY=sk_test_stub`,
+`STRIPE_PRICE_ID=price_stub`, `STRIPE_WEBHOOK_SECRET=whsec_stub_secret`,
+`STRIPE_API_BASE=http://127.0.0.1:4026`, `EMAIL_API_KEY=test` and
+`EMAIL_API_BASE=http://127.0.0.1:4025`, then run:
 
 ```bash
 STRIPE_WEBHOOK_SECRET=whsec_stub_secret STRIPE_PRICE_ID=price_stub npm run stripe:smoke
 ```
 
-It
-covers checkout creation, signed webhooks, past-due mapping, invoice payment,
-cancellation, idempotency, forged signatures and session-ownership checks.
+The command starts both stubs. It covers checkout creation, signed webhooks,
+past-due mapping, invoice payment, cancellation, idempotency, forged signatures
+and session-ownership checks. It also verifies that the localized purchase
+confirmation is accepted by the email stub and stored as `sent`, that the
+success confirmation before the webhook does not duplicate it, and that an
+inactive subscription receives no purchase confirmation.
 
 **Amazon Appstore:** external payment prompts are not allowed in the app. The
 `subscriptions.channel` field separates `amazon` from `web`; Amazon purchases
@@ -257,6 +261,33 @@ Defaults can be overridden with:
 | `BACKUP_INITIAL_DELAY_SECONDS` | `120` |
 | `BACKUP_INTERVAL_SECONDS` | `86400` |
 
+Contact messages expire after `CONTACT_RETENTION_DAYS` (default `730`, i.e. 24
+months, clamped to 30–3650). `docker-entrypoint.sh` runs
+`scripts/contact-retention.mjs` shortly after startup and then once per day,
+next to the backup loop; the same purge also runs when the admin inbox is opened
+and when a new contact request arrives. The scheduled run is independent of
+traffic, and deletions are audited as `contact_messages.purged`. Every run
+prints a JSON line (`deleted`, `retentionDays`, `cutoff`) to the container log
+and stores the last run under the `settings` key `contact_retention_last_run`,
+which the admin inbox displays.
+
+| Variable | Default |
+| --- | --- |
+| `CONTACT_RETENTION_DAYS` | `730` |
+| `RETENTION_INITIAL_DELAY_SECONDS` | `180` |
+| `RETENTION_INTERVAL_SECONDS` | `86400` |
+
+The security log (`audit_log`) follows the 90 days promised by the privacy
+policy: `scripts/audit-retention.mjs` runs in the same daily loop and deletes
+older rows, and opening **Admin → Sicherheitsprotokoll** purges as well. Each
+deletion is recorded as `audit.purged` with the number of removed rows. The
+period can be raised for an ongoing incident via `AUDIT_RETENTION_DAYS`
+(minimum 90, maximum 3650).
+
+| Variable | Default |
+| --- | --- |
+| `AUDIT_RETENTION_DAYS` | `90` |
+
 Run a backup manually in the container:
 
 ```bash
@@ -278,8 +309,17 @@ fly volumes snapshots create vol_42k2gkdelj0xj904 --app streaminghub-org
 Test a restore by copying a backup to a temporary path, opening it with SQLite
 and running `PRAGMA integrity_check`; never overwrite the live database without
 a maintenance window. Logs/audit retention: 90 days for `audit_log`, 30 days for
-server logs, support tickets 24 months; admin-managed M3U URLs until account
-deletion or removal. The privacy policy documents these periods.
+server logs, support tickets 24 months, contact messages 24 months (see above);
+admin-managed M3U URLs until account deletion or removal. The privacy policy documents these periods.
+
+### 7.1 Off-site backup freshness gate
+
+An off-site copy is accepted only after the forced backup has been checked
+against the source: the remote modification time must be recent, the remote and
+local SHA-256 must match, the sizes must match, and `PRAGMA integrity_check` and
+`PRAGMA foreign_key_check` must pass. A stale or mismatched download is never
+uploaded and never causes older snapshots to be pruned. The exact commands,
+time limits and abort rules are in [`STAGING.md`](STAGING.md) §6.
 
 ## 8. Scaling
 
@@ -327,7 +367,7 @@ run is `npm run amazon:sync`, which calls the token-protected
 `POST /api/internal/amazon-sync` on the deployed app.
 
 `.github/workflows/amazon-sync.yml` runs it daily at 04:41 UTC and on demand via
-*Actions → Amazon IAP sync → Run workflow*. Without `AMAZON_SYNC_TOKEN` the job
+*Actions → Amazon-IAP-Abgleich → Run workflow*. Without `AMAZON_SYNC_TOKEN` the job
 skips with a notice instead of failing, so the schedule stays quiet until IAP is
 live.
 
@@ -341,11 +381,21 @@ live.
 | `AMAZON_IAP_SKU` | Fly env (optional) | Defaults to `premium_monthly`; must match the console IAP item |
 | `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
+| `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial-Jobs* workflow skips |
+| `STRIPE_PRICE_ID_ANNUAL` | fly.toml (`price_1Udbs9Pmp8Jh8xSPwsWMiajx`) | Annual price (34,99 EUR/year); the annual option is only shown while `annual_enabled` is on |
+| `R2_ENDPOINT` | Fly secret | `https://<account_id>.r2.cloudflarestorage.com` – storage for cloud backups |
+| `R2_BUCKET` | Fly secret | Bucket name, e.g. `streaminghub-backups` |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Fly secret | R2 API token with Object Read & Write on that bucket |
+| `BACKUP_ENCRYPTION_KEY` | Fly secret | `openssl rand -base64 32`; losing it makes existing backups unreadable |
+| `BACKUP_RETENTION_DAYS` | optional (default 365) | Backups older than this are pruned on the next create |
+| `BACKUP_MAX_BYTES` | optional (default 1048576) | Largest unencrypted snapshot |
+| `STRIPE_CONVERSION_COUPON_ID` | fly.toml (`streaminghub_trial_25_3`) | Stripe coupon for converting trials; only applied while `conversion_coupon_enabled` is on |
+| `STRIPE_WINBACK_COUPON_ID` | fly.toml (`streaminghub_winback_50_2`) | Stripe coupon for the cancellation offer; only shown while `retention_enabled` is on |
 
 The easiest path needs no local tooling: add the values under *GitHub → Settings
 → Secrets and variables → Actions* as `AMAZON_RVS_SHARED_SECRET`,
 `AMAZON_SYNC_TOKEN` (and later `AMAZON_RTN_TOPIC_ARN`), then run *Actions →
-Configure Amazon secrets → Run workflow*. That workflow copies them to Fly with
+Amazon-Secrets einrichten → Run workflow*. That workflow copies them to Fly with
 the existing `FLY_API_TOKEN` and prints only their names.
 
 ```bash
@@ -358,6 +408,33 @@ printf '%s' "$TOKEN" | gh secret set AMAZON_SYNC_TOKEN   # same value as the Fly
 Keep `AMAZON_SYNC_TOKEN` identical in both places – the app rejects any other
 value, and a mismatch shows up as `403 forbidden` in the workflow log. Never put
 these values in the repository, in `fly.toml` or in the chat.
+
+### 11.6 App Store (iOS, iPadOS, macOS)
+
+The Apple app sends its StoreKit transaction to `/api/v1/apple/purchase`; the
+server verifies the signature chain against Apple Root CA G3. **No secret is
+needed** – Apple's certificates are public and the root ships in
+`src/lib/apple-root-ca.ts`.
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `APPLE_IAP_BUNDLE_ID` | Fly env | Bundle id of the app, e.g. `org.streaminghub.app`. Without it the endpoint answers `503`, so a test deployment never accepts real receipts |
+| `APPLE_IAP_PRODUCT_ID` | Fly env (optional) | Defaults to `premium_monthly`; must match the product in App Store Connect |
+| `APPLE_IAP_ALLOW_SANDBOX` | Fly env (optional) | `1` only while testing with a sandbox account or TestFlight. Leave it unset in production |
+
+```bash
+flyctl secrets set APPLE_IAP_BUNDLE_ID=org.streaminghub.app -a streaminghub-org
+```
+
+These are not secrets; they can also live in `fly.toml` under `[env]`.
+
+Then paste the endpoint into *App Store Connect → App Information → App Store
+Server Notifications*: `https://streaminghub.org/api/v1/apple/notifications`,
+for production and sandbox alike. Apple signs every delivery, so no shared
+secret is involved. Sandbox deliveries are only accepted with
+`APPLE_IAP_ALLOW_SANDBOX=1`. See [`IAP-APPLE.md`](IAP-APPLE.md) for the
+verification rules, the conflict handling and the remaining gap (no App Store
+Server API).
 
 ### 11.2 What the run does
 
@@ -393,7 +470,7 @@ the response and in the log), and rejects every other message with `503`.
 2. Register `https://streaminghub.org/api/webhooks/amazon/rtn` in the Amazon
    Developer Console and let it confirm.
 3. Copy the topic ARN, add it as the `AMAZON_RTN_TOPIC_ARN` repository secret and
-   run *Configure Amazon secrets* again.
+   run *Amazon-Secrets einrichten* again.
 
 From then on, notifications are processed; a foreign topic answers `403`.
 
@@ -405,3 +482,152 @@ APP_URL=https://streaminghub.org AMAZON_SYNC_TOKEN=… npm run amazon:sync
 
 The command prints the same JSON summary and exits non-zero when the endpoint
 fails, which is what the workflow relies on.
+
+## 12. Release auf Fly.io – Schritt für Schritt
+
+Die App läuft als Container `streaminghub-org` in `fra` mit dem Volume
+`streaminghub_data` auf `/app/data`. Eine Maschine, 512 MB – so steht es in
+`fly.toml`. **Nicht auf mehrere Maschinen skalieren:** SQLite, Sessions und
+Rate-Limits liegen in einer Datei auf diesem Volume.
+
+### 12.1 Voraussetzungen
+
+- `flyctl` installiert und angemeldet (`fly auth login`) oder `FLY_API_TOKEN`
+in der Umgebung – beides gehört nicht ins Repository.
+- `main` ausgecheckt, `gh pr checks` grün, lokal `npm run typecheck` und
+`npm run build` grün.
+- Das Image baut Fly selbst; lokal wird kein Docker gebraucht.
+
+### 12.2 Secrets setzen
+
+Namen prüfen, Werte nie in Repo, Chat oder `fly.toml`:
+
+```bash
+fly secrets list -a streaminghub-org            # zeigt nur Namen und Zeitstempel
+fly secrets set NAME=… -a streaminghub-org      # Wert aus dem eigenen Passwort-Manager
+```
+
+| Variable | Pflicht | Zweck |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | nur beim ersten Start | legt das Admin-Konto an; danach `fly secrets unset ADMIN_PASSWORD` |
+| `EMAIL_API_KEY` | für Mailversand | Resend-Schlüssel; ohne ihn bleiben Mails in der Outbox |
+| `EMAIL_WEBHOOK_SECRET` | für Zustellberichte | Svix-Secret des Endpunkts `/api/webhooks/resend` |
+| `STRIPE_SECRET_KEY` | für Checkout | Stripe-Secret; ohne ihn antwortet der Checkout 503 |
+| `STRIPE_WEBHOOK_SECRET` | für Checkout | Secret des Endpunkts `/api/webhooks/stripe` |
+| `OPERATOR_LEGAL_NAME`, `OPERATOR_REPRESENTATIVE`, `OPERATOR_STREET`, `OPERATOR_POSTAL_CODE`, `OPERATOR_CITY`, `OPERATOR_PHONE` | für den Livegang | Betreiberdaten im Impressum; ohne sie stehen dort Platzhalter |
+| `AMAZON_RVS_SHARED_SECRET` | für Fire-TV-Käufe | Shared Key aus der Amazon Developer Console |
+| `AMAZON_SYNC_TOKEN` | für den täglichen Abgleich | derselbe Wert zusätzlich als GitHub-Actions-Secret |
+| `TRIAL_JOB_TOKEN` | für die Trial-Jobs | gemeinsames Token für `POST /api/internal/trial-jobs` (Erinnerung und Ablauf), derselbe Wert zusätzlich als GitHub-Actions-Secret |
+| `STRIPE_CONVERSION_COUPON_ID` | für den Umwandlungsrabatt | `streaminghub_trial_25_3` (25 %, 3 Monate) in `fly.toml`; wirkt nur bei `conversion_coupon_enabled=1` |
+| `STRIPE_WINBACK_COUPON_ID` | für die Kündigungs-Rettung | `streaminghub_winback_50_2` (50 %, 2 Monate) in `fly.toml`; nur bei `retention_enabled=1` |
+| `AMAZON_RTN_TOPIC_ARN` | nach der RTN-Registrierung | SNS-Topic; vorher leer lassen (siehe 11.4) |
+
+Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,
+`DATABASE_PATH`, `SESSION_DAYS`, `ADMIN_EMAIL`, `EMAIL_FROM`, `EMAIL_REPLY_TO`,
+`STRIPE_PRICE_ID`, `OPERATOR_EMAIL`, `OPERATOR_COUNTRY`,
+`OPERATOR_SMALL_BUSINESS`, `APPLE_IAP_BUNDLE_ID`.
+
+### 12.3 Ausrollen
+
+Ein Merge auf `main` rollt sich selbst aus: Sobald der CI-Lauf für diesen
+Commit grün ist, startet der Workflow **Produktions-Deploy** (`workflow_run` auf `CI-Prüfungen`) und
+rollt **genau diesen Commit** nach `streaminghub-org`. Der Lauf endet erst
+erfolgreich, wenn `/status` denselben Commit meldet – ein stiller Leerlauf
+(zurückgerollte Ausrollung, hängender Builder) wird damit rot statt übersehen.
+
+Beobachten: *Actions → Produktions-Deploy*. Ein fehlgeschlagener CI-Lauf deployt nichts,
+der vorherige Stand bleibt online.
+
+Manuell bleibt der Workflow für Rollbacks und ältere Commits:
+
+```bash
+# Actions → Produktions-Deploy → Run workflow, Feld `ref` = Tag, Branch oder Commit
+git switch main && git pull
+fly deploy -a streaminghub-org --remote-only   # nur wenn Actions nicht verfügbar ist
+fly status -a streaminghub-org
+fly logs -a streaminghub-org
+```
+
+Der Build läuft auf Fly und dauert einige Minuten. Die Schema-Migration läuft
+beim Start (`migrate()`), neue Spalten werden additiv ergänzt – es gibt keinen
+separaten Migrationsschritt und keinen Datenverlust bei bestehenden Zeilen.
+
+### 12.4 Prüfliste nach dem Ausrollen
+
+Der Reihe nach, jede Zeile mit Befehl oder Blick:
+
+- [ ] **Erreichbarkeit:** `curl -sI https://streaminghub.org/status | head -1` → `HTTP/2 200`
+- [ ] **Neue Rechtsseiten:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/widerruf https://streaminghub.org/kuendigung` → zweimal `200` (vor dem Release: `404`)
+- [ ] **Admin-Route vorhanden:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/admin/contracts` → `307` (Weiterleitung zum Login), nicht `404`
+- [ ] **Release-Konsistenz:** `npm run smoke:deploy -- --base https://streaminghub.org` → „serves one consistent release“
+- [ ] **Geräte-Vorwarnung:** *Actions → Produktions-Deploy* ist grün und der daran hängende Lauf *Geräte-Vorwarnung im Konto* (Job **Geräte-Vorwarnung auf Produktion prüfen**) ebenfalls – er prüft die gerenderte Karte mit einem Wegwerf-Konto und räumt es wieder ab (siehe `docs/STAGING.md`)
+- [ ] **Anmeldung:** Admin-Login mit MFA; `/admin` zeigt die Zeile „Offene Erklärungen“, `/admin/contracts` listet die Vorgänge
+- [ ] **Widerruf von Ende zu Ende:** `/widerruf` mit einer Testadresse abschicken → Bestätigungsseite, Eintrag erscheint in `/admin/contracts`, bei konfiguriertem Versand eine Mail in **Admin → E-Mail-Ausgang**
+- [ ] **Zahlung:** `/status` meldet den Zahlungsanbieter als verbunden; mit Testkarte `4242 4242 4242 4242` eine Testbuchung (nur mit gesetzten Stripe-Schlüsseln)
+- [ ] **E-Mail-Versand:** Kontaktformular abschicken → Outbox-Eintrag, bei Resend Status `delivered`
+- [ ] **Sicherheitsheader:** `curl -sI https://streaminghub.org | grep -i strict-transport-security` → gesetzt
+- [ ] **Sitemap:** `curl -s https://streaminghub.org/sitemap.xml | head -5` → XML mit den neuen Pfaden
+- [ ] **Backup:** `fly ssh console -a streaminghub-org -C "node /app/scripts/backup-db.mjs"`, danach `fly ssh console -a streaminghub-org -C "ls -la /app/data/backups"`
+- [ ] **Logs:** in den ersten Minuten keine `500` in `fly logs`
+- [ ] **Rollback notiert:** `fly releases -a streaminghub-org` → Image der vorherigen Version notieren
+
+### 12.5 Rollback
+
+```bash
+fly releases -a streaminghub-org
+fly deploy --image <image-der-vorherigen-version> -a streaminghub-org
+```
+
+Die Datenbank bleibt dabei unverändert; additive Spalten stören die alte
+Version nicht. Nur wenn eine Migration Daten umgeschrieben hätte, wäre ein
+Backup-Restore nötig – bei den bisherigen Änderungen ist das nicht der Fall.
+
+### 12.6 Was der Deploy nicht erledigt
+
+- Keine Secrets anlegen und keine DNS-Einträge ändern.
+- Keine Store-Einträge: APK/AAB entstehen separat über `npm run release:apk`,
+  TestFlight und App Store Connect bleiben Handarbeit.
+- Die Release-Metadaten (`src/content/release.ts`, `/api/release`) beschreiben
+  nur, was dort veröffentlicht wurde – ein neuer App-Build braucht einen
+  eigenen Upload, sonst zeigt `/download` weiter die alte Version.
+
+### 12.7 Admin-Bereich auf der Live-Seite prüfen
+
+Der Admin-Bereich ist nur nach Anmeldung mit Zwei-Faktor sichtbar. Damit sich
+das trotzdem nach jedem Deploy prüfen lässt, ohne Passwörter weiterzugeben,
+gibt es ein eigenes Prüf-Konto und zwei Wege:
+
+**Einmalig einrichten**
+
+1. Ein Konto für die Prüfung anlegen, zum Beispiel
+   `service+smoke@streaminghub.org`. Rolle im Admin unter „Kunden“ auf
+   `support` setzen – das genügt für Übersicht und Widerrufsliste, nicht für
+   Rollen- oder Secret-Änderungen.
+2. Mit diesem Konto `/admin` öffnen. Die Seite führt zur
+   Zwei-Faktor-Einrichtung und zeigt den Schlüssel im Klartext an
+   (`t.admin.mfa.secretLabel`). Diesen Schlüssel kopieren und in der
+   Authenticator-App bestätigen – ohne die Bestätigung bleibt der Zugang
+   gesperrt.
+3. In GitHub unter *Settings → Secrets and variables → Actions* drei Secrets
+   anlegen: `ADMIN_SMOKE_EMAIL`, `ADMIN_SMOKE_PASSWORD` und
+   `ADMIN_SMOKE_TOTP_SECRET` (der Schlüssel aus Schritt 2).
+
+**Prüfen**
+
+- In GitHub unter *Actions → Admin-Prüfung → Run workflow*. Das Protokoll zeigt
+  jede Prüfung einzeln: Anmeldung mit Zwei-Faktor, `/admin`, Zähler „Offene
+  Erklärungen“, `/admin/contracts` mit Überschrift und Liste,
+  `/admin/audit`. Ergebnis ist grün, wenn alle Punkte bestehen.
+- Lokal dasselbe mit
+  `SMOKE_BASE_URL=https://streaminghub.org ADMIN_SMOKE_EMAIL=… ADMIN_SMOKE_PASSWORD=… ADMIN_SMOKE_TOTP_SECRET=… node scripts/admin-smoke.mjs`
+  oder `npm run admin:smoke`.
+
+Das Skript druckt weder Passwort noch Schlüssel noch Cookies, nur die
+Ergebniszeilen; die E-Mail erscheint gekürzt (`ad***@example.org`). Legt eine
+Prüfung los, gibt es die Ausgabe mit `exit 1` und der Liste der
+fehlgeschlagenen Punkte zurück – gut geeignet als Geplante Aufgabe oder als
+Schritt nach einem Deploy.
+
+Das Prüf-Konto sieht dieselben Daten wie ein Support-Mitarbeiter. Es sollte
+deshalb nicht für den Alltag genutzt und bei Personalwechsel gelöscht werden
+(Aktionen im Sicherheitsprotokoll bleiben erhalten).

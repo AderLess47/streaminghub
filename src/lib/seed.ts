@@ -34,16 +34,16 @@ const FAQ_SEED = [
   {
     category: "premium",
     q_de: "Was kostet StreamingHub Premium?",
-    a_de: "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten.",
+    a_de: "StreamingHub Premium kostet 3,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten.",
     q_en: "How much does StreamingHub Premium cost?",
-    a_en: "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; premium is currently not offered in Amazon Appstore builds.",
+    a_en: "StreamingHub Premium costs €3.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; premium is currently not offered in Amazon Appstore builds.",
   },
   {
     category: "premium",
-    q_de: "Ist die VPN-Funktion bereits verfügbar?",
-    a_de: "Die integrierte VPN-/Proxy-Funktion ist in Entwicklung und noch nicht produktiv aktiviert. Wir kennzeichnen sie auf der Premium-Seite transparent als „In Entwicklung“ und informieren vor einer Aktivierung über Funktionen, Kosten und Datenschutz.",
-    q_en: "Is the VPN feature available yet?",
-    a_en: "The integrated VPN/proxy capability is in development and not active in production. It is labelled clearly as “In development” on the premium page and we will explain functionality, cost and privacy before activation.",
+    q_de: "Welche Funktionen umfasst Premium?",
+    a_de: "Premium umfasst derzeit geräteübergreifendes Weiterschauen und die geräteübergreifende Kontoverwaltung. Weitere Funktionen werden erst angeboten, wenn sie produktiv verfügbar sind.",
+    q_en: "Which features does Premium include?",
+    a_en: "Premium currently includes cross-device continue watching and cross-device account management. Further features are offered only once they are available in production.",
   },
   {
     category: "troubleshooting",
@@ -117,6 +117,43 @@ const PREVIOUS_SELECTED_DEVICE_FAQ_DE =
 const PREVIOUS_SELECTED_DEVICE_FAQ_EN =
   "Open StreamingHub on your device and choose “Add playlist”. Enter the credentials or the M3U URL provided by your provider. The app stores the playlist and its credentials locally on the device. If you expressly ask us to store an M3U URL that you provided yourself for your account, that URL is stored on the server and sent only to active linked devices; playlist content remains local. Please only use sources you are licensed to access.";
 
+const RETIRED_VPN_FAQ_DE =
+  "Die integrierte VPN-/Proxy-Funktion ist in Entwicklung und noch nicht produktiv aktiviert. Wir kennzeichnen sie auf der Premium-Seite transparent als „In Entwicklung“ und informieren vor einer Aktivierung über Funktionen, Kosten und Datenschutz.";
+const RETIRED_VPN_FAQ_EN =
+  "The integrated VPN/proxy capability is in development and not active in production. It is labelled clearly as “In development” on the premium page and we will explain functionality, cost and privacy before activation.";
+
+/**
+ * Replaces the retired VPN FAQ only when the row still matches the seeded copy,
+ * so manual admin edits are never overwritten.
+ */
+function syncRetiredVpnFaqCopy() {
+  const target = FAQ_SEED.find(
+    (item) => item.q_de === "Welche Funktionen umfasst Premium?",
+  );
+  if (!target) return;
+
+  const current = get<{ answer_de: string; answer_en: string }>(
+    `SELECT answer_de, answer_en FROM faq_items WHERE question_de = ?`,
+    "Ist die VPN-Funktion bereits verfügbar?",
+  );
+  if (!current) return;
+  if (current.answer_de !== RETIRED_VPN_FAQ_DE || current.answer_en !== RETIRED_VPN_FAQ_EN) {
+    return;
+  }
+
+  run(
+    `UPDATE faq_items
+     SET question_de = ?, question_en = ?, answer_de = ?, answer_en = ?, updated_at = ?
+     WHERE question_de = ?`,
+    target.q_de,
+    target.q_en,
+    target.a_de,
+    target.a_en,
+    nowIso(),
+    "Ist die VPN-Funktion bereits verfügbar?",
+  );
+}
+
 function syncLegacyPlaylistFaqCopy() {
   const target = FAQ_SEED.find(
     (item) => item.q_de === "Wie füge ich meine eigene Playlist hinzu?",
@@ -152,7 +189,9 @@ function syncLegacyPlaylistFaqCopy() {
 }
 
 function seedFaq() {
+  syncRetiredVpnFaqCopy();
   syncLegacyPlaylistFaqCopy();
+  syncPriceFaqCopy();
   const count = get<{ c: number }>(`SELECT COUNT(*) AS c FROM faq_items`)?.c ?? 0;
   if (count > 0) return;
   FAQ_SEED.forEach((item, index) => {
@@ -171,6 +210,38 @@ function seedFaq() {
   });
 }
 
+/**
+ * Preis-FAQ aus der Zeit vor der Preisanpassung. Sie wird beim Start ersetzt,
+ * aber nur solange die Zeile noch dem ausgelieferten Text entspricht – manuelle
+ * Aenderungen im Admin bleiben unangetastet.
+ */
+const PREVIOUS_PRICE_FAQ_DE =
+  "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Abschluss ist über den Web-Checkout für die Sideload-Version vorgesehen; in Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten.";
+const PREVIOUS_PRICE_FAQ_EN =
+  "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Subscriptions are intended to be completed via the web checkout for the sideload version; premium is currently not offered in Amazon Appstore builds.";
+
+function syncPriceFaqCopy() {
+  const target = FAQ_SEED.find((item) => item.q_de === "Was kostet StreamingHub Premium?");
+  if (!target) return;
+
+  const current = get<{ answer_de: string; answer_en: string }>(
+    `SELECT answer_de, answer_en FROM faq_items WHERE question_de = ?`,
+    target.q_de,
+  );
+  if (!current) return;
+  if (current.answer_de !== PREVIOUS_PRICE_FAQ_DE || current.answer_en !== PREVIOUS_PRICE_FAQ_EN) {
+    return;
+  }
+
+  run(
+    `UPDATE faq_items SET answer_de = ?, answer_en = ?, updated_at = ? WHERE question_de = ?`,
+    target.a_de,
+    target.a_en,
+    nowIso(),
+    target.q_de,
+  );
+}
+
 function seedSettings() {
   const defaults: Record<string, string> = {
     announcement_de: "",
@@ -181,6 +252,12 @@ function seedSettings() {
       "StreamingHub is a technical IPTV player for Fire TV, Android TV and Android mobile devices. Import your own playlists, manage them clearly and use hardware-aware playback.",
     free_device_limit: "2",
     premium_device_limit: "5",
+    // Monetarisierung startet aus: Der Deploy allein ändert kein Verhalten.
+    trial_enabled: "0",
+    cloud_backup_enabled: "0",
+    annual_enabled: "0",
+    conversion_coupon_enabled: "0",
+    retention_enabled: "0",
   };
   for (const [key, value] of Object.entries(defaults)) {
     run(

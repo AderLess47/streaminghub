@@ -13,4 +13,6 @@ data class Channel(
     val group: String,
     val tvgId: String?,
     val kind: MediaKind,
+    /** DRM-Angaben aus `#KODIPROP`; `null`, wenn der Sender frei empfangbar ist. */
+    val drm: ChannelDrm? = null,
 )

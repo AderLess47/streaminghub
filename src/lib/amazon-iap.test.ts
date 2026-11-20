@@ -5,6 +5,7 @@ import {
   buildVerifyUrl,
   decideReceiptApplication,
   isReplayable,
+  isReplayableReceipt,
   parseRvsResponse,
   receiptState,
   verifyReceipt,
@@ -106,6 +107,18 @@ test("a verified receipt is replayed inside the window and re-checked afterwards
   assert.equal(isReplayable(new Date(now - 60_000).toISOString(), now), true);
   assert.equal(isReplayable(new Date(now - 11 * 60_000).toISOString(), now), false);
   assert.equal(isReplayable(null, now), false);
+});
+
+test("a canceled receipt is re-verified instead of replayed", () => {
+  const fresh = new Date(now - 60_000).toISOString();
+  assert.equal(isReplayableReceipt({ status: "active", verified_at: fresh }, now), true);
+  // RVS 410 oder erkannter Ablauf: verified_at ist frisch, Premium aber weg.
+  assert.equal(isReplayableReceipt({ status: "canceled", verified_at: fresh }, now), false);
+  assert.equal(isReplayableReceipt({ status: "expired", verified_at: fresh }, now), false);
+  assert.equal(
+    isReplayableReceipt({ status: "active", verified_at: new Date(now - 60 * 60_000).toISOString() }, now),
+    false,
+  );
 });
 
 test("turning auto-renew off keeps premium until the cancel date", () => {

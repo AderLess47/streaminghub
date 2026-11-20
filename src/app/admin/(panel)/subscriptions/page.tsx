@@ -32,7 +32,7 @@ export default async function AdminSubscriptionsPage() {
     <div className="grid gap-5">
       <PageHeader eyebrow={t.admin.nav.subscriptions} title={t.admin.subscriptions.title} description={t.admin.subscriptions.note} />
 
-      <ScrollRegion label={t.admin.subscriptions.title} className="card overflow-x-auto">
+      <ScrollRegion label={t.admin.subscriptions.title} className="card hidden overflow-x-auto xl:block">
         <table className="data-table">
           <caption className="sr-only">{t.admin.subscriptions.title}</caption>
           <thead>
@@ -49,7 +49,9 @@ export default async function AdminSubscriptionsPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.user_id}>
-                <td className="text-xs">{row.email}</td>
+                <td className="max-w-[13rem] truncate text-xs" title={row.email}>
+                  {row.email}
+                </td>
                 <td>
                   <Badge tone={row.status === "active" ? "ok" : row.status === "pending" ? "warn" : "neutral"}>{row.status}</Badge>
                 </td>
@@ -61,7 +63,12 @@ export default async function AdminSubscriptionsPage() {
                   <form action={setSubscriptionStatusAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="userId" value={row.user_id} />
                     <input type="hidden" name="returnTo" value="/admin/subscriptions" />
-                    <select name="status" defaultValue={row.status} className="field !w-auto !py-1 !text-xs">
+                    <select
+                      name="status"
+                      defaultValue={row.status}
+                      className="field !w-auto !py-1 !text-xs"
+                      aria-label={`${t.admin.subscriptions.setStatus}: ${row.email}`}
+                    >
                       {["none", "pending", "active", "past_due", "canceled", "incomplete"].map((status) => (
                         <option key={status} value={status}>
                           {status}
@@ -75,7 +82,7 @@ export default async function AdminSubscriptionsPage() {
                       title={t.ui.save}
                       aria-label={t.ui.save}
                     >
-                      ✓
+                      <span aria-hidden="true">✓</span>
                     </button>
                   </form>
                 </td>
@@ -91,9 +98,71 @@ export default async function AdminSubscriptionsPage() {
           </tbody>
         </table>
       </ScrollRegion>
-      <p className="rounded-xl border border-amber-500/20 bg-amber-500/6 px-3.5 py-3 text-xs leading-relaxed text-amber-200/90">
-        {t.admin.subscriptions.note}
-      </p>
+
+      <ul className="grid gap-3 md:grid-cols-2 xl:hidden">
+        {rows.map((row) => (
+          <li key={row.user_id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 truncate text-xs text-slate-200">{row.email}</p>
+              <span className="shrink-0">
+                <Badge tone={row.status === "active" ? "ok" : row.status === "pending" ? "warn" : "neutral"}>
+                  {row.status}
+                </Badge>
+              </span>
+            </div>
+
+            <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <dt className="text-muted">{t.admin.subscriptions.channel}</dt>
+                <dd>{row.channel}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t.admin.subscriptions.provider}</dt>
+                <dd>{row.provider}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t.admin.subscriptions.periodEnd}</dt>
+                <dd className="whitespace-nowrap">
+                  {row.current_period_end ? dateFormat.format(new Date(row.current_period_end)) : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t.admin.subscriptions.updated}</dt>
+                <dd className="whitespace-nowrap">{dateFormat.format(new Date(row.updated_at))}</dd>
+              </div>
+            </dl>
+
+            <form action={setSubscriptionStatusAction} className="mt-3 flex items-center gap-2">
+              <input type="hidden" name="userId" value={row.user_id} />
+              <input type="hidden" name="returnTo" value="/admin/subscriptions" />
+              <select
+                name="status"
+                defaultValue={row.status}
+                className="field min-h-11 !w-auto flex-1 !text-xs"
+                aria-label={`${t.admin.subscriptions.setStatus}: ${row.email}`}
+              >
+                {["none", "pending", "active", "past_due", "canceled", "incomplete"].map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <FormStatus label={t.ui.saving} />
+              <button
+                type="submit"
+                className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                title={t.ui.save}
+                aria-label={t.ui.save}
+              >
+                <span aria-hidden="true">✓</span>
+              </button>
+            </form>
+          </li>
+        ))}
+        {rows.length === 0 ? (
+          <li className="card p-6 text-center text-xs text-muted">{t.admin.subscriptions.empty}</li>
+        ) : null}
+      </ul>
     </div>
   );
 }

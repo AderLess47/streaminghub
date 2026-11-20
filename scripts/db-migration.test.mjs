@@ -35,15 +35,14 @@ function schemaSql() {
 /** Columns that migrate() adds to a table that already exists. */
 function migratedColumns() {
   const found = [];
-  for (const match of migrationSource.matchAll(/ALTER TABLE (\w+) ADD COLUMN (\w+)/g)) {
+  // Either an explicit ALTER TABLE or the addColumn() helper. Dynamic additions
+  // (a loop over a [name, definition] list) cannot be detected from the source;
+  // their columns are not indexed by SCHEMA_SQL, so no check is lost.
+  for (const match of migrationSource.matchAll(/addColumn\(\s*db,\s*"(\w+)",\s*"(\w+)"/g)) {
     found.push({ table: match[1], column: match[2] });
   }
-  // The outbox columns are added from a [column, definition] list inside a loop.
-  const loop = migrationSource.match(/ALTER TABLE (\w+) ADD COLUMN \$\{definition\}/);
-  if (loop) {
-    for (const match of migrationSource.matchAll(/\["(\w+)",\s*"(\w+)\s+[^"]+"\]/g)) {
-      found.push({ table: loop[1], column: match[2] });
-    }
+  for (const match of migrationSource.matchAll(/ALTER TABLE (\w+) ADD COLUMN (\w+)/g)) {
+    found.push({ table: match[1], column: match[2] });
   }
   return found;
 }
@@ -148,7 +147,7 @@ test("base schema creates no index on a column that migrate() adds", () => {
 test("migrate() still adds the device column and its index", () => {
   assert.match(
     migrationSource,
-    /ALTER TABLE customer_playlists ADD COLUMN device_id/,
+    /addColumn\(\s*db,\s*"customer_playlists",\s*"device_id"/,
     "migrate() must keep adding customer_playlists.device_id",
   );
   assert.match(

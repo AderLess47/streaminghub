@@ -1,9 +1,26 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { get, nowIso, run } from "./db";
+import { freeDeviceLimit, revokeDevicesOverLimit } from "./device-access";
 import { env, isBillingConfigured } from "./env";
+import {
+  paymentFailedMail,
+  paymentFailedSupportNotice,
+  paymentRecoveredMail,
+  purchaseConfirmationMail,
+  sendMail,
+  storeSubscriptionEndedMail,
+  storeSubscriptionRefundedMail,
+  subscriptionEndedMail,
+} from "./mail";
+import {
+  billingIntervalOf,
+  cents,
+  PREMIUM_PLAN_ID,
+  PREMIUM_PRICE_EUR,
+} from "./pricing";
 
-export const PREMIUM_PRICE_EUR = 2.49;
-export const PREMIUM_PLAN_ID = "premium_monthly";
+// Weiterhin von hier exportiert, damit bestehende Importe unverändert bleiben.
+export { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR };
 const STRIPE_TIMEOUT_MS = 10_000;
 
 export type CheckoutOutcome =
@@ -26,13 +43,33 @@ export type Subscription = {
   id: string;
   user_id: string;
   status: SubscriptionStatus;
-  channel: "web" | "amazon";
+  channel: "web" | "amazon" | "apple";
   provider: string;
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
   current_period_end: string | null;
   cancel_at_period_end: number;
   updated_at: string;
+  // Seit dem Abo-Modell zusätzlich vorhanden (per Migration ergänzt). Der
+  // Status bleibt die Laufzeit-Wahrheit; diese Felder beschreiben Tarif,
+  // Abrechnung und Trial.
+  plan?: string;
+  billing_interval?: string | null;
+  provider_price_id?: string | null;
+  price_cents?: number | null;
+  started_at?: string | null;
+  canceled_at?: string | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  trial_source?: string | null;
+  trial_used_at?: string | null;
+  trial_converted_at?: string | null;
+  trial_reminder_sent_at?: string | null;
+  trial_ended_at?: string | null;
+  /** Rabatt, der beim Checkout oder für die Kündigungs-Rettung hinterlegt wurde. */
+  coupon_id?: string | null;
+  retention_outcome?: "accepted" | "declined" | null;
+  retention_decided_at?: string | null;
 };
 
 type StripeSubscriptionObject = {
@@ -42,7 +79,24 @@ type StripeSubscriptionObject = {
   current_period_end?: number;
   cancel_at_period_end?: boolean;
   metadata?: Record<string, string>;
+  items?: { data?: { price?: { id?: string; unit_amount?: number | null } }[] };
 };
+
+/**
+ * Tarif und Abrechnung aus dem abgeschlossenen Preis. Unbekannte Preise (etwa
+ * Alt-Abos mit dem frueheren Betrag) bleiben unbenannt, damit dort nichts
+ * umgeschrieben wird.
+ */
+function planPatch(priceId: string | undefined): { plan?: string; billingInterval?: "month" | "year" } {
+  if (!priceId) return {};
+  if (env.billing.stripeAnnualPriceId && priceId === env.billing.stripeAnnualPriceId) {
+    return { plan: "standard_annual", billingInterval: "year" };
+  }
+  if (priceId === env.billing.stripePriceId) {
+    return { plan: "standard_monthly", billingInterval: "month" };
+  }
+  return {};
+}
 
 export function getSubscription(userId: string): Subscription | null {
   return (
@@ -131,13 +185,19 @@ function patchSubscription(
     subscriptionId?: string | null;
     periodEnd?: string | null;
     cancelAtPeriodEnd?: boolean;
+    /** Betrag des abgeschlossenen Preises in Cent, damit die Anzeige stimmt. */
+    priceCents?: number | null;
+    priceId?: string | null;
+    /** Tarif und Abrechnung, abgeleitet aus dem abgeschlossenen Preis. */
+    plan?: string | null;
+    billingInterval?: "month" | "year" | null;
   },
 ) {
   const current = ensureSubscription(userId);
   run(
     `UPDATE subscriptions SET status = ?, provider = 'stripe', channel = 'web',
        provider_customer_id = ?, provider_subscription_id = ?, current_period_end = ?,
-       cancel_at_period_end = ?, updated_at = ?
+       cancel_at_period_end = ?, price_cents = ?, provider_price_id = ?, plan = ?, billing_interval = ?, updated_at = ?
      WHERE user_id = ?`,
     patch.status ?? current.status,
     patch.customerId === undefined ? current.provider_customer_id : patch.customerId,
@@ -148,6 +208,12 @@ function patchSubscription(
       : patch.cancelAtPeriodEnd
         ? 1
         : 0,
+    patch.priceCents === undefined ? (current.price_cents ?? null) : patch.priceCents,
+    patch.priceId === undefined ? (current.provider_price_id ?? null) : patch.priceId,
+    patch.plan === undefined ? (current.plan ?? "premium") : (patch.plan ?? "premium"),
+    patch.billingInterval === undefined
+      ? (current.billing_interval ?? null)
+      : patch.billingInterval,
     nowIso(),
     userId,
   );
@@ -175,6 +241,10 @@ export async function createWebCheckout(params: {
   userId: string;
   email: string;
   locale: string;
+  /** Optionaler Stripe-Coupon (z. B. Umwandlung nach dem Testzeitraum). */
+  couponId?: string | null;
+  /** Abrechnung; ohne Angabe monatlich, damit bestehende Aufrufer gleich bleiben. */
+  interval?: "month" | "year";
 }): Promise<CheckoutOutcome> {
   const subscription = ensureSubscription(params.userId);
   const status = effectiveStatus(subscription);
@@ -194,19 +264,36 @@ export async function createWebCheckout(params: {
     };
   }
 
+  const interval = params.interval === "year" ? "year" : "month";
+  const priceId = interval === "year" ? env.billing.stripeAnnualPriceId : env.billing.stripePriceId;
+  if (!priceId) {
+    return {
+      ok: false,
+      code: "not_configured",
+      message: "Der Jahresabschluss ist derzeit nicht verfügbar.",
+    };
+  }
+
   const body = new URLSearchParams({
     mode: "subscription",
-    "line_items[0][price]": env.billing.stripePriceId,
+    "line_items[0][price]": priceId,
     "line_items[0][quantity]": "1",
     customer_email: params.email,
     client_reference_id: params.userId,
     "metadata[userId]": params.userId,
     "subscription_data[metadata][userId]": params.userId,
+    "subscription_data[metadata][interval]": interval,
     locale: stripeLocale(params.locale),
     success_url: `${env.appUrl}/dashboard/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.appUrl}/premium?checkout=canceled`,
     allow_promotion_codes: "false",
   });
+  if (params.couponId) {
+    // Rabatte kommen ausschließlich von hier: kein frei eintippbarer Code im
+    // Checkout, und der Betrag wird erst nach serverseitiger Prüfung gesetzt.
+    body.set("discounts[0][coupon]", params.couponId);
+    body.set("metadata[coupon]", params.couponId);
+  }
 
   try {
     const response = await stripeRequest("/v1/checkout/sessions", {
@@ -233,7 +320,11 @@ export async function createWebCheckout(params: {
     }
 
     run(
-      `UPDATE subscriptions SET status = 'pending', provider = 'stripe', channel = 'web', updated_at = ? WHERE user_id = ?`,
+      `UPDATE subscriptions
+       SET status = 'pending', provider = 'stripe', channel = 'web',
+           coupon_id = COALESCE(?, coupon_id), updated_at = ?
+       WHERE user_id = ?`,
+      params.couponId ?? null,
       nowIso(),
       params.userId,
     );
@@ -317,36 +408,64 @@ export async function applyStripeEvent(event: StripeEvent) {
 
   switch (event.type) {
     case "checkout.session.completed": {
+      const sessionId = typeof object.id === "string" ? object.id : null;
       const subscriptionId = idOf(object.subscription);
       const customerId = idOf(object.customer);
       // Payment methods such as SEPA may complete later; the subscription event
       // is authoritative. Fetch it when possible so the UI is not stuck.
       const subscription = subscriptionId ? await fetchSubscription(subscriptionId) : null;
       status = subscription ? mapStripeStatus(subscription.status) : "pending";
+      const periodEnd = isoFromSeconds(subscription?.current_period_end) ?? null;
+      // Betrag und Preis-ID mitschreiben: Ein Abo behaelt den Preis, mit dem es
+      // abgeschlossen wurde, auch wenn der Listenpreis spaeter steigt.
+      const checkoutPrice = subscription?.items?.data?.[0]?.price;
       patchSubscription(userId, {
         status,
         customerId,
         subscriptionId,
-        periodEnd: isoFromSeconds(subscription?.current_period_end) ?? undefined,
+        periodEnd: periodEnd ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
+        priceCents: typeof checkoutPrice?.unit_amount === "number" ? checkoutPrice.unit_amount : undefined,
+        priceId: checkoutPrice?.id ?? undefined,
+        ...planPatch(checkoutPrice?.id),
       });
+      if (status === "active" && sessionId) {
+        await sendPurchaseConfirmation({ userId, sessionId, subscriptionId, periodEnd });
+      }
       break;
     }
     case "customer.subscription.created":
     case "customer.subscription.updated": {
       const subscription = object as StripeSubscriptionObject;
       status = mapStripeStatus(subscription.status);
+      const price = subscription.items?.data?.[0]?.price;
       patchSubscription(userId, {
         status,
         customerId: idOf(subscription.customer),
         subscriptionId: subscription.id ?? null,
         periodEnd: isoFromSeconds(subscription.current_period_end) ?? undefined,
         cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+        priceCents: typeof price?.unit_amount === "number" ? price.unit_amount : undefined,
+        priceId: price?.id ?? undefined,
+        ...planPatch(price?.id),
       });
+      // "unpaid" ist bei Stripe das Ende der Wiederholungen: Premium ist weg,
+      // ohne dass je eine Kündigung erklärt wurde.
+      if (subscription.status === "unpaid") {
+        await mailSubscriptionEnded(
+          userId,
+          subscription.id ?? null,
+          isoFromSeconds(subscription.current_period_end) ?? null,
+        );
+      }
       break;
     }
     case "customer.subscription.deleted": {
       const subscription = object as StripeSubscriptionObject;
+      // Nur ein Abo, das zuletzt an einer offenen Zahlung hing, verdient die
+      // Abschlussmail; eine normale Kündigung hat ihre Bestätigung schon.
+      const previousSub = getSubscription(userId);
+      const previous = effectiveStatus(previousSub);
       status = "canceled";
       patchSubscription(userId, {
         status,
@@ -354,12 +473,22 @@ export async function applyStripeEvent(event: StripeEvent) {
         subscriptionId: subscription.id ?? null,
         cancelAtPeriodEnd: false,
       });
+      if (previous === "past_due") {
+        await mailSubscriptionEnded(
+          userId,
+          subscription.id ?? null,
+          previousSub?.current_period_end ?? null,
+        );
+      }
       break;
     }
     case "invoice.paid": {
       const lines = object.lines as
         | { data?: { period?: { end?: number } }[] }
         | undefined;
+      // Nur eine Nachzahlung verdient eine Bestätigung; die monatliche
+      // Verlängerung läuft ohne Mail weiter.
+      const wasPastDue = effectiveStatus(getSubscription(userId)) === "past_due";
       status = "active";
       patchSubscription(userId, {
         status,
@@ -367,6 +496,16 @@ export async function applyStripeEvent(event: StripeEvent) {
         periodEnd: isoFromSeconds(lines?.data?.[0]?.period?.end) ?? undefined,
         cancelAtPeriodEnd: false,
       });
+      if (wasPastDue) {
+        const user = userContact(userId);
+        if (user) {
+          await sendMail({
+            to: user.email,
+            ...paymentRecoveredMail({ name: user.display_name, locale: user.locale }),
+            kind: "subscription",
+          });
+        }
+      }
       break;
     }
     case "invoice.payment_failed": {
@@ -375,6 +514,40 @@ export async function applyStripeEvent(event: StripeEvent) {
         status,
         customerId: idOf(object.customer),
       });
+      const attemptCount = typeof object.attempt_count === "number" ? object.attempt_count : 1;
+      const user = userContact(userId);
+      // Nur der erste Fehlversuch informiert den Kunden; die Wiederholungen
+      // innerhalb desselben Zahlungsplans wären dieselbe Nachricht.
+      if (user && attemptCount <= 1) {
+        await sendMail({
+          to: user.email,
+          ...paymentFailedMail({ name: user.display_name, locale: user.locale }),
+          kind: "subscription",
+        });
+      }
+      // Erst der zweite Fehlversuch verdient eine interne Meldung; jede
+      // weitere Wiederholung würde den Support nur erneut zum selben Fall
+      // anschreiben.
+      if (user && attemptCount === 2) {
+        const nextAttempt =
+          typeof object.next_payment_attempt === "number"
+            ? new Date(object.next_payment_attempt * 1000).toLocaleDateString("de-DE", {
+                timeZone: "Europe/Berlin",
+                dateStyle: "long",
+              })
+            : null;
+        await sendMail({
+          to: env.supportEmail,
+          ...paymentFailedSupportNotice({
+            name: user.display_name,
+            email: user.email,
+            customerId: idOf(object.customer),
+            attemptCount,
+            nextAttemptAt: nextAttempt,
+          }),
+          kind: "system",
+        });
+      }
       break;
     }
     default:
@@ -383,6 +556,143 @@ export async function applyStripeEvent(event: StripeEvent) {
 
   run(`UPDATE subscription_events SET user_id = ? WHERE provider_event_id = ?`, userId, event.id);
   return { handled: true, duplicate: false as const, status };
+}
+
+/** Markiert eine bereits verschickte Mail, damit spätere Ereignisse sie nicht wiederholen. */
+function claimMailMarker(userId: string, key: string) {
+  const result = run(
+    `INSERT OR IGNORE INTO subscription_events
+       (id, user_id, provider, event_type, provider_event_id, payload, created_at)
+     VALUES (?, ?, 'stripe', 'mail.sent', ?, '{}', ?)`,
+    randomUUID(),
+    userId,
+    key,
+    nowIso(),
+  );
+  return Number(result.changes ?? 0) > 0;
+}
+
+/**
+ * Abschlussmail für ein Store-Abo. Wird von den Apple- und Amazon-Pfaden nach
+ * dem Statuswechsel gerufen; die Markierung verhindert Doppelmails, wenn
+ * Notification und Pull-Refresh denselben Ablauf feststellen. Der Zeitraum
+ * gehört zum Schlüssel: Nach einem Wiederkauf endet derselbe Beleg später
+ * erneut, und dann soll es wieder eine Mail geben.
+ */
+export async function notifyStoreSubscriptionEnded(input: {
+  userId: string;
+  store: "apple" | "amazon";
+  subscriptionKey: string;
+  periodEnd?: string | null;
+  reason?: "ended" | "refunded";
+  /**
+   * Zeitraum, für den eine Erstattung auch die spätere Ablaufmail abdeckt.
+   * Apple kann nach einer Erstattung noch eine EXPIRED-Meldung für dieselbe
+   * Periode schicken; der Kunde soll dann nicht zwei Nachrichten bekommen.
+   */
+  coversPeriodEnd?: string | null;
+}) {
+  const user = userContact(input.userId);
+  if (!user) return false;
+  const reason = input.reason ?? "ended";
+  const key = `mail:store-subscription-${reason}:${input.subscriptionKey}:${input.periodEnd ?? "unknown"}`;
+  if (!claimMailMarker(input.userId, key)) return false;
+  if (reason === "refunded" && input.coversPeriodEnd) {
+    claimMailMarker(
+      input.userId,
+      `mail:store-subscription-ended:${input.subscriptionKey}:${input.coversPeriodEnd}`,
+    );
+  }
+  // Wie beim Trial-Ablauf: Nach dem Ende gilt das kostenlose Limit, die
+  // zuletzt genutzten Geräte bleiben. Der Marker oben fängt Doppelläufe ab,
+  // deshalb passiert die Abmeldung je Ablauf nur einmal.
+  const deviceLimit = freeDeviceLimit();
+  const devicesRevoked = revokeDevicesOverLimit(input.userId, nowIso(), deviceLimit, "subscription_ended");
+  const template =
+    reason === "refunded"
+      ? storeSubscriptionRefundedMail({
+          name: user.display_name,
+          locale: user.locale,
+          store: input.store,
+          deviceLimit,
+          devicesRevoked,
+        })
+      : storeSubscriptionEndedMail({
+          name: user.display_name,
+          locale: user.locale,
+          store: input.store,
+          deviceLimit,
+          devicesRevoked,
+        });
+  await sendMail({ to: user.email, ...template, kind: "subscription" });
+  return true;
+}
+
+/**
+ * Erzeugt die Kaufbestätigung genau einmal pro Checkout. Der Marker liegt in
+ * subscription_events und schützt sowohl gegen Stripe-Retries als auch gegen
+ * das Zusammentreffen von Webhook und serverseitiger Success-Bestätigung.
+ */
+async function sendPurchaseConfirmation(params: {
+  userId: string;
+  sessionId: string;
+  subscriptionId: string | null;
+  periodEnd: string | null;
+}) {
+  const user = userContact(params.userId);
+  if (!user) return;
+  const key = `mail:purchase-confirmation:${params.subscriptionId ?? params.sessionId}`;
+  if (!claimMailMarker(params.userId, key)) return;
+  // Betrag und Intervall stammen aus dem Abo, das der Webhook gerade
+  // geschrieben hat – ein Jahresabo darf nicht als Monatspreis in der
+  // Bestätigung stehen.
+  const subscription = getSubscription(params.userId);
+  const priceCents = subscription?.price_cents ?? cents(PREMIUM_PRICE_EUR);
+  const interval =
+    billingIntervalOf(subscription?.plan, subscription?.billing_interval) ?? "month";
+  await sendMail({
+    to: user.email,
+    ...purchaseConfirmationMail({
+      name: user.display_name,
+      locale: user.locale,
+      priceEur: priceCents / 100,
+      interval,
+      periodEnd: params.periodEnd,
+    }),
+    kind: "subscription",
+  });
+}
+
+async function mailSubscriptionEnded(
+  userId: string,
+  subscriptionId: string | null,
+  periodEnd: string | null,
+) {
+  const user = userContact(userId);
+  if (!user) return;
+  // Der Zeitraum gehört zum Schlüssel: Wird dasselbe Abo nach einer Zahlung
+  // wieder aktiv und läuft später erneut aus, soll es wieder eine Mail geben.
+  const key = `mail:subscription-ended:${subscriptionId ?? userId}:${periodEnd ?? "unknown"}`;
+  if (!claimMailMarker(userId, key)) return;
+  const deviceLimit = freeDeviceLimit();
+  const devicesRevoked = revokeDevicesOverLimit(userId, nowIso(), deviceLimit, "subscription_ended");
+  await sendMail({
+    to: user.email,
+    ...subscriptionEndedMail({
+      name: user.display_name,
+      locale: user.locale,
+      deviceLimit,
+      devicesRevoked,
+    }),
+    kind: "subscription",
+  });
+}
+
+function userContact(userId: string) {
+  return get<{ email: string; display_name: string; locale: string }>(
+    `SELECT email, display_name, locale FROM users WHERE id = ?`,
+    userId,
+  );
 }
 
 function findUserByCustomerId(customerId: string | undefined) {
@@ -475,13 +785,17 @@ export async function reconcileCheckoutSession(
     typeof subscriptionValue === "string" ? subscriptionValue : idOf(subscriptionValue);
 
   const status = subscription ? mapStripeStatus(subscription.status) : "pending";
+  const periodEnd = isoFromSeconds(subscription?.current_period_end) ?? null;
   patchSubscription(userId, {
     status,
     customerId: idOf(session.customer),
     subscriptionId,
-    periodEnd: isoFromSeconds(subscription?.current_period_end) ?? undefined,
+    periodEnd: periodEnd ?? undefined,
     cancelAtPeriodEnd: Boolean(subscription?.cancel_at_period_end),
   });
+  if (status === "active" && session.id) {
+    await sendPurchaseConfirmation({ userId, sessionId: session.id, subscriptionId, periodEnd });
+  }
 
   return { ok: true, status };
 }
@@ -501,6 +815,13 @@ export async function cancelSubscription(userId: string) {
       ok: false as const,
       message:
         "Dieses Abonnement wurde über den Amazon Appstore abgeschlossen und wird dort verwaltet. Bitte kündige es in deinem Amazon-Konto.",
+    };
+  }
+  if (subscription.channel === "apple") {
+    return {
+      ok: false as const,
+      message:
+        "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Bitte kündige es in deinen Apple-Konto-Einstellungen.",
     };
   }
   if (subscription.provider !== "stripe" || !subscription.provider_subscription_id) {
@@ -541,5 +862,58 @@ export async function cancelSubscription(userId: string) {
     };
   } catch {
     return { ok: false as const, message: "Der Zahlungsanbieter ist derzeit nicht erreichbar." };
+  }
+}
+
+/**
+ * Legt einen Coupon auf ein laufendes Abo (Kündigungs-Rettung).
+ *
+ * Stripe ersetzt damit einen vorhandenen Rabatt, statt ihn zu stapeln – genau
+ * das ist hier gewollt. Erst eine erfolgreiche Antwort wird gespeichert, damit
+ * ein Fehlversuch wiederholt werden kann.
+ */
+export async function applySubscriptionCoupon(
+  userId: string,
+  couponId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const subscription = getSubscription(userId);
+  if (!subscription || effectiveStatus(subscription) !== "active") {
+    return { ok: false, message: "Es ist kein aktives Abonnement vorhanden." };
+  }
+  if (subscription.channel !== "web") {
+    return {
+      ok: false,
+      message:
+        "Dieses Abonnement wird über den Store verwaltet. Ein Rabatt lässt sich dort nicht setzen.",
+    };
+  }
+  if (subscription.provider !== "stripe" || !subscription.provider_subscription_id) {
+    return {
+      ok: false,
+      message: "Für dieses Abonnement ist kein aktiver Zahlungsanbieter hinterlegt.",
+    };
+  }
+
+  try {
+    const response = await stripeRequest(
+      `/v1/subscriptions/${encodeURIComponent(subscription.provider_subscription_id)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ coupon: couponId }),
+      },
+    );
+    if (!response.ok) {
+      console.error("stripe coupon error", response.status);
+      return {
+        ok: false,
+        message: "Der Rabatt konnte nicht hinterlegt werden. Bitte versuche es später erneut.",
+      };
+    }
+
+    run(`UPDATE subscriptions SET coupon_id = ?, updated_at = ? WHERE user_id = ?`, couponId, nowIso(), userId);
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Der Zahlungsanbieter ist derzeit nicht erreichbar." };
   }
 }

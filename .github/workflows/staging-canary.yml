@@ -1,0 +1,556 @@
+name: Staging-Billing-Canary
+
+# Runs manually, daily, and after any successful Staging-Deploy run. Automatic
+# runs download the exact commit recorded by that deploy, so custom refs and
+# non-main deploys are verified without trusting the default-branch tip.
+on:
+  # Daily at 05:47 UTC, after the Amazon sync (04:41) and release drift check
+  # (05:17). A scheduled run also catches staging that has fallen behind main.
+  # GitHub starts scheduled runs late and drops slots entirely (observed hours of
+  # delay in this repository), so the remaining slots are retries: the `guard` job
+  # lets only one of them run the canary per day.
+  schedule:
+    - cron: "47 5 * * *"
+    - cron: "47 9 * * *"
+    - cron: "47 13 * * *"
+    - cron: "47 17 * * *"
+    - cron: "47 21 * * *"
+  workflow_dispatch:
+    inputs:
+      # The external dispatcher (Cloudflare Worker, see docs/STAGING.md) starts the
+      # canary with source=external when GitHub dropped every schedule slot. Such a
+      # run must alert like an unattended one, not like a run somebody is watching.
+      source:
+        description: Who started the run
+        type: choice
+        options:
+          - manual
+          - external
+        default: manual
+  workflow_run:
+    workflows: ["Staging-Deploy"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: staging-canary
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Entscheiden, ob der geplante Canary heute läuft
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      # The retry decision reads the open drift and billing issues below.
+      issues: read
+
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+
+    steps:
+      - name: Letzten geplanten Versuch prüfen
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          # One canary per day. Only the documented verification procedure lowers
+          # this to 0 so a near-future test slot is not treated as a retry.
+          MIN_INTERVAL_SECONDS: "64800"
+        run: |
+          set -euo pipefail
+          open_issue() {
+            gh issue list --state open --search "\"$1\" in:title" --json number,title --limit 100 \
+              | jq -r --arg title "$1" '[.[] | select(.title == $title)][0].number // empty'
+          }
+          run="true"
+          runs=$(gh api "repos/$GH_REPO/actions/workflows/staging-canary.yml/runs?event=schedule&per_page=30")
+          last=$(printf '%s' "$runs" | jq -r --argjson id "$RUN_ID" '
+            [.workflow_runs[] | select(.id != $id and .status == "completed")][0]
+            | if . == null then "" else "\(.created_at) \(.conclusion)" end')
+          if [ -n "$last" ]; then
+            created=${last% *}
+            conclusion=${last##* }
+            age=$(( $(date -u +%s) - $(date -u -d "$created" +%s) ))
+            echo "Last completed scheduled attempt: $created ($conclusion, ${age}s ago)."
+            if [ "$age" -lt "$MIN_INTERVAL_SECONDS" ]; then
+              run="false"
+              # A drift attempt stopped at the commit comparison and never reached a
+              # billing check, so its slot proved nothing about billing. While the
+              # drift is unresolved, the next slot retries: a deploy fix then
+              # restores the daily scheduled success and its heartbeat on the same
+              # day instead of the next morning. A real billing failure keeps its
+              # single daily run, because the open billing issue is the signal.
+              if [ "$conclusion" = 'failure' ]; then
+                drift=$(open_issue "Staging-Deploy-Abweichung")
+                billing=$(open_issue "Staging-Canary fehlgeschlagen")
+                if [ -n "$drift" ] && [ -z "$billing" ]; then
+                  echo "Drift issue #$drift is open and no billing issue is; this slot is the drift retry."
+                  run="true"
+                fi
+              fi
+            fi
+          else
+            echo "No completed scheduled attempt yet."
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Run the canary now: $run"
+
+  canary:
+    name: Staging-Billing-Canary ausführen
+    needs: guard
+    # always() is required: a job that needs a skipped job is skipped as well, and
+    # `guard` only runs for schedule events. Without it every deploy-triggered and
+    # manual run was silently skipped.
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch'
+        || (github.event_name == 'schedule' && needs.guard.outputs.run == 'true')
+        || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    outputs:
+      # The commit the canary actually verified: the artifact commit of the
+      # triggering deploy, or the default-branch checkout of a scheduled run.
+      commit: ${{ steps.deployed_commit.outputs.sha || github.sha }}
+      # Set when the canary stopped on deploy drift (staging serves another
+      # commit). Such a failure never ran a billing check, so it is reported on
+      # its own issue instead of `Staging-Canary fehlgeschlagen`.
+      drift: ${{ steps.run_canary.outputs.drift }}
+      served: ${{ steps.run_canary.outputs.served }}
+
+    steps:
+      - name: Deployten Commit ermitteln
+        if: github.event_name == 'workflow_run'
+        id: deployed_commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/deployed-commit"
+          gh run download "$DEPLOY_RUN_ID" -n deployed-commit -D "$artifact_dir"
+          commit="$(tr -d '[:space:]' < "$artifact_dir/commit.txt")"
+          case "$commit" in
+            ""|*[!0-9a-f]*)
+              echo "::error::Das Deploy-Artefakt enthält keinen gültigen Commit-SHA."
+              exit 1
+              ;;
+          esac
+          if [ "${#commit}" -ne 40 ]; then
+            echo "::error::Der Commit im Deploy-Artefakt ist kein vollständiger 40-stelliger SHA."
+            exit 1
+          fi
+          echo "sha=$commit" >> "$GITHUB_OUTPUT"
+
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.deployed_commit.outputs.sha || github.sha }}
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Sweep-Vorprüfung (Testlauf)
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          # Explicitly keep the preflight non-destructive even if a repository
+          # variable or caller environment tries to enable apply.
+          CANARY_SWEEP_APPLY: "0"
+        run: |
+          set -euo pipefail
+          : "${STRIPE_SECRET_KEY:?STRIPE_TEST_SECRET_KEY is missing}"
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "::error::STRIPE_TEST_SECRET_KEY muss mit sk_test_ beginnen."
+              exit 1
+              ;;
+          esac
+          output="$(node scripts/staging-canary-sweep.mjs)"
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" > "$RUNNER_TEMP/staging-canary-sweep.json"
+          node -e '
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            const lines = [
+              "### Canary-Sweep verwaister Objekte (Vorprüfung)",
+              "",
+              "- Modus: Testlauf (keine Löschungen)",
+              "- Stichtag: `" + plan.cutoff + "`",
+              "- alte Abos: **" + plan.subscriptions.length + "**",
+              "- alte Kunden: **" + plan.customers.length + "**",
+            ];
+            if (plan.subscriptions.length) {
+              lines.push("- Abo-IDs: " + plan.subscriptions.map((id) => "`" + id + "`").join(", "));
+            }
+            if (plan.customers.length) {
+              lines.push("- Kunden-IDs: " + plan.customers.map((id) => "`" + id + "`").join(", "));
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            const total = plan.subscriptions.length + plan.customers.length;
+            if (total) {
+              console.log("::warning::Gefundene alte Canary-Stripe-Objekte: " + total + "; nur Testlauf, nichts gelöscht.");
+            }
+          ' "$RUNNER_TEMP/staging-canary-sweep.json"
+
+      - name: flyctl installieren
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Datenbank-Sweep-Vorprüfung (Testlauf)
+        env:
+          STAGING_APP: streaminghub-staging
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          # The remote command explicitly sets apply=0; no apply flag is passed.
+          output="$(flyctl ssh console -a "$STAGING_APP" -C "env CANARY_DB_SWEEP_APPLY=0 node /app/scripts/staging-canary-db-sweep.mjs")"
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" > "$RUNNER_TEMP/staging-canary-db-sweep.json"
+          node scripts/staging-canary-db-preflight-summary.mjs "$RUNNER_TEMP/staging-canary-db-sweep.json"
+
+      - name: Canary ausführen
+        id: run_canary
+        env:
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          STAGING_APP: streaminghub-staging
+          STAGING_CANARY_EMAIL: ${{ vars.STAGING_CANARY_EMAIL }}
+          CANARY_EXPECT_COMMIT: ${{ steps.deployed_commit.outputs.sha || github.sha }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          STRIPE_PRICE_ID: ${{ vars.STRIPE_PRICE_ID }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+          CANARY_EXPECT_MAIL: sent
+        run: |
+          set -euo pipefail
+          : "${STAGING_BASE_URL:?STAGING_BASE_URL is missing}"
+          : "${STRIPE_SECRET_KEY:?STRIPE_TEST_SECRET_KEY is missing}"
+          : "${STRIPE_PRICE_ID:?STRIPE_PRICE_ID is missing}"
+          : "${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is missing}"
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          case "$STAGING_BASE_URL" in
+            https://streaminghub.org|https://streaminghub.org/*)
+              echo "::error::Der Canary wird nicht gegen Produktion ausgeführt."
+              exit 1
+              ;;
+          esac
+          case "$STRIPE_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "::error::STRIPE_TEST_SECRET_KEY muss mit sk_test_ beginnen."
+              exit 1
+              ;;
+          esac
+          # Exit code 3 is deploy drift: the commit comparison failed before any
+          # billing check. Report it as its own signal and keep it out of the
+          # billing issue, which must mean "billing is broken".
+          log="$RUNNER_TEMP/staging-canary.log"
+          set +e
+          node scripts/staging-canary.mjs 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 3 ]; then
+            served=$(sed -n 's/.*staging deploy drift: served=\([^ ]*\) expected=.*/\1/p' "$log" | head -1)
+            served="${served:-unknown}"
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "served=$served" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Staging-Deploy-Abweichung"
+              echo
+              echo "- Staging liefert: \`$served\`"
+              echo "- Erwarteter Commit: \`$CANARY_EXPECT_COMMIT\`"
+              echo
+              echo "Der Commit-Vergleich ist fehlgeschlagen, deshalb liefen die Billing-Prüfungen nicht."
+              echo "Das ist eine Deploy-Abweichung und kein Billing-Fehler: Sie wird auf einem"
+              echo "eigenen Issue gemeldet und kommentiert nie \`Staging-Canary fehlgeschlagen\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
+      - name: Zusammenfassung
+        if: always()
+        run: |
+          {
+            echo "### Staging-Billing-Canary"
+            echo
+            echo "- Ziel: \`${{ vars.STAGING_BASE_URL }}\`"
+            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    name: Über Canary-Fehler benachrichtigen
+    needs: canary
+    # Runs after every canary attempt that actually started, but only failures do
+    # anything. Scheduled and deploy-triggered failures open or update the single
+    # failure issue; a manual run only annotates itself, because whoever started it
+    # is already watching the run and must not be able to flood the issue tracker.
+    if: always() && needs.canary.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+
+    steps:
+      - name: Fehler-Issue öffnen oder aktualisieren
+        # Drift never reaches a billing check, so it stays out of this issue.
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging-Canary fehlgeschlagen"
+          case "$TRIGGER" in
+            schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.'; label='Zeitplan' ;;
+            workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.'; label='Deploy' ;;
+            workflow_dispatch) summary='Der Staging-Billing-Canary ist beim externen Nachhol-Lauf fehlgeschlagen (GitHub hat keinen Zeitplan-Slot geliefert).'; label='externer Auslöser' ;;
+            *) summary='Der Staging-Billing-Canary ist fehlgeschlagen.'; label="$TRIGGER" ;;
+          esac
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          # A repeated deploy failure for the commit that is already reported adds
+          # nothing; the daily run still comments every day so a persistent failure
+          # keeps producing its heartbeat.
+          if [ -n "$existing" ] && [ "$TRIGGER" != 'schedule' ] \
+            && gh issue view "$existing" --json comments --jq '.comments[].body' | grep -qF "Commit: $COMMIT"; then
+            echo "Commit $COMMIT is already reported on issue #$existing; nothing to add."
+            exit 0
+          fi
+          body=$(printf '%s\n' \
+            "$summary" \
+            '' \
+            "- Lauf: $RUN_URL" \
+            "- Commit: $COMMIT" \
+            "- Auslöser: $label" \
+            '' \
+            'Bitte den Lauf und die Staging-Logs prüfen. Der Canary deckt Checkout, Webhook, E-Mail-Versand, Datenbankzustand und Cleanup ab; Produktionsdaten sind nicht beteiligt.' \
+            '' \
+            'Dieses Issue wird beim nächsten erfolgreichen unbeaufsichtigten Lauf (Zeitplan, Deploy oder externer Auslöser) automatisch geschlossen; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Abweichungs-Issue öffnen oder aktualisieren
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          SERVED: ${{ needs.canary.outputs.served }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging-Deploy-Abweichung"
+          case "$TRIGGER" in
+            schedule) summary='Staging stellt beim täglichen Canary nicht den erwarteten Commit bereit.'; label='Zeitplan' ;;
+            workflow_run) summary='Staging stellt nach dem Deploy nicht den deployten Commit bereit.'; label='Deploy' ;;
+            workflow_dispatch) summary='Staging stellt beim externen Nachhol-Lauf nicht den erwarteten Commit bereit.'; label='externer Auslöser' ;;
+            *) summary='Staging stellt nicht den erwarteten Commit bereit.'; label="$TRIGGER" ;;
+          esac
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          # A repeated drift for the same expected commit adds nothing; a daily run
+          # still comments so a persistent drift keeps producing its heartbeat.
+          if [ -n "$existing" ] && [ "$TRIGGER" != 'schedule' ] \
+            && gh issue view "$existing" --json comments --jq '.comments[].body' | grep -qF "Erwartet: $COMMIT"; then
+            echo "Drift for commit $COMMIT is already reported on issue #$existing; nothing to add."
+            exit 0
+          fi
+          body=$(printf '%s\n' \
+            "$summary" \
+            '' \
+            "- Lauf: $RUN_URL" \
+            "- Erwartet: $COMMIT" \
+            "- Staging liefert: $SERVED" \
+            "- Auslöser: $label" \
+            '' \
+            'Der Commit-Vergleich ist fehlgeschlagen, bevor eine Billing-Prüfung lief: auf Staging lief ein älterer, zurückgerollter oder unvollständiger Stand. Das ist eine Deploy-Abweichung und kein Billing-Fehler; das Issue `Staging-Canary fehlgeschlagen` bleibt dafür unberührt.' \
+            '' \
+            'Bitte den Staging-Deploy wiederholen (Actions → Staging-Deploy) und den Drift-Report des Deploys prüfen. Sobald Staging den erwarteten Commit ausliefert, schließt der nächste erfolgreiche unbeaufsichtigte Lauf dieses Issue; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Fehlgeschlagenen manuellen Lauf annotieren
+        if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'external'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          RESULT: ${{ needs.canary.result }}
+        run: |
+          set -euo pipefail
+          echo "::error title=Staging-Billing-Canary fehlgeschlagen::Der manuelle Staging-Billing-Canary ist fehlgeschlagen ($RESULT). Siehe $RUN_URL"
+          {
+            echo "### Staging-Billing-Canary fehlgeschlagen (manueller Lauf)"
+            echo
+            echo "- Ergebnis: \`$RESULT\`"
+            echo "- Commit: \`$COMMIT\`"
+            echo "- Lauf: $RUN_URL"
+            echo
+            echo "Manuelle Läufe werden nur annotiert. Issue und Chat-Alarm sind den Zeitplan- und Deploy-Läufen vorbehalten."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Discord benachrichtigen
+        # Drift has its own issue and the deploy run reports it; posting the
+        # billing alert for it would name the wrong problem.
+        if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          RESULT: ${{ needs.canary.result }}
+        run: |
+          set -euo pipefail
+          # The Discord alert is optional, its state is not: the run summary says
+          # whether a message went out or why it did not, so nobody has to open
+          # the job log to learn that GitHub issues were the only alarm.
+          summary() {
+            {
+              echo "### Staging-Billing-Canary fehlgeschlagen"
+              echo
+              echo "$1"
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt; Discord-Benachrichtigung wird übersprungen."
+            summary '- Discord: übersprungen – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt'
+            exit 0
+          fi
+          case "$DISCORD_WEBHOOK_URL" in
+            https://discord.com/api/webhooks/* | https://discordapp.com/api/webhooks/*) ;;
+            *)
+              echo "::error::DISCORD_WEBHOOK_URL muss eine Discord-Channel-Webhook-URL sein."
+              summary '- Discord: nicht gesendet – `DISCORD_WEBHOOK_URL` ist keine Discord-Channel-Webhook-URL'
+              exit 1
+              ;;
+          esac
+          content=$(printf '%s\n' \
+            '**:rotating_light: Staging-Billing-Canary fehlgeschlagen**' \
+            '' \
+            "Ergebnis: \`$RESULT\`" \
+            "Commit: \`$COMMIT\`" \
+            "Lauf: $RUN_URL")
+          payload=$(jq -c -n --arg content "$content" '{content: $content, allowed_mentions: {parse: []}}')
+          # The webhook URL is a bearer credential for one channel; it is never echoed.
+          status=$(curl --silent --show-error --max-time 10 --output /dev/null \
+            --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "$DISCORD_WEBHOOK_URL" || true)
+          case "$status" in
+            200 | 204)
+              echo "Discord notified (HTTP $status)."
+              summary "- Discord: Nachricht gesendet (HTTP $status)"
+              ;;
+            *)
+              echo "::error::Discord antwortete mit HTTP ${status:-000}."
+              summary "- Discord: Senden fehlgeschlagen (HTTP ${status:-000})"
+              exit 1
+              ;;
+          esac
+
+      - name: Fehler-Issue nach Erholung schließen
+        if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging-Canary fehlgeschlagen"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          if [ -z "$existing" ]; then
+            echo "No open canary failure issue."
+            exit 0
+          fi
+          case "$TRIGGER" in
+            schedule) trigger='Zeitplan' ;;
+            workflow_run) trigger='Deploy' ;;
+            workflow_dispatch) trigger='externer Auslöser' ;;
+            *) trigger="$TRIGGER" ;;
+          esac
+          gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
+          gh issue close "$existing" --reason completed
+
+      - name: Abweichungs-Issue nach Erholung schließen
+        # A green unattended run proves staging now serves the expected commit,
+        # so a drift issue left over from an earlier run is resolved as well.
+        if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ needs.canary.outputs.commit }}
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          title="Staging-Deploy-Abweichung"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
+          if [ -z "$existing" ]; then
+            echo "No open staging drift issue."
+            exit 0
+          fi
+          case "$TRIGGER" in
+            schedule) trigger='Zeitplan' ;;
+            workflow_run) trigger='Deploy' ;;
+            workflow_dispatch) trigger='externer Auslöser' ;;
+            *) trigger="$TRIGGER" ;;
+          esac
+          gh issue comment "$existing" --body "Staging liefert wieder den erwarteten Commit \`$COMMIT\` und der Canary läuft erfolgreich (Auslöser: $trigger): $RUN_URL"
+          gh issue close "$existing" --reason completed
+
+      - name: Täglichen Erfolg an den Heartbeat melden
+        # Runs after the closing step on purpose: a healthchecks.io outage must not
+        # keep a recovered issue open. Only a real scheduled run proves that
+        # GitHub's scheduler still delivers; deploy-triggered and manual runs must
+        # not hide a dead schedule, and a failed run pings nothing on purpose.
+        if: needs.canary.result == 'success' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.source == 'external'))
+        env:
+          HEARTBEAT_URL: ${{ secrets.CANARY_HEARTBEAT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HEARTBEAT_URL:-}" ]; then
+            echo "::warning::CANARY_HEARTBEAT_URL ist nicht gesetzt; Heartbeat-Ping wird übersprungen."
+            exit 0
+          fi
+          case "$HEARTBEAT_URL" in
+            https://hc-ping.com/*) ;;
+            *)
+              echo "::error::CANARY_HEARTBEAT_URL muss eine healthchecks.io-Ping-URL sein (https://hc-ping.com/...)."
+              exit 1
+              ;;
+          esac
+          # The ping URL is a credential for one check; it is never echoed. Only
+          # the status is reported, so the log proves the check accepted the ping.
+          status=$(curl --fail --silent --show-error --max-time 10 --retry 5 \
+            --output /dev/null --write-out '%{http_code}' "$HEARTBEAT_URL")
+          echo "Heartbeat pinged (HTTP $status)."

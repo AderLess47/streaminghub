@@ -1,5 +1,6 @@
 import { randomToken } from "./auth";
 import { get, nowIso, run } from "./db";
+import { DEFAULT_FREE_DEVICE_LIMIT, deviceLimits } from "./entitlements";
 import { env, isEmailConfigured } from "./env";
 
 export type MailKind =
@@ -7,6 +8,8 @@ export type MailKind =
   | "reset_password"
   | "contact_message"
   | "ticket_update"
+  | "contract_request"
+  | "subscription"
   | "system";
 
 type QueuedMail = {
@@ -230,6 +233,19 @@ Support: <a href="mailto:${env.supportEmail}" style="color:#64748b">${env.suppor
 
 type MailTemplate = { subject: string; text: string };
 
+/**
+ * Absatz, wenn ein Premium-Zugang endet und dabei Geräte über dem kostenlosen
+ * Limit abgemeldet wurden. Trial-Ablauf und Abo-Ende nutzen denselben Wortlaut,
+ * damit die Zusage zum Geräte-Limit überall gleich ist. Ohne Abmeldung `null`.
+ */
+function surplusDevicesNote(de: boolean, limit: number, revoked: number): string | null {
+  if (revoked <= 0) return null;
+  const count = revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`;
+  return de
+    ? `Ab jetzt gilt der kostenlose Tarif mit ${limit} Geräten. Davon bleiben die ${limit} zuletzt genutzten aktiv; ${count} deshalb abgemeldet. Deine Playlist bleibt gespeichert.`
+    : `The free plan with ${limit} devices applies from now on. The ${limit} most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored.`;
+}
+
 const signature = (de: boolean) =>
   de
     ? `\n\nBei Fragen antworte einfach auf diese E-Mail oder schreibe an ${env.supportEmail}.`
@@ -266,6 +282,401 @@ export function contactMail(input: {
   return {
     subject: `[Kontakt] ${input.subject}`.slice(0, 160),
     text: `Neue Kontaktanfrage über streaminghub.org\n\nName: ${input.name}\nE-Mail: ${input.email}\nBetreff: ${input.subject}\n\n${input.message}\n\nReferenz: ${input.reference}\nIP: ${input.ip}`,
+  };
+}
+
+/**
+ * Bestätigung eines Widerrufs in Textform (§ 356a Abs. 4 BGB): Datum, Inhalt
+ * der Erklärung und der weitere Ablauf.
+ */
+export function withdrawalMail(input: {
+  reference: string;
+  name: string;
+  contract: string;
+  receivedAt: string;
+  locale: string;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  return {
+    subject: de
+      ? `Bestätigung deines Widerrufs – ${input.reference}`
+      : `Confirmation of your withdrawal – ${input.reference}`,
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nwir bestätigen den Eingang deines Widerrufs.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\nDamit hast du den Vertrag widerrufen. Wir erstatten dir alle Zahlungen für diesen Vertrag unverzüglich und spätestens binnen 14 Tagen, gerechnet ab dem Eingang des Widerrufs, über das ursprünglich verwendete Zahlungsmittel. Entgelte für die Rückzahlung berechnen wir nicht.\n\nFalls du zusätzlich eine Kündigung erklären willst, kannst du sie jederzeit über https://streaminghub.org/kuendigung abgeben.${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nwe confirm that your withdrawal has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\nYou have withdrawn from the contract. We refund every payment for this contract without undue delay and within 14 days of receiving the withdrawal, using the original means of payment. No fees are charged for the refund.\n\nIf you also want to cancel, you can do so at any time via https://streaminghub.org/kuendigung.${signature(false)}`,
+  };
+}
+
+/**
+ * Bestätigung einer Kündigung in Textform (§ 312k Abs. 3 BGB): Datum, Inhalt
+ * und – wenn schon bekannt – der Zeitpunkt, zu dem der Vertrag endet.
+ */
+export function cancellationMail(input: {
+  reference: string;
+  contract: string;
+  receivedAt: string;
+  /** Name aus dem Konto; ohne Angabe bleibt die Anrede neutral. */
+  name?: string;
+  effectiveAt: string | null;
+  status: string;
+  channel: string | null;
+  locale: string;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const ends = input.effectiveAt
+    ? de
+      ? `Das Abo endet zum ${input.effectiveAt}.`
+      : `The subscription ends on ${input.effectiveAt}.`
+    : de
+      ? "Zum Zeitpunkt der Kündigung war kein laufendes Abo hinterlegt."
+      : "No running subscription was on record at the time of cancellation.";
+  const store = input.status === "store_channel"
+    ? de
+      ? input.channel === "apple"
+        ? "Dieses Abo wird über den App Store verwaltet. Bitte kündige es zusätzlich in deinen Apple-Konto-Einstellungen, damit es dort endet."
+        : "Dieses Abo wird über den Amazon Appstore verwaltet. Bitte kündige es zusätzlich in deinem Amazon-Konto, damit es dort endet."
+      : "This subscription is managed by the store. Please also cancel it in your store account settings so that it ends there."
+    : "";
+  return {
+    subject: de
+      ? `Bestätigung deiner Kündigung – ${input.reference}`
+      : `Confirmation of your cancellation – ${input.reference}`,
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nwir bestätigen den Eingang deiner Kündigung.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nwe confirm that your cancellation has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(false)}`,
+  };
+}
+
+/** Interne Meldung an den Betreiber, damit die Erklärung nicht nur in der Datenbank liegt. */
+export function contractRequestNotice(input: {
+  kind: "withdrawal" | "cancellation";
+  reference: string;
+  email: string;
+  name: string;
+  contract: string;
+  status: string;
+  note: string | null;
+  ip: string;
+}): MailTemplate {
+  const title = input.kind === "withdrawal" ? "Widerruf" : "Kündigung";
+  return {
+    subject: `[${title}] ${input.reference}`.slice(0, 160),
+    text: `Neue Erklärung über streaminghub.org\n\nArt: ${title}\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nStatus: ${input.status}\nName: ${input.name || "-"}\nE-Mail: ${input.email}\nHinweis: ${input.note ?? "-"}\nIP: ${input.ip}`,
+  };
+}
+
+/**
+ * Hinweis bei fehlgeschlagener Abbuchung. Der Status steht schon auf past_due,
+ * Premium ruht also; die Mail nennt Zahlungsmethode und den Weg zum Konto.
+ */
+export function paymentFailedMail(input: { name: string; locale: string }): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Zahlung fehlgeschlagen – bitte Zahlungsmethode prüfen"
+      : "Payment failed – please check your payment method",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndie letzte Zahlung für dein StreamingHub-Premium-Abo ist fehlgeschlagen. Premium ruht deshalb vorerst.\n\nBitte prüfe die Zahlungsmethode, die du beim Abschluss hinterlegt hast, oder schreib dem Support – wir helfen beim Aktualisieren. Sobald die Zahlung erfolgreich ist, wird Premium automatisch wieder freigeschaltet.\n\nDein Abo und den aktuellen Status siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nthe last payment for your StreamingHub Premium subscription failed, so Premium is paused for now.\n\nPlease check the payment method you used at checkout or contact support – we can help you update it. Premium is switched back on automatically once the payment succeeds.\n\nYou can see your subscription and its current status here:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Interne Meldung an den Support, wenn eine Zahlung zum zweiten Mal scheitert,
+ * damit jemand den Kunden kontaktieren kann. Einmal je Zahlungsplan.
+ */
+export function paymentFailedSupportNotice(input: {
+  name: string;
+  email: string;
+  customerId: string | null;
+  attemptCount: number;
+  nextAttemptAt: string | null;
+}): MailTemplate {
+  return {
+    subject: `[Zahlung fehlgeschlagen] ${input.email} – ${input.attemptCount}. Versuch`.slice(0, 160),
+    text: `Zahlung wiederholt fehlgeschlagen.\n\nKunde: ${input.name || "-"} <${input.email}>\nStripe-Kunde: ${input.customerId ?? "-"}\nFehlversuche: ${input.attemptCount}\nNächster Versuch: ${input.nextAttemptAt ?? "-"}\n\nPremium ruht, bis die Zahlung eingeht. Bitte Zahlungsmethode prüfen und den Kunden kontaktieren.`,
+  };
+}
+
+/**
+ * Bestätigung des ersten erfolgreichen Checkouts. Der Preis und das
+ * Verlängerungsdatum kommen aus dem serverseitig geprüften Stripe-Zustand;
+ * die Mail wird pro Checkout-Session nur einmal erzeugt.
+ */
+export function purchaseConfirmationMail(input: {
+  name: string;
+  locale: string;
+  priceEur: number;
+  /** Abrechnung des gekauften Tarifs; ohne Angabe monatlich. */
+  interval?: "month" | "year";
+  periodEnd?: string | null;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const unit = input.interval === "year" ? (de ? "Jahr" : "year") : de ? "Monat" : "month";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+  const renewal = input.periodEnd ? new Date(input.periodEnd) : null;
+  const renewalDate =
+    renewal && Number.isFinite(renewal.getTime())
+      ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
+          dateStyle: "long",
+          timeZone: "Europe/Berlin",
+        }).format(renewal)
+      : null;
+  const details = de
+    ? [
+        `Preis: ${price} / ${unit} (Endpreis; keine USt. gemäß § 19 UStG)`,
+        renewalDate ? `Nächste Verlängerung: ${renewalDate}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : [
+        `Price: ${price} / ${unit} (final price; no VAT under the German small business regulation)`,
+        renewalDate ? `Next renewal: ${renewalDate}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+  return {
+    subject: de ? "Willkommen bei StreamingHub Premium" : "Welcome to StreamingHub Premium",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein Kauf von StreamingHub Premium war erfolgreich. Dein Abo ist ab jetzt aktiv.\n\n${details}\n\nAbo und Kündigung:\n${link}\n\nDu kannst dein Abo jederzeit zum Ende des Abrechnungszeitraums kündigen.${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of StreamingHub Premium was successful. Your subscription is active now.\n\n${details}\n\nSubscription and cancellation:\n${link}\n\nYou can cancel your subscription at any time at the end of the billing period.${signature(false)}`,
+  };
+}
+
+/**
+ * Start des kostenlosen Testzeitraums. Der Text nennt das Ende, damit niemand
+ * eine Abbuchung erwartet: ohne Abo endet der Trial automatisch.
+ */
+export function trialStartedMail(input: {
+  name: string;
+  locale: string;
+  trialEndsAt: string;
+  priceEur: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/premium`;
+  const end = new Date(input.trialEndsAt);
+  const endDate = Number.isFinite(end.getTime())
+    ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
+        dateStyle: "long",
+        timeZone: "Europe/Berlin",
+      }).format(end)
+    : null;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+  // Limits aus den Einstellungen: die Mail nennt, was der Tarif wirklich erlaubt.
+  const limits = deviceLimits();
+
+  return {
+    subject: de
+      ? "Dein kostenloser Testzeitraum beginnt – StreamingHub"
+      : "Your free trial has started – StreamingHub",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium hat begonnen.${endDate ? `\n\nTestzeitraum bis: ${endDate}` : ""}\n\nIn dieser Zeit hast du bis zu ${limits.premium} gekoppelte Geräte und kannst auf allen Geräten weiterschauen. Danach gilt wieder der kostenlose Tarif mit ${limits.free} Geräten.\n\nEs wird nichts abgebucht: Ohne Abschluss eines Abos endet der Testzeitraum automatisch. Wenn du Premium behalten willst, kostet es danach ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has started.${endDate ? `\n\nTrial ends: ${endDate}` : ""}\n\nDuring the trial you can link up to ${limits.premium} devices and continue watching on all of them. Afterwards the free plan with ${limits.free} devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. If you want to keep Premium, it costs ${price} per month afterwards and can be cancelled monthly:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Erinnerung kurz vor dem Ende des Testzeitraums. Der Text nennt das Datum und
+ * den Preis, damit niemand eine Abbuchung erwartet – ohne Abo endet der Trial.
+ */
+export function trialReminderMail(input: {
+  name: string;
+  locale: string;
+  trialEndsAt: string;
+  priceEur: number;
+  /** Limit des kostenlosen Tarifs; steht so auch im Fließtext. */
+  deviceLimit?: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/premium`;
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const end = new Date(input.trialEndsAt);
+  const endDate = Number.isFinite(end.getTime())
+    ? new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
+        dateStyle: "long",
+        timeZone: "Europe/Berlin",
+      }).format(end)
+    : null;
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+
+  return {
+    subject: de
+      ? "Dein Testzeitraum endet bald – StreamingHub"
+      : "Your trial ends soon – StreamingHub",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium${endDate ? ` endet am ${endDate}` : " endet in Kürze"}. Danach gilt wieder der kostenlose Tarif mit ${limit} Geräten.\n\nEs wird nichts abgebucht: Ohne Abo endet der Testzeitraum automatisch. Aktiv bleiben dann die ${limit} zuletzt genutzten Geräte; alle weiteren werden beim Ablauf abgemeldet. Deine Playlist bleibt gespeichert; ein abgemeldetes Gerät kannst du in der App neu koppeln, sobald du im Konto ein anderes entfernst.\n\nWenn du Premium behalten willst, sind es ${price} pro Monat, monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium${endDate ? ` ends on ${endDate}` : " ends soon"}. Afterwards the free plan with ${limit} devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. The ${limit} most recently used devices stay active; any others are unlinked when the trial ends. Your playlist stays stored; an unlinked device can be paired again in the app once you remove another one in your account.\n\nIf you want to keep Premium, it costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Abschlussmail nach dem Ende des Testzeitraums. Sie erklärt den Rückfall auf
+ * den kostenlosen Tarif und nennt den Preis, ohne zu drängen.
+ */
+export function trialEndedMail(input: {
+  name: string;
+  locale: string;
+  priceEur: number;
+  /** Limit des kostenlosen Tarifs; steht so auch im Fließtext. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ablauf abgemeldet wurden. */
+  devicesRevoked?: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/premium`;
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const revoked = input.devicesRevoked ?? 0;
+  // Ohne Abmeldung bleibt die alte Zusage stehen; mit Abmeldung nennt der
+  // gemeinsame Absatz Limit und Zahl.
+  const devices =
+    (surplusDevicesNote(de, limit, revoked) ??
+      (de
+        ? `Ab jetzt gilt der kostenlose Tarif mit ${limit} Geräten. Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.`
+        : `The free plan with ${limit} devices applies from now on. Your devices stay linked and your playlist stays stored, so you can keep watching at any time.`)) +
+    (revoked > 0
+      ? de
+        ? " Brauchst du später wieder mehr Geräte, kannst du im Konto Platz schaffen oder Premium dazunehmen."
+        : " If you need more devices again later, you can free up a slot in your account or add Premium."
+      : "");
+  const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+  }).format(input.priceEur);
+
+  return {
+    subject: de ? "Dein Testzeitraum ist beendet – StreamingHub" : "Your trial has ended – StreamingHub",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\n${devices}\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\n${devices}\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Abschlussmail, wenn ein Abo nach fehlgeschlagenen Zahlungen ausläuft. Die
+ * normale Kündigung bekommt ihre eigene Bestätigung.
+ */
+export function subscriptionEndedMail(input: {
+  name: string;
+  locale: string;
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Abo-Ende abgemeldet wurden. */
+  devicesRevoked?: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Dein Premium-Abo ist ausgelaufen – Zahlung fehlgeschlagen"
+      : "Your Premium subscription has ended – payment failed",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo ist ausgelaufen, weil die offene Zahlung nicht eingegangen ist. Premium ist damit beendet.\n\n${devices} Du kannst Premium jederzeit neu abschließen:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription has ended because the outstanding payment did not arrive. Premium is therefore switched off.\n\n${devices} You can subscribe to Premium again at any time:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Abschlussmail für Store-Abos (App Store, Amazon Appstore). Kündigung und
+ * Verlängerung laufen dort, deshalb nennt der Text den Store.
+ */
+export function storeSubscriptionEndedMail(input: {
+  name: string;
+  locale: string;
+  store: "apple" | "amazon";
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ende abgemeldet wurden. */
+  devicesRevoked?: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const store = de
+    ? input.store === "apple"
+      ? "den App Store"
+      : "den Amazon Appstore"
+    : input.store === "apple"
+      ? "the App Store"
+      : "the Amazon Appstore";
+  return {
+    subject: de ? "Dein Premium-Abo ist ausgelaufen" : "Your Premium subscription has ended",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo über ${store} ist ausgelaufen. Premium ist damit beendet.\n\n${devices} Wenn du Premium weiter nutzen willst, schließe es erneut ab.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription via ${store} has ended. Premium is therefore switched off.\n\n${devices} If you want to keep using Premium, subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+  };
+}
+
+/**
+ * Abschlussmail für ein erstattetes Store-Abo. Der Text nennt den Grund, weil
+ * „ausgelaufen“ bei einer Erstattung falsch wäre.
+ */
+export function storeSubscriptionRefundedMail(input: {
+  name: string;
+  locale: string;
+  store: "apple" | "amazon";
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ende abgemeldet wurden. */
+  devicesRevoked?: number;
+}): MailTemplate {
+  const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
+  const link = `${env.appUrl}/dashboard/subscription`;
+  const store = de
+    ? input.store === "apple"
+      ? "den App Store"
+      : "den Amazon Appstore"
+    : input.store === "apple"
+      ? "the App Store"
+      : "the Amazon Appstore";
+  return {
+    subject: de ? "Dein Premium-Abo wurde erstattet" : "Your Premium subscription was refunded",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nder Kauf deines StreamingHub-Premium-Abos über ${store} wurde erstattet. Premium ist damit beendet.\n\n${devices} Wenn du Premium weiter nutzen willst, kannst du es erneut abschließen.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of the StreamingHub Premium subscription via ${store} was refunded. Premium is therefore switched off.\n\n${devices} If you want to keep using Premium, you can subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+  };
+}
+
+/** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
+export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
+  const de = input.locale !== "en";
+  const link = `${env.appUrl}/dashboard/subscription`;
+  return {
+    subject: de
+      ? "Zahlung erfolgreich – Premium ist wieder aktiv"
+      : "Payment successful – Premium is active again",
+    text: de
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndeine ausstehende Zahlung ist eingegangen. Dein StreamingHub-Premium-Abo ist damit wieder aktiv.\n\nAbrechnungszeitraum und Status siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour outstanding payment has arrived. Your StreamingHub Premium subscription is active again.\n\nYou can see the billing period and status here:\n${link}${signature(false)}`,
   };
 }
 

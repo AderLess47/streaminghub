@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS devices (
   activated_at TEXT,
   last_seen_at TEXT,
   revoked_at TEXT,
+  revoked_reason TEXT,  -- 'trial_ended' | 'subscription_ended' | 'legacy_cleanup' | 'admin' | 'customer'
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
@@ -111,12 +112,29 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   plan TEXT NOT NULL DEFAULT 'premium',
   status TEXT NOT NULL DEFAULT 'none',  -- none | pending | active | past_due | canceled | incomplete
-  channel TEXT NOT NULL DEFAULT 'web', -- web | amazon
+  channel TEXT NOT NULL DEFAULT 'web', -- web | amazon | apple | apple
   provider TEXT NOT NULL DEFAULT 'none',
   provider_customer_id TEXT,
   provider_subscription_id TEXT,
   current_period_end TEXT,
   cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+  -- Tarif, Abrechnung und Trial. Der Status bleibt davon unberührt; ein Trial
+  -- ist eine eigene Information und wird nicht als Status gespeichert.
+  billing_interval TEXT,               -- month | year
+  provider_price_id TEXT,
+  price_cents INTEGER,
+  started_at TEXT,
+  canceled_at TEXT,
+  trial_started_at TEXT,
+  trial_ends_at TEXT,
+  trial_source TEXT,                   -- web | app | admin
+  trial_used_at TEXT,
+  trial_converted_at TEXT,
+  trial_reminder_sent_at TEXT,       -- Erinnerung vor Ablauf, einmal pro Trial
+  trial_ended_at TEXT,               -- vom Ablauf-Job markiert (Status bleibt)
+  coupon_id TEXT,                    -- Rabatt aus Checkout oder Kündigungs-Rettung
+  retention_outcome TEXT,            -- accepted | declined (Kündigungs-Rettung)
+  retention_decided_at TEXT,
   updated_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -163,6 +181,27 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   ip TEXT,
   created_at TEXT NOT NULL
 );
+
+-- Widerruf (§ 356a BGB) und Kündigung (§ 312k BGB) über die Website.
+-- Die Zeile ist der Beleg: wann welche Erklärung zu welchem Vertrag einging.
+CREATE TABLE IF NOT EXISTS contract_requests (
+  id TEXT PRIMARY KEY,
+  reference TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL,                 -- withdrawal | cancellation
+  email TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  contract TEXT NOT NULL DEFAULT '',
+  note TEXT,
+  status TEXT NOT NULL,               -- received | canceled_web | store_channel | no_subscription | no_account | failed
+  channel TEXT,
+  effective_at TEXT,
+  handled_at TEXT,                    -- NULL = noch offen für den Support
+  handled_by TEXT,
+  ip TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_contract_requests_created ON contract_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_contract_requests_email ON contract_requests(email);
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id TEXT PRIMARY KEY,
@@ -271,6 +310,10 @@ CREATE INDEX IF NOT EXISTS idx_iap_user ON iap_receipts(user_id, provider);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_amazon_customer
   ON subscriptions(provider_customer_id) WHERE provider = 'amazon';
 
+-- Dasselbe fuer den App Store: eine Transaktion gehoert zu genau einem Konto.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_apple_customer
+  ON subscriptions(provider_customer_id) WHERE provider = 'apple';
+
 -- Cross-device resume for premium accounts: one position per title and user.
 CREATE TABLE IF NOT EXISTS watch_progress (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -282,6 +325,18 @@ CREATE TABLE IF NOT EXISTS watch_progress (
   PRIMARY KEY (user_id, media_url)
 );
 CREATE INDEX IF NOT EXISTS idx_watch_progress_user ON watch_progress(user_id, updated_at);
+
+-- Cloud-Backup: der Snapshot selbst liegt verschlüsselt in R2, hier steht nur
+-- der Zeiger darauf. Nur Konto und Besitzer werden gespeichert.
+CREATE TABLE IF NOT EXISTS cloud_backups (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  object_key TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  restored_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cloud_backups_user ON cloud_backups(user_id, created_at);
 
 CREATE TABLE IF NOT EXISTS request_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

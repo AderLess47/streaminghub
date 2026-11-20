@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, PageHeader, StatusPill } from "@/components/ui";
 import { getI18n } from "@/i18n";
+import { contractRequestStats } from "@/lib/contract-requests";
 import { all, get } from "@/lib/db";
 import { env, isBillingConfigured, isEmailConfigured } from "@/lib/env";
 import { requireStaff } from "@/lib/session";
@@ -10,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 const count = (sql: string, ...params: (string | number)[]) =>
   get<{ c: number }>(sql, ...params)?.c ?? 0;
+
+/** „1 Widerruf“, aber „2 Widerrufe“ – die Kachel soll nicht wie ein Zähler klingen. */
+const plural = (value: number, one: string, many: string) => `${value} ${value === 1 ? one : many}`;
 
 export default async function AdminOverviewPage({
   searchParams,
@@ -24,6 +28,7 @@ export default async function AdminOverviewPage({
   const devices = count(`SELECT COUNT(*) AS c FROM devices WHERE status = 'active'`);
   const subscriptions = count(`SELECT COUNT(*) AS c FROM subscriptions WHERE status = 'active'`);
   const tickets = count(`SELECT COUNT(*) AS c FROM support_tickets WHERE status != 'closed'`);
+  const contracts = contractRequestStats();
 
   const recentAudit = all<{ id: string; action: string; actor_email: string | null; created_at: string; target_type: string | null }>(
     `SELECT id, action, actor_email, created_at, target_type FROM audit_log ORDER BY created_at DESC LIMIT 8`,
@@ -43,6 +48,13 @@ export default async function AdminOverviewPage({
     { label: t.admin.overview.subscriptions, value: subscriptions, href: "/admin/subscriptions", icon: "card" as const },
     { label: t.admin.overview.tickets, value: tickets, href: "/admin/tickets", icon: "mail" as const },
   ];
+  const contractHint =
+    contracts.open > 0
+      ? [
+          plural(contracts.openWithdrawals, t.admin.contracts.withdrawal, t.admin.contracts.withdrawals),
+          plural(contracts.openCancellations, t.admin.contracts.cancellation, t.admin.contracts.cancellations),
+        ].join(" · ")
+      : t.admin.overview.contractsNone;
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -74,6 +86,24 @@ export default async function AdminOverviewPage({
           </Link>
         ))}
       </div>
+
+      <Link
+        href="/admin/contracts?state=open"
+        className={`card card-hover flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4${
+          contracts.open > 0 ? " ring-1 ring-amber-500/40" : ""
+        }`}
+      >
+        <div className="min-w-0">
+          <span className="text-[0.68rem] uppercase tracking-[0.1em] text-muted">
+            {t.admin.overview.contractsOpen}
+          </span>
+          <p className="mt-1 text-xs text-muted">{contractHint}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-2xl font-semibold">{contracts.open}</p>
+          <Icon name="check" size={16} className={contracts.open > 0 ? "text-amber-300" : "text-cyan"} />
+        </div>
+      </Link>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="card p-5">

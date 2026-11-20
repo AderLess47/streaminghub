@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Keep `src/content/release.ts` in step with the release that production serves.
+ * Hält `src/content/release.ts` mit dem Release synchron, den Produktion ausliefert.
  *
- * Usage:
- *   npm run release:sync                 # refresh the local fallback
- *   npm run release:sync -- --check      # exit 1 when the fallback lags behind
- *   npm run release:sync -- --best-effort  # never fail a build (used by predev/prebuild)
+ * Aufruf:
+ *   npm run release:sync                 # den lokalen Fallback aktualisieren
+ *   npm run release:sync -- --check      # Exit 1, wenn der Fallback hinterherhängt
+ *   npm run release:sync -- --best-effort  # einen Build nie scheitern lassen (predev/prebuild)
  *   npm run release:sync -- --url http://localhost:3000/api/release
  *
- * The fallback only matters when the APK_* variables are missing (local builds,
- * a fresh deployment). Refreshing it here keeps checkouts and images from
- * carrying metadata older than what was live when they were built, without
- * writing to Git: branch protection rejects automated commits to main, and a
- * bot pull request cannot satisfy the required check.
+ * Der Fallback zählt nur, wenn die APK_*-Variablen fehlen (lokale Builds, ein
+ * frisches Deployment). Ihn hier zu aktualisieren verhindert, dass Checkouts und
+ * Images Metadaten tragen, die älter sind als das, was beim Bauen live war –
+ * ohne in Git zu schreiben: Die Branch-Protection lehnt automatische Commits auf
+ * main ab, und ein Bot-Pull-Request erfüllt den erforderlichen Check nicht.
  */
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -38,28 +38,28 @@ function parseArgs(argv) {
       options.bestEffort = true;
     } else if (arg === "--url" || arg.startsWith("--url=")) {
       const value = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : argv[(i += 1)];
-      if (!value) throw new Error("--url requires a value");
+      if (!value) throw new Error("--url erwartet einen Wert");
       options.source = value;
     } else {
-      throw new Error(`Unknown option: ${arg}`);
+      throw new Error(`Unbekannte Option: ${arg}`);
     }
   }
 
   if (!/^https?:\/\//i.test(options.source)) {
-    throw new Error(`Invalid source URL: ${options.source}`);
+    throw new Error(`Ungültige Quell-URL: ${options.source}`);
   }
   return options;
 }
 
 function usage() {
-  console.log(`Usage: npm run release:sync -- [options]
+  console.log(`Aufruf: npm run release:sync -- [Optionen]
 
-Options:
-  --url <url>     Metadata source (default: RELEASE_SOURCE_URL or
+Optionen:
+  --url <url>     Quelle der Metadaten (Standard: RELEASE_SOURCE_URL oder
                   ${DEFAULT_SOURCE})
-  --check         Do not write; exit 1 when src/content/release.ts is stale
-  --best-effort   Warn instead of failing when the source is unreachable
-  --help          Show this help
+  --check         Nichts schreiben; mit Exit 1 enden, wenn src/content/release.ts veraltet ist
+  --best-effort   Warnen statt fehlschlagen, wenn die Quelle nicht erreichbar ist
+  --help          Diese Hilfe anzeigen
 `);
 }
 
@@ -82,41 +82,41 @@ async function main() {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     if (options.bestEffort) {
-      console.warn(`! ${options.source} unreachable (${detail}); keeping the committed release metadata`);
+      console.warn(`! ${options.source} nicht erreichbar (${detail}); die committeten Release-Metadaten bleiben erhalten`);
       return;
     }
-    throw new Error(`Could not read ${options.source}: ${detail}`);
+    throw new Error(`${options.source} konnte nicht gelesen werden: ${detail}`);
   }
 
   const release = validateRelease(payload);
   if (!release) {
     if (options.bestEffort) {
-      console.warn(`! ${options.source} returned no usable release metadata; keeping the committed file`);
+      console.warn(`! ${options.source} lieferte keine nutzbaren Release-Metadaten; die committete Datei bleibt erhalten`);
       return;
     }
-    throw new Error(`${options.source} returned no usable release metadata`);
+    throw new Error(`${options.source} lieferte keine nutzbaren Release-Metadaten`);
   }
 
   const current = existsSync(RELEASE_FILE) ? await readFile(RELEASE_FILE, "utf8") : "";
   const next = renderRelease(release);
   if (current === next) {
-    console.log(`src/content/release.ts is current (${release.version}, ${release.sha256.slice(0, 8)}...)`);
+    console.log(`src/content/release.ts ist aktuell (${release.version}, ${release.sha256.slice(0, 8)}…)`);
     return;
   }
   if (options.check) {
     throw new Error(
-      `src/content/release.ts is behind production (${release.version}, ${release.sha256.slice(0, 8)}...); run npm run release:sync`,
+      `src/content/release.ts ist hinter Produktion zurück (${release.version}, ${release.sha256.slice(0, 8)}…); führe npm run release:sync aus`,
     );
   }
 
   await writeFile(RELEASE_FILE, next);
   console.log(
-    `Updated src/content/release.ts to ${release.version} ` +
-      `(${release.sha256.slice(0, 8)}..., ${release.sizeLabel})`,
+    `src/content/release.ts auf ${release.version} aktualisiert ` +
+      `(${release.sha256.slice(0, 8)}…, ${release.sizeLabel})`,
   );
 }
 
 main().catch((error) => {
-  console.error(`\nRelease sync failed: ${error.message}`);
+  console.error(`\nRelease-Abgleich fehlgeschlagen: ${error.message}`);
   process.exit(1);
 });

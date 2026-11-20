@@ -52,7 +52,7 @@ export default async function HomePage() {
           price: PREMIUM_PRICE_EUR.toFixed(2),
           priceCurrency: "EUR",
           description:
-            "StreamingHub Premium, monatliches Abonnement für 2,49 €; Endpreis ohne Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
+            "StreamingHub Premium, monatliches Abonnement für 3,49 €; Endpreis ohne Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
         },
       },
     ],

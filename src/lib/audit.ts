@@ -1,5 +1,6 @@
 import { randomToken } from "./auth";
 import { nowIso, run } from "./db";
+import { env } from "./env";
 
 export type AuditInput = {
   action: string;
@@ -11,6 +12,32 @@ export type AuditInput = {
   userAgent?: string | null;
   meta?: Record<string, unknown>;
 };
+
+export const AUDIT_RETENTION_DAYS = env.auditRetentionDays;
+
+/**
+ * Löscht Sicherheitsprotokolle nach der Aufbewahrungsfrist (Standard 90 Tage,
+ * wie in der Datenschutzerklärung zugesagt). Läuft beim Öffnen des
+ * Sicherheitsprotokolls und täglich im Container.
+ */
+export function purgeExpiredAuditLog(
+  retentionDays: number = AUDIT_RETENTION_DAYS,
+  now: Date = new Date(),
+): number {
+  const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  const result = run(`DELETE FROM audit_log WHERE created_at < ?`, cutoff);
+  const deleted = Number(result.changes ?? 0);
+  if (deleted > 0) {
+    // Der Löschvorgang selbst bleibt nachvollziehbar; die Zeile ist neu und
+    // fällt erst nach Ablauf der Frist wieder heraus.
+    logAudit({
+      action: "audit.purged",
+      targetType: "audit_log",
+      meta: { deleted, retentionDays, cutoff },
+    });
+  }
+  return deleted;
+}
 
 /** Append-only security/audit trail. Never log secrets, tokens or passwords. */
 export function logAudit(input: AuditInput) {

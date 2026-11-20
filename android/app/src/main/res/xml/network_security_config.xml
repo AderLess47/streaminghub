@@ -3,6 +3,11 @@
   IPTV playlists and streams are frequently served over plain HTTP, so cleartext
   stays enabled for user-provided sources. HTTPS keeps the system trust anchors;
   nothing is pinned or trusted additionally.
+
+  The StreamingHub API is the exception: account, device, pairing and progress
+  data, including the bearer token, must never travel in cleartext, so
+  streaminghub.org (and its subdomains) is pinned to TLS here as well. This is a
+  second line of defence next to the HTTPS check in StreamingHubApi.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
@@ -10,4 +15,11 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">streaminghub.org</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>

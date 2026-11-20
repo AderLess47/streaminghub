@@ -1,0 +1,88 @@
+name: Vega-Shaka-Smoke-Test
+
+# Läuft nur auf einem selbst gehosteten Runner mit Vega SDK, weil der Build
+# zwingend die Vega-CLI, JDK 21 und eine Amazon-Anmeldung braucht. Bewusst nur
+# manuell: der Job blockiert so keine Pull Requests und startet nicht, wenn
+# kein Runner mit dem Label `vega` verbunden ist.
+#
+# Labels am Runner: `vega` sowie alles, was die Vega-Installation vorgibt
+# (z. B. `vvd`). Ist der Runner nicht verbunden, bleibt der Lauf in der Warteschlange.
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: "Gerät für den Wiedergabetest (vega device list)"
+        required: true
+        default: "VirtualDevice:Tv"
+      smoke_url:
+        description: "HLS-Testquelle"
+        required: true
+        default: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+      start_vvd:
+        description: "Vega Virtual Device vorher starten"
+        type: boolean
+        default: true
+      vvd_no_gui:
+        description: "VVD ohne Fenster starten (headless Runner)"
+        type: boolean
+        default: true
+      skip_build:
+        description: "Build überspringen und vorhandenes .vpkg testen"
+        type: boolean
+        default: false
+
+concurrency:
+  group: vega-shaka-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Shaka-Setup, Build und HLS-Wiedergabe
+    runs-on: [self-hosted, vega]
+    timeout-minutes: 90
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Java 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: SDK-Version anzeigen
+        run: vega --version
+
+      - name: Vega-Abhängigkeiten installieren
+        working-directory: vega
+        run: npm ci --no-audit --no-fund
+
+      - name: Shaka-Player von Amazon bauen
+        working-directory: vega
+        run: npm run setup:shaka
+
+      - name: Setup, Build und HLS-Smoke-Test
+        working-directory: vega
+        env:
+          SMOKE_URL: ${{ inputs.smoke_url }}
+          DEVICE: ${{ inputs.device }}
+        run: |
+          args=(--device "$DEVICE" --smoke-url "$SMOKE_URL" --skip-install --require-device)
+          if [ "${{ inputs.start_vvd }}" = "true" ]; then args+=(--start-vvd); fi
+          if [ "${{ inputs.vvd_no_gui }}" = "true" ]; then args+=(--vvd-no-gui); fi
+          if [ "${{ inputs.skip_build }}" = "true" ]; then args+=(--skip-build); fi
+          npm run verify:shaka -- "${args[@]}"
+
+      - name: Geräte-Logs hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vega-smoke-logs
+          path: artifacts/vega-logs
+          if-no-files-found: warn

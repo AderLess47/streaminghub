@@ -160,12 +160,12 @@ export const en: Dictionary = {
         premium: {
           title: "Premium extras",
           description:
-            "Advanced optimisation, cross-device account management and future extensions.",
+            "Cross-device account management, continue watching on every device and future extensions.",
         },
         continueWatching: {
           title: "Cross-device resume",
           description:
-            "Start on the TV, continue on the tablet. This feature is in development.",
+            "Start on the TV, continue on the tablet. The position is kept in your account and picked up on every paired device (premium).",
         },
       },
     },
@@ -216,12 +216,12 @@ export const en: Dictionary = {
     },
     premium: {
       eyebrow: "StreamingHub Premium",
-      title: "More control for €2.49 per month",
+      title: "More control for €3.49 per month",
       subtitle:
-        "€2.49 per month. Final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Cancel monthly.",
+        "€3.49 per month. Final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. Cancel monthly.",
       ctaPrimary: "Discover Premium",
       ctaSecondary: "Manage my subscription",
-      note: "Some premium features are still in development. We label their status transparently; payments are processed via Stripe.",
+      note: "Premium currently includes continue watching on every device and cross-device account management. Payments are processed only after server-side confirmation.",
     },
     transparency: {
       title: "What StreamingHub is not",
@@ -240,8 +240,11 @@ export const en: Dictionary = {
   premium: {
     title: "StreamingHub Premium",
     subtitle:
-      "A subscription that complements device management and connection optimisation.",
-    price: "€2.49",
+      "A subscription for cross-device continue watching and managing your devices.",
+    price: "€3.49",
+    annualCta: "Yearly for €34.99 (2 months free)",
+    annualNote:
+      "€34.99 per year instead of €41.88 – that is €2.92 per month. Renews yearly; cancellable at the end of the term.",
     period: "per month",
     vat: "Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
     ctaPrimary: "Discover Premium",
@@ -249,12 +252,12 @@ export const en: Dictionary = {
     channelTitle: "Where you can subscribe",
     channels: {
       web: "Sideload version: web checkout via Stripe",
-      amazon: "Amazon Appstore version: premium is not available in that build",
+      amazon: "Amazon Appstore version: purchase through Amazon In-App Purchasing",
     },
     billingNotice:
       "Note: no payment provider is connected yet. The web checkout is technically prepared but does not trigger a payment. Your subscription status stays “not active” until a real payment has been confirmed server-side.",
     billingLiveNotice:
-      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount of €2.49. No VAT is charged.",
+      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount of €3.49. No VAT is charged.",
     featuresTitle: "Premium features",
     features: [
       {
@@ -262,18 +265,6 @@ export const en: Dictionary = {
         description:
           "Playback positions are stored in your account: start in the living room and pick up at the same spot in the bedroom.",
         status: "Available",
-      },
-      {
-        title: "Integrated VPN/proxy capability",
-        description:
-          "Automatically configured connection supporting suitable streaming connections – inside the app.",
-        status: "In development",
-      },
-      {
-        title: "Advanced streaming optimisation",
-        description:
-          "Additional buffering and connection strategies for unstable networks.",
-        status: "In development",
       },
       {
         title: "Cross-device account management",
@@ -412,6 +403,8 @@ export const en: Dictionary = {
     error: "The message could not be sent. Please try again later.",
     spamNotice:
       "This request is validated server-side and protected against spam. Please never send passwords or payment data.",
+    supportPremiumNote:
+      "Email support is part of Premium. The help section answers the most common questions; account and contract matters as well as withdrawal and cancellation requests still go through this form.",
     responseTime: "Response time",
     responseTimeValue: "usually 1–2 business days",
     hours: "Support hours",
@@ -491,6 +484,7 @@ export const en: Dictionary = {
       subscription: "Subscription",
       support: "Support",
       settings: "Settings",
+      backup: "Cloud backup",
       security: "Security",
       currentPage: "current page",
     },
@@ -513,6 +507,22 @@ export const en: Dictionary = {
       verifyEmailNow: "Confirm now",
     },
     devices: {
+      revokedNoticeTitleOne: "One device was unlinked",
+      revokedNoticeTitleMany: "{n} devices were unlinked",
+      revokedNoticeBodyOne:
+        "Because your premium access ended, one device above the free limit was unlinked. The most recently used ones stay active; the free plan allows {limit} devices. You can pair it again once you remove another one above.",
+      revokedNoticeBodyMany:
+        "Because your premium access ended, {n} devices above the free limit were unlinked. The most recently used ones stay active; the free plan allows {limit} devices. You can pair an unlinked device again once you remove another one above.",
+      revokedNoticeLink: "Activate Premium again",
+      preNoticeTitle: "{limit} devices stay active when it ends",
+      preNoticeBody:
+        "You have {count} active devices. When your trial or subscription ends, the {limit} most recently used ones stay active – the rest are unlinked, exactly as the closing email says. The badges below show which is which. To keep them all, remove one of the devices or extend Premium.",
+      preNoticeEndsAt: "Your trial ends on {date}.",
+      preNoticeSubscriptionEndsAt: "Your subscription ends on {date}.",
+      preNoticeSubscriptionRenewsAt:
+        "Your subscription renews automatically on {date}; Premium continues unless you cancel.",
+      keepsBadge: "stays",
+      willUnlinkBadge: "will be unlinked",
       title: "Devices",
       subtitle: "Linked devices and activation status.",
       empty: "No devices linked yet.",
@@ -531,6 +541,18 @@ export const en: Dictionary = {
       pairingSubtitle: "Enter the code from the app.",
     },
     subscription: {
+      trialTitle: "Try Premium free for 14 days",
+      trialBody:
+        "Test Premium for two weeks without payment details. Afterwards the free plan applies again automatically – nothing is charged.",
+      trialRunningTitle: "Trial in progress",
+      trialRunningBody:
+        "The free plan applies again automatically afterwards. Devices and playlist stay; nothing is charged. You can subscribe at any time above.",
+      trialInfo:
+        "Your trial is running; the free plan applies again automatically afterwards – nothing is charged. Premium rights apply for the whole period.",
+      trialCta: "Start trial",
+      trialStarted: "Your trial is running. Ends:",
+      trialFailed: "The trial could not be started.",
+      statusTrial: "Trial",
       title: "Subscription",
       subtitle: "Status, billing channel and cancellation.",
       currentPlan: "Current plan",
@@ -538,8 +560,17 @@ export const en: Dictionary = {
       channel: "Channel",
       channelWeb: "Web / sideload",
       channelAmazon: "Amazon Appstore",
+      channelApple: "App Store",
+      appleNotice: "This subscription was purchased through the App Store and is managed there. You can cancel it in your Apple account settings.",
       renewsAt: "Valid until",
       cancelAtPeriodEnd: "Cancellation scheduled for period end",
+      statusEnded: "Ended",
+      statusPastDue: "Payment failed",
+      statusIncomplete: "Payment not completed",
+      paymentFailed:
+        "The last payment failed, so Premium is paused. Check your payment method with the payment provider or contact support — Premium is restored once the payment succeeds.",
+      subscriptionEnded:
+        "Your premium subscription has ended. Your devices and playlist stay in place; you can subscribe to Premium again at any time.",
       startCta: "Subscribe to Premium on the web",
       manageCta: "Manage in customer account",
       cancelCta: "Cancel subscription",
@@ -552,12 +583,28 @@ export const en: Dictionary = {
       amazonNotice:
         "This subscription is managed through the Amazon Appstore. Cancellations and changes happen in your Amazon account.",
       noSubscription:
-        "No premium subscription is stored yet. Premium adds cross-device management and optimisation features.",
-      priceNote: "€2.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
+        "No premium subscription is stored yet. Premium adds cross-device continue watching and device management.",
+      priceNote: "€3.49 per month. Final price; no VAT charged under the German small business regulation (section 19 of the German VAT Act).",
+      storePriceNote: "Price as billed by your store (App Store / Amazon Appstore).",
+      conversionCouponNote:
+        "A discount for the first billing periods is stored for your trial. It is applied automatically at checkout – no code needed.",
+      retentionTitle: "Stay with Premium – at a discount",
+      retentionBody:
+        "Before you cancel: we can apply a discount to your next billing periods. Your subscription continues at the reduced price and stays cancellable monthly.",
+      retentionCta: "Claim the discount",
+      retentionAccepted:
+        "The discount is applied. Your subscription continues at the reduced price – thanks for staying!",
+      retentionFailed:
+        "The discount could not be applied. You can try again or cancel as usual.",
     },
     support: {
       title: "Support requests",
       subtitle: "Your requests and replies from the support team.",
+      supportPremiumOnly: "Email support is part of Premium",
+      supportPremiumBody:
+        "Email support is part of Premium. You will find answers to the most common questions – installation, playlist, activation – in the help section; it also explains how to handle account and contract questions.",
+      supportFaqCta: "Go to help section",
+      supportPremiumCta: "See Premium",
       newTicket: "New request",
       subject: "Subject",
       category: "Category",
@@ -617,6 +664,41 @@ export const en: Dictionary = {
       sessionsCleared: "Other sessions were signed out.",
       dangerTitle: "Deactivate account",
     },
+    backup: {
+      title: "Cloud backup",
+      description:
+        "Keep your progress and playlist safely in the cloud – encrypted – and bring them back on any device.",
+      listTitle: "Your backups",
+      limitNote:
+        "The {keep} newest backups are kept; older ones are replaced when you create a new one.",
+      createCta: "Create backup",
+      creating: "Backing up …",
+      created: "Backup created – it is in the list now.",
+      failed: "That did not work. Please try again later.",
+      empty: "No backup yet. The first one only takes a moment.",
+      restoreCta: "Restore",
+      restoring: "Restoring …",
+      restored: "{count} progress entries restored.",
+      restoredNothing: "Your account was already up to date – nothing to change.",
+      playlistRestored: "Playlist added.",
+      deleteCta: "Delete",
+      deleting: "Deleting …",
+      confirmDelete: "Delete this backup permanently?",
+      createdAtLabel: "Created",
+      sizeLabel: "Size",
+      restoredAtLabel: "Restored",
+      lockedTitle: "Cloud backup is not available",
+      lockedPremium:
+        "Cloud backup is part of Premium. You can back up with a subscription or during the trial.",
+      lockedDisabled: "Cloud backup is currently disabled.",
+      lockedNotConfigured: "Cloud backup is not set up yet.",
+      lockedListNote: "Your backups will appear here once cloud backup is available.",
+      aboutTitle: "What is backed up",
+      aboutBody:
+        "Your continue-watching progress and your own playlist are backed up. The file only leaves the server encrypted – without the server key it cannot be read.",
+      retentionNote:
+        "Restoring only overwrites older state: newer progress is kept, and an existing playlist is not replaced.",
+    },
   },
   admin: {
     title: "Administration",
@@ -628,18 +710,39 @@ export const en: Dictionary = {
       subscriptions: "Subscriptions",
       pairing: "Pairing codes",
       tickets: "Support",
+      contracts: "Withdrawals & cancellations",
       emails: "Email outbox",
       roles: "Roles & permissions",
       content: "Content & FAQ",
+      settings: "Monetisation",
       status: "System status",
       audit: "Security log",
+      backup: "Cloud backup",
+      trial: "Trial",
       backToSite: "Back to website",
+    },
+    monetization: {
+      title: "Monetisation",
+      subtitle:
+        "Flags for trial, discounts and add-ons. Changes apply immediately, without a deploy.",
+      trial: "Free trial period",
+      conversion: "Discount after the trial",
+      retention: "Cancellation retention",
+      cloudBackup: "Cloud backup",
+      annual: "Annual plan",
+      trialDays: "Trial length in days (1–60)",
+      hint:
+        "A flag that is off means the behaviour stays as without the feature. Discounts only apply when the matching Stripe coupon is configured as well.",
+      save: "Save",
+      saved: "Saved. The change applies from the next page view.",
     },
     overview: {
       customers: "Customers",
       devices: "Active devices",
       subscriptions: "Active subscriptions",
       tickets: "Open requests",
+      contractsOpen: "Open declarations",
+      contractsNone: "No open withdrawals or cancellations.",
       recentAudit: "Latest security-relevant events",
       recentSignups: "Newest registrations",
       systemTitle: "System status",
@@ -653,6 +756,7 @@ export const en: Dictionary = {
       name: "Name",
       role: "Role",
       verified: "Verified",
+      notVerified: "Not verified",
       created: "Registered",
       devices: "Devices",
       subscription: "Subscription",
@@ -770,6 +874,37 @@ export const en: Dictionary = {
       internalNote: "Save as internal note",
       internalSaved: "Note saved.",
     },
+    contracts: {
+      title: "Withdrawals and cancellations",
+      subtitle:
+        "Declarations made on the website. They were submitted without signing in and are effective on receipt; this page only records the processing.",
+      kind: "Type",
+      withdrawal: "Withdrawal",
+      cancellation: "Cancellation",
+      customer: "Customer",
+      contract: "Contract",
+      received: "Received",
+      outcome: "Outcome",
+      processing: "Processing",
+      open: "Open",
+      handled: "Done",
+      markHandled: "Mark as done",
+      reopen: "Reopen",
+      filterAll: "All",
+      filterOpen: "Open",
+      filterHandled: "Done",
+      empty: "No declarations in this selection.",
+      handledNotice: "Declaration marked as done.",
+      reopenedNotice: "Declaration reopened.",
+      handledBy: "Handled by",
+      note: "Note",
+      reference: "Reference",
+      openSummary: "still open",
+      withdrawals: "Withdrawals",
+      cancellations: "Cancellations",
+      statOpenWithdrawals: "open withdrawals",
+      statOpenCancellations: "open cancellations",
+    },
     emails: {
       title: "Email outbox",
       subtitle:
@@ -879,6 +1014,69 @@ export const en: Dictionary = {
       alreadyEnabled: "MFA is already active for this account.",
       notAuthorized: "Only staff accounts can set up MFA.",
     },
+    backup: {
+      title: "Cloud backup",
+      subtitle: "Usage and storage taken up by the encrypted backups.",
+      accountsPremium: "Premium accounts",
+      accountsWithBackup: "Accounts with a backup",
+      backups: "Backups in total",
+      storage: "Stored",
+      lastBackup: "Last backup",
+      lastRestore: "Last restore",
+      quotaNote:
+        "R2 free tier: 10 GB per month. “Stored” is the sum of the encrypted objects; the database only keeps a reference.",
+      tableTitle: "Backups per account",
+      customer: "Customer",
+      count: "Count",
+      size: "Storage",
+      created: "Created",
+      restored: "Restored",
+      empty: "No backup created yet.",
+      flagOff:
+        "Cloud backup is switched off. Existing backups stay stored, but nobody can create new ones right now.",
+      notConfigured: "Cloud backup is not set up – the R2 secrets are missing.",
+      hintRetention: "3 backups per account, kept for 365 days",
+      hintEncrypted: "AES-256-GCM, one key per account",
+    },
+    trial: {
+      title: "Trial",
+      subtitle: "Running trials, reminder emails sent and finished trial periods.",
+      running: "Running trials",
+      reminderDue: "Reminder due",
+      reminded: "Reminded",
+      converted: "Converted",
+      expired: "Expired without purchase",
+      hint:
+        "“Reminder due” are trials ending within the next 48 hours that have not been emailed yet. The daily job runs at 03:17 UTC; these numbers come from the database, not from the log.",
+      tableTitle: "Trials per account",
+      customer: "Customer",
+      state: "State",
+      endsAt: "Ends at",
+      remindedAt: "Reminded at",
+      endedAt: "Ended at",
+      convertedAt: "Converted at",
+      stateRunning: "running",
+      stateDue: "running, reminder pending",
+      stateConverted: "converted",
+      stateExpired: "expired",
+      empty: "No trial started yet.",
+      devices: "Devices",
+      overLimit: "Above free limit",
+      overLimitHint:
+        "“Above free limit” counts expired trials with more active devices than allowed – for example because the trial ended before this rule or the limit was lowered. On expiry, surplus devices are unlinked automatically; the most recently used ones stay.",
+      overLimitRow: "More active devices than the free plan allows",
+      cleanupTitle: "Clean up legacy accounts",
+      cleanupBody:
+        "Accounts without premium access whose subscription lapsed before the automatic unlinking still keep their devices. This run unlinks the surplus ones – the most recently used stay – and deliberately sends no email, because the closing emails went out long ago. Repeatable: it only changes what is still above the limit.",
+      cleanupCount: "{n} accounts affected",
+      cleanupButton: "Clean up legacy accounts",
+      cleanupDone: "Cleaned up: {devices} devices unlinked across {accounts} accounts.",
+      cleanupEmpty: "Nothing to clean up: every account without premium access is within the limit.",
+      subscriptionOverLimit: "Subscription ended, above limit",
+      subscriptionOverLimitHint:
+        "“Subscription ended, above limit” counts accounts without premium access – lapsed subscription, failed payment or never subscribed – that still have more active devices than the free plan allows. These accounts predate the automatic unlinking; they are not cleaned up retroactively, only when that subscription ends again.",
+      flagOff: "The trial is switched off. Running trials still end on their stored date.",
+    },
   },
   accountDeletion: {
     eyebrow: "Account deletion",
@@ -945,6 +1143,8 @@ export const en: Dictionary = {
     terms: "Terms of use",
     subscriptionTerms: "Subscription terms",
     withdrawal: "Withdrawal information",
+    withdrawContract: "Withdraw contract",
+    cancelSubscription: "Cancel subscription",
     accountDeletion: "Delete account",
     accessibility: "Accessibility",
     cookies: "Cookie settings",

@@ -1,4 +1,4 @@
-name: Android release
+name: Android-Release
 
 on:
   workflow_dispatch:
@@ -13,31 +13,31 @@ concurrency:
 
 jobs:
   release:
-    name: Build, upload and publish
+    name: Bauen, hochladen und veröffentlichen
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Set up Java 17
+      - name: Java 17 einrichten
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
 
-      - name: Install Android SDK packages
+      - name: Android-SDK-Pakete installieren
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
@@ -61,14 +61,14 @@ jobs:
           if [ "$license_status" -ne 0 ]; then
             exit "$license_status"
           fi
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle
+      - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
 
-      - name: Validate release secrets
+      - name: Release-Secrets prüfen
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -82,13 +82,13 @@ jobs:
           missing=0
           for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN FLY_API_TOKEN ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             if [ -z "${!name:-}" ]; then
-              echo "::error::Missing required secret: $name"
+              echo "::error::Erforderliches Secret fehlt: $name"
               missing=1
             fi
           done
           exit "$missing"
 
-      - name: Restore Android signing configuration
+      - name: Android-Signierungskonfiguration wiederherstellen
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -106,15 +106,15 @@ jobs:
           printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}" > android/local.properties
           chmod 600 android/keystore.properties android/keystore/streaminghub-release.jks
 
-      - name: Install Node dependencies
+      - name: Node-Abhängigkeiten installieren
         run: npm ci --no-audit --no-fund
 
-      - name: Typecheck website
+      - name: Website typechecken
         run: npm run typecheck
 
       # Builds, signs and uploads the APK, verifies the public object, updates the
       # release metadata files and exports APK_* to GITHUB_ENV.
-      - name: Build, upload and verify APK
+      - name: APK bauen, hochladen und prüfen
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -124,7 +124,7 @@ jobs:
       # (BuildConfig.PREMIUM_SALES=true, channel amazon, see docs/IAP-AMAZON.md).
       # It is never published on the public download page; the run attaches it
       # for the console upload instead.
-      - name: Build, verify and attach the Amazon Appstore APK
+      - name: Amazon-Appstore-APK bauen, prüfen und anhängen
         run: |
           set -euo pipefail
           cd android
@@ -142,16 +142,39 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --print-certs "$APK"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionName='${APK_VERSION}'"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -q "versionCode='${APK_VERSION_CODE}'"
-          echo "Amazon APK: $(stat -c%s "$APK") bytes, $(sha256sum "$APK" | cut -d' ' -f1)"
+          echo "Amazon-APK: $(stat -c%s "$APK") Bytes, $(sha256sum "$APK" | cut -d' ' -f1)"
 
-      - name: Attach the Amazon Appstore APK
+      - name: Amazon-Appstore-APK anhängen
         uses: actions/upload-artifact@v4
         with:
           name: streaminghub-amazon-apk
           path: android/app/build/outputs/apk/amazon/release/app-amazon-release.apk
           if-no-files-found: error
 
-      - name: Install flyctl
+      # Play erlaubt keinen Web-Checkout. Der Play-Build hat deshalb keinen
+      # Kaufweg (PREMIUM_SALES=false); Google Play Billing folgt separat.
+      - name: Google-Play-AAB bauen und prüfen
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew --no-daemon bundlePlayRelease
+          AAB="app/build/outputs/bundle/playRelease/app-play-release.aab"
+          test -f "$AAB"
+          grep -q 'PREMIUM_SALES = false' \
+            "app/build/generated/source/buildConfig/play/release/de/streaminghub/app/BuildConfig.java"
+          grep -q 'PREMIUM_CHANNEL = "play"' \
+            "app/build/generated/source/buildConfig/play/release/de/streaminghub/app/BuildConfig.java"
+          jarsigner -verify "$AAB"
+          echo "Play-AAB: $(stat -c%s "$AAB") Bytes, $(sha256sum "$AAB" | cut -d' ' -f1)"
+
+      - name: Google-Play-AAB anhängen
+        uses: actions/upload-artifact@v4
+        with:
+          name: streaminghub-play-aab
+          path: android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          if-no-files-found: error
+
+      - name: flyctl installieren
         run: |
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
@@ -159,7 +182,7 @@ jobs:
       # The website reads APK_* at request time (src/lib/android-release.ts), so
       # publishing the release itself is a secret update: no commit to the
       # protected branch and no deploy are involved.
-      - name: Publish release metadata as Fly secrets
+      - name: Release-Metadaten als Fly-Secrets veröffentlichen
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
@@ -175,14 +198,14 @@ jobs:
       # Same check that runs after every deploy: page, API and served APK must
       # describe one release. The checksum changes with every build, so it proves
       # the secrets were applied even when the version stays the same.
-      - name: Verify the deployed site
+      - name: Deployte Website prüfen
         run: node scripts/deploy-smoke.mjs --wait 300
 
       # `npm run release:apk` rewrote the generated files in this runner, but it
       # must not commit to the protected branch. It therefore parks the changes on
       # a stable branch and keeps one pull request open, so syncing the repository
       # is a single merge.
-      - name: Prepare the release metadata pull request
+      - name: Pull Request für die Release-Metadaten vorbereiten
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -192,7 +215,7 @@ jobs:
           git add -- src/content/release.ts
 
           if git diff --cached --quiet; then
-            echo "Committed release metadata is already current; no pull request needed."
+            echo "Die committeten Release-Metadaten sind bereits aktuell; kein Pull Request nötig."
             exit 0
           fi
 
@@ -208,7 +231,7 @@ jobs:
 
           BODY=$(mktemp)
           cat > "$BODY" <<EOF
-          Generated release metadata for **${APK_VERSION}** (build ${APK_VERSION_CODE}).
+          Erzeugte Release-Metadaten für **${APK_VERSION}** (Build ${APK_VERSION_CODE}).
 
           | Feld | Wert |
           | --- | --- |
@@ -228,7 +251,7 @@ jobs:
           EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -n "$EXISTING" ]; then
             gh pr edit "$EXISTING" --title "chore(release): ${APK_VERSION}" --body-file "$BODY"
-            echo "Updated pull request #${EXISTING}."
+            echo "Pull Request #${EXISTING} aktualisiert."
           else
             gh pr create --base main --head "$BRANCH" \
               --title "chore(release): ${APK_VERSION}" \

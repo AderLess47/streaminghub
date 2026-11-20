@@ -2,23 +2,29 @@ package de.streaminghub.app
 
 import android.app.Application
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
 import de.streaminghub.app.billing.BillingReceipt
 import de.streaminghub.app.billing.PremiumBillingProvider
 import de.streaminghub.app.billing.PremiumBillingState
 import de.streaminghub.app.billing.PremiumPurchaseController
 import de.streaminghub.app.billing.SubmissionResult
 import de.streaminghub.app.data.AccountInfo
+import de.streaminghub.app.data.AppUpdateInfo
+import de.streaminghub.app.data.AppUpdater
 import de.streaminghub.app.data.DemoLibrary
 import de.streaminghub.app.data.DeviceIdentity
 import de.streaminghub.app.data.EpgRepository
 import de.streaminghub.app.data.M3uParser
 import de.streaminghub.app.data.ManagedPlaylist
 import de.streaminghub.app.data.PairingCodeData
+import de.streaminghub.app.data.PlaylistCache
 import de.streaminghub.app.data.PlaylistRepository
 import de.streaminghub.app.data.SecureTokenStore
 import de.streaminghub.app.data.SettingsRepository
@@ -27,19 +33,25 @@ import de.streaminghub.app.data.StreamingHubApiException
 import de.streaminghub.app.data.XmltvParser
 import de.streaminghub.app.model.Channel
 import de.streaminghub.app.model.EpgProgramme
+import de.streaminghub.app.model.MediaKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import de.streaminghub.app.data.AppLog
 
 private const val MANAGED_PLAYLIST_LABEL = "Admin-Playlist"
 
@@ -96,13 +108,28 @@ data class EpgUiState(
     val error: String? = null,
 )
 
+data class UpdateUiState(
+    val checking: Boolean = false,
+    val checked: Boolean = false,
+    val available: AppUpdateInfo? = null,
+    val downloadPercent: Int? = null,
+    val readyToInstall: Boolean = false,
+    val error: String? = null,
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = PlaylistRepository(application)
+    private val playlistCache = PlaylistCache(application)
+
+    val categories: StateFlow<List<String>> = repository.observeCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val epgRepository = EpgRepository(application)
     private val secureStore = SecureTokenStore(application)
     private val settingsRepository = SettingsRepository(application)
     private val api = StreamingHubApi()
+    private val updater by lazy { AppUpdater(application) }
+    private var downloadedUpdate: java.io.File? = null
 
     private val premiumController by lazy {
         PremiumPurchaseController(
@@ -123,20 +150,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var epgState by mutableStateOf(EpgUiState())
         private set
 
+    var updateState by mutableStateOf(UpdateUiState())
+        private set
+
     var lowSpecMode by mutableStateOf(settingsRepository.isLowSpecMode())
         private set
 
     init {
-        val stored = repository.loadPlaylist()
-        uiState = AppUiState(
-            channels = stored.channels,
-            favorites = repository.loadFavorites(),
-            sourceUrl = stored.sourceUrl,
-            sourceLabel = stored.sourceLabel,
-            updatedAt = stored.updatedAt,
-            managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
-            demoMode = stored.sourceLabel == DemoLibrary.SOURCE_LABEL,
-        )
+        viewModelScope.launch {
+            val stored = repository.loadPlaylist()
+            uiState = AppUiState(
+                channels = stored.channels,
+                favorites = repository.loadFavorites(),
+                sourceUrl = stored.sourceUrl,
+                sourceLabel = stored.sourceLabel,
+                updatedAt = stored.updatedAt,
+                managedPlaylist = stored.sourceLabel == MANAGED_PLAYLIST_LABEL,
+                demoMode = stored.sourceLabel == DemoLibrary.SOURCE_LABEL,
+            )
+
+            if (secureStore.loadToken() != null) {
+                refreshAccount()
+            }
+
+            refreshCachedPlaylistIfStale()
+        }
 
         val storedEpg = epgRepository.load()
         epgState = EpgUiState(
@@ -145,11 +183,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             updatedAt = storedEpg.updatedAt,
         )
 
-        if (secureStore.loadToken() != null) {
-            refreshAccount()
-        }
-
-        refreshCachedPlaylistIfStale()
+        if (BuildConfig.SELF_UPDATE) checkForUpdate(silent = true)
     }
 
     fun importFromUrl(rawUrl: String) {
@@ -164,7 +198,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+            val file = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -172,7 +207,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = url,
                 sourceLabel = sourceLabelFor(url),
             )
@@ -183,7 +218,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { readUri(uri) }.getOrElse { throwable ->
+            val file = runCatching { readUri(uri) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, "Datei-Import")
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -191,7 +227,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = null,
                 sourceLabel = "M3U-Datei",
             )
@@ -203,11 +239,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         importFromUrl(source)
     }
 
+    fun channelPages(
+        category: String?,
+        kind: MediaKind?,
+        query: String,
+        lowSpecMode: Boolean,
+    ): Flow<PagingData<Channel>> = repository.pagedChannels(
+        category = category,
+        kind = kind,
+        query = query,
+        pageSize = if (lowSpecMode) LOW_SPEC_PAGE_SIZE else PAGE_SIZE,
+    )
+
     fun removePlaylist() {
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
-        repository.clearPlaylist()
+        playlistCache.clear()
         uiState = AppUiState()
+        viewModelScope.launch {
+            runCatching { repository.clearPlaylist() }
+                .onFailure { throwable -> AppLog.error("playlist", throwable, "Room") }
+        }
     }
 
     // ---- Demo library -------------------------------------------------------------
@@ -261,6 +313,116 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateLowSpecMode(enabled: Boolean) {
         lowSpecMode = enabled
         settingsRepository.saveLowSpecMode(enabled)
+    }
+
+    // ---- In-App-Update (nur direkte Sideload-APK) --------------------------------
+
+    fun checkForUpdate(silent: Boolean = false) {
+        if (!BuildConfig.SELF_UPDATE) return
+        if (updateState.checking || updateState.downloadPercent != null) return
+
+        updateState = updateState.copy(checking = true, error = null)
+        viewModelScope.launch {
+            val result = runCatching { updater.check(BuildConfig.VERSION_CODE) }
+            updateState = result.fold(
+                onSuccess = { info ->
+                    if (info != null) {
+                        AppLog.info("update", "Version ${info.version} (${info.versionCode}) verfügbar.")
+                    }
+                    updateState.copy(
+                        checking = false,
+                        checked = true,
+                        available = info,
+                        error = null,
+                    )
+                },
+                onFailure = { throwable ->
+                    AppLog.error("update", throwable)
+                    updateState.copy(
+                        checking = false,
+                        checked = true,
+                        error = if (silent) {
+                            null
+                        } else {
+                            throwable.message?.takeIf { it.isNotBlank() }
+                                ?: "Die Update-Prüfung ist fehlgeschlagen."
+                        },
+                    )
+                },
+            )
+        }
+    }
+
+    fun downloadUpdate() {
+        val info = updateState.available ?: return
+        if (updateState.downloadPercent != null) return
+
+        updateState = updateState.copy(downloadPercent = 0, error = null)
+        viewModelScope.launch {
+            val result = runCatching {
+                updater.download(info) { percent ->
+                    Handler(Looper.getMainLooper()).post {
+                        if (updateState.downloadPercent != null) {
+                            updateState = updateState.copy(downloadPercent = percent)
+                        }
+                    }
+                }
+            }
+            result.onSuccess { file ->
+                downloadedUpdate = file
+                updateState = updateState.copy(
+                    downloadPercent = null,
+                    readyToInstall = true,
+                    error = null,
+                )
+            }.onFailure { throwable ->
+                AppLog.error("update", throwable)
+                downloadedUpdate = null
+                updateState = updateState.copy(
+                    downloadPercent = null,
+                    readyToInstall = false,
+                    error = throwable.message?.takeIf { it.isNotBlank() }
+                        ?: "Das Update konnte nicht geladen werden.",
+                )
+            }
+        }
+    }
+
+    fun installUpdate() {
+        if (!BuildConfig.SELF_UPDATE) return
+        val file = downloadedUpdate
+        if (file == null || !file.isFile) {
+            updateState = updateState.copy(
+                readyToInstall = false,
+                error = "Bitte lade das Update erneut herunter.",
+            )
+            return
+        }
+
+        if (!updater.canRequestInstall()) {
+            val opened = updater.openInstallPermissionSettings()
+            updateState = updateState.copy(
+                error = if (opened) {
+                    "Erlaube StreamingHub die Installation unbekannter Apps und tippe danach erneut auf „Installation öffnen“."
+                } else {
+                    "Die Installationsfreigabe konnte nicht geöffnet werden. Erlaube sie in den Systemeinstellungen unter „Unbekannte Apps“."
+                },
+            )
+            return
+        }
+
+        updater.install(file).onSuccess {
+            updateState = updateState.copy(error = null)
+        }.onFailure { throwable ->
+            AppLog.error("update", throwable)
+            updateState = updateState.copy(
+                error = "Die Installation konnte nicht geöffnet werden: ${throwable.message.orEmpty()}",
+            )
+        }
+    }
+
+    fun dismissUpdateError() {
+        updateState = updateState.copy(error = null)
     }
 
     fun toggleFavorite(channel: Channel) {
@@ -322,6 +484,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         epgState = epgState.copy(loading = true, error = null)
         viewModelScope.launch {
             val content = runCatching { fetchEpg(url) }.getOrElse { throwable ->
+                AppLog.error("epg", throwable, AppLog.redactUrl(url))
                 epgState = epgState.copy(loading = false, error = throwable.epgMessage())
                 return@launch
             }
@@ -333,6 +496,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         epgState = epgState.copy(loading = true, error = null)
         viewModelScope.launch {
             val content = runCatching { readEpgUri(uri) }.getOrElse { throwable ->
+                AppLog.error("epg", throwable, "Datei-Import")
                 epgState = epgState.copy(loading = false, error = throwable.epgMessage())
                 return@launch
             }
@@ -516,6 +680,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     api.pollPairing(session.requestId, session.pollToken)
                 }
 
+                result.exceptionOrNull()?.let { AppLog.error("pairing", it) }
+
                 if (result.isFailure) {
                     accountState = accountState.copy(
                         pairingBusy = false,
@@ -592,7 +758,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playlistRefreshJob?.cancel()
         uiState = uiState.copy(loading = true, error = null)
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+            val file = runCatching { fetchPlaylist(url) }.getOrElse { throwable ->
+                AppLog.error("playlist", throwable, AppLog.redactUrl(url))
                 uiState = uiState.copy(
                     loading = false,
                     error = throwable.toUserMessage(),
@@ -600,7 +767,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = url,
                 sourceLabel = MANAGED_PLAYLIST_LABEL,
             )
@@ -608,6 +775,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun handleAccountFailure(throwable: Throwable) {
+        AppLog.error("account", throwable)
         val apiError = throwable as? StreamingHubApiException
         if (apiError?.httpStatus == 401 || apiError?.httpStatus == 403) {
             secureStore.clearToken()
@@ -625,8 +793,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!uiState.managedPlaylist) return
         playlistRefreshJob?.cancel()
         playlistRefreshJob = null
-        repository.clearPlaylist()
+        playlistCache.clear()
         uiState = AppUiState()
+        viewModelScope.launch {
+            runCatching { repository.clearPlaylist() }
+                .onFailure { throwable -> AppLog.error("playlist", throwable, "Room") }
+        }
     }
 
     private fun refreshCachedPlaylistIfStale() {
@@ -639,10 +811,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val label = uiState.sourceLabel ?: sourceLabelFor(source)
         playlistRefreshJob?.cancel()
         playlistRefreshJob = viewModelScope.launch {
-            val content = runCatching { fetchPlaylist(source) }.getOrNull() ?: return@launch
+            val file = runCatching { fetchPlaylist(source) }.getOrNull() ?: return@launch
             if (uiState.sourceUrl != source || uiState.updatedAt != cachedAt) return@launch
             applyPlaylist(
-                content = content,
+                file = file,
                 sourceUrl = source,
                 sourceLabel = label,
                 silent = true,
@@ -651,13 +823,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun applyPlaylist(
-        content: String,
+        file: File,
         sourceUrl: String?,
         sourceLabel: String,
         silent: Boolean = false,
     ) {
-        val channels = withContext(Dispatchers.Default) {
-            runCatching { M3uParser.parse(content) }
+        val channels = withContext(Dispatchers.IO) {
+            runCatching { M3uParser.parse(file) }
         }.getOrElse { throwable ->
             uiState = uiState.copy(
                 loading = false,
@@ -677,9 +849,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val stored = withContext(Dispatchers.IO) {
-            repository.savePlaylist(channels, sourceUrl, sourceLabel)
-            repository.loadPlaylist()
+        val stored = runCatching {
+            withContext(Dispatchers.IO) {
+                repository.savePlaylist(channels, sourceUrl, sourceLabel)
+                repository.loadPlaylist()
+            }
+        }.getOrElse { throwable ->
+            AppLog.error("playlist", throwable, "Room")
+            uiState = uiState.copy(
+                loading = false,
+                error = "Die Playlist konnte nicht lokal gespeichert werden.",
+            )
+            return
         }
         uiState = AppUiState(
             channels = stored.channels,
@@ -691,34 +872,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    private suspend fun fetchPlaylist(url: String): String = withContext(Dispatchers.IO) {
+    private suspend fun fetchPlaylist(url: String): File = withContext(Dispatchers.IO) {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 20_000
             readTimeout = 45_000
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("Accept", "*/*")
-            setRequestProperty("User-Agent", "StreamingHub/1.2 (Android)")
+            setRequestProperty("User-Agent", "StreamingHub/${BuildConfig.VERSION_NAME} (Android)")
         }
 
         try {
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw IOException("Der Server antwortet mit HTTP $code.")
+                throw IOException(httpErrorMessage(code, "Playlist"))
             }
-            connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
-                reader.readLimited(MAX_PLAYLIST_CHARS)
-            }
+            playlistCache.store(connection.inputStream)
         } finally {
             connection.disconnect()
         }
     }
 
-    private suspend fun readUri(uri: Uri): String = withContext(Dispatchers.IO) {
+    private suspend fun readUri(uri: Uri): File = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
-        resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-            reader.readLimited(MAX_PLAYLIST_CHARS)
-        } ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
+        val input = resolver.openInputStream(uri)
+            ?: throw IOException("Die ausgewählte Datei konnte nicht geöffnet werden.")
+        playlistCache.store(input)
     }
 
     private suspend fun fetchEpg(url: String): String = withContext(Dispatchers.IO) {
@@ -728,16 +907,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("Accept", "application/xml,text/xml,*/*")
-            setRequestProperty("User-Agent", "StreamingHub/1.2 (Android)")
+            setRequestProperty("User-Agent", "StreamingHub/${BuildConfig.VERSION_NAME} (Android)")
         }
 
         try {
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw IOException("Der EPG-Server antwortet mit HTTP $code.")
+                throw IOException(httpErrorMessage(code, "EPG"))
             }
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
-                reader.readLimited(MAX_EPG_CHARS)
+                reader.readLimited(MAX_EPG_CHARS, "EPG-Datei")
             }
         } finally {
             connection.disconnect()
@@ -747,11 +926,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun readEpgUri(uri: Uri): String = withContext(Dispatchers.IO) {
         val resolver = getApplication<Application>().contentResolver
         resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-            reader.readLimited(MAX_EPG_CHARS)
+            reader.readLimited(MAX_EPG_CHARS, "EPG-Datei")
         } ?: throw IOException("Die ausgewählte EPG-Datei konnte nicht geöffnet werden.")
     }
 
-    private fun Reader.readLimited(maxChars: Int): String {
+    private fun Reader.readLimited(maxChars: Int, label: String): String {
         val builder = StringBuilder()
         val buffer = CharArray(8_192)
         var total = 0
@@ -760,11 +939,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (read < 0) break
             total += read
             if (total > maxChars) {
-                throw IOException("Die Playlist ist zu groß (maximal 20 MB).")
+                throw IOException("Die $label ist zu groß (maximal ${maxChars / 1_000_000} MB).")
             }
             builder.append(buffer, 0, read)
         }
         return builder.toString()
+    }
+
+    /**
+     * 884 ist kein Standard-HTTP-Code, sondern eine Ablehnung des Anbieters
+     * (häufig: Liste gesperrt oder an ein anderes Gerät gebunden). Ein
+     * generisches "HTTP 884" hilft niemandem; der Hinweis schon.
+     */
+    private fun httpErrorMessage(code: Int, kind: String): String = when (code) {
+        884 -> "Der Anbieter verweigert die Playlist (Code 884). Fordere eine neue M3U-URL an: Viele Anbieter sperren die Liste oder binden sie an ein bestimmtes Gerät."
+        401, 403 -> "Der Anbieter verweigert den Zugriff (HTTP $code). Prüfe die Zugangsdaten in der URL oder frage nach einer neuen Adresse."
+        in 400..499 -> "Der $kind-Server lehnt die Anfrage ab (HTTP $code). Prüfe die Adresse oder frage beim Anbieter nach einer neuen URL."
+        else -> "Der $kind-Server antwortet mit HTTP $code."
     }
 
     private fun sourceLabelFor(url: String): String {
@@ -798,8 +989,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private companion object {
-        const val MAX_PLAYLIST_CHARS = 20_000_000
-        const val MAX_EPG_CHARS = 20_000_000
+        const val MAX_EPG_CHARS = 50_000_000
         const val CACHE_REFRESH_AFTER_MS = 15 * 60 * 1_000L
+        const val PAGE_SIZE = 80
+        const val LOW_SPEC_PAGE_SIZE = 40
     }
 }

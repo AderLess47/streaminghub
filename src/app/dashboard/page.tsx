@@ -6,6 +6,8 @@ import { ResendVerification } from "@/components/resend-verification";
 import { Alert, Badge, EmptyState, InfoRow } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { removeDeviceAction } from "@/lib/actions/dashboard";
+import { devicesOverLimit, devicesRevokedByEnding, freeDeviceLimit } from "@/lib/device-access";
+import { getEntitlements } from "@/lib/entitlements";
 import { all, get } from "@/lib/db";
 import { effectiveStatus, ensureSubscription } from "@/lib/payments";
 import { requireUser } from "@/lib/session";
@@ -30,6 +32,34 @@ export default async function DashboardPage() {
      FROM devices WHERE user_id = ? ORDER BY activated_at DESC`,
     user.id,
   );
+  // Ein abgemeldetes Gerät soll im Konto erklärt werden, nicht nur in der Mail.
+  const entitlements = getEntitlements(user.id);
+  const revokedByEnding = entitlements.premium ? [] : devicesRevokedByEnding(user.id);
+
+  // Was beim Ende des Zugangs passieren würde – mit derselben Funktion, die
+  // später tatsächlich abmeldet, damit die Vorschau nicht abweicht.
+  const freeLimit = freeDeviceLimit();
+  const activeDevices = devices.filter((device) => device.status === "active");
+  const willUnlink =
+    entitlements.premium && activeDevices.length > freeLimit
+      ? new Set(devicesOverLimit(user.id, freeLimit).map((device) => device.id))
+      : null;
+
+  // Das konkrete Ende nennen, wo es feststeht: Trial-Ende oder das von Stripe
+  // gemeldete Periodenende. Store-Abos liefern keins – dort bleibt der Satz weg,
+  // statt ein Datum zu raten.
+  const endsAt =
+    entitlements.trialActive && entitlements.trialEndsAt
+      ? { kind: "trial" as const, date: entitlements.trialEndsAt }
+      : entitlements.source === "stripe" &&
+          subscription.current_period_end &&
+          Number.isFinite(Date.parse(subscription.current_period_end))
+        ? {
+            kind: subscription.cancel_at_period_end ? ("stripeEnd" as const) : ("stripeRenew" as const),
+            date: subscription.current_period_end,
+          }
+        : null;
+
   const openTickets =
     get<{ c: number }>(
       `SELECT COUNT(*) AS c FROM support_tickets WHERE user_id = ? AND status != 'closed'`,
@@ -42,6 +72,19 @@ export default async function DashboardPage() {
       : status === "pending"
         ? t.dashboard.overview.planPending
         : t.dashboard.overview.planFree;
+
+  const statusText =
+    status === "active"
+      ? t.dashboard.overview.planPremium
+      : status === "pending"
+        ? t.dashboard.overview.planPending
+        : status === "canceled"
+          ? t.dashboard.subscription.statusEnded
+          : status === "past_due"
+            ? t.dashboard.subscription.statusPastDue
+            : status === "incomplete"
+              ? t.dashboard.subscription.statusIncomplete
+              : t.dashboard.overview.planNone;
 
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
     dateStyle: "medium",
@@ -99,6 +142,56 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {willUnlink ? (
+        <section className="card grid gap-2 p-4">
+          <h2 className="text-sm font-semibold">
+            {t.dashboard.devices.preNoticeTitle.replace("{limit}", String(freeLimit))}
+          </h2>
+          <p className="text-xs leading-relaxed text-muted">
+            {t.dashboard.devices.preNoticeBody
+              .replace("{count}", String(activeDevices.length))
+              .replace("{limit}", String(freeLimit))}
+          </p>
+          {endsAt ? (
+            <p className="text-xs font-medium text-fg">
+              {(endsAt.kind === "trial"
+                ? t.dashboard.devices.preNoticeEndsAt
+                : endsAt.kind === "stripeEnd"
+                  ? t.dashboard.devices.preNoticeSubscriptionEndsAt
+                  : t.dashboard.devices.preNoticeSubscriptionRenewsAt
+              ).replace("{date}", dateFormat.format(new Date(endsAt.date)))}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {revokedByEnding.length > 0 ? (
+        <section className="card grid gap-2 border-amber-400/30 p-4">
+          <h2 className="text-sm font-semibold text-amber-300">
+            {(revokedByEnding.length === 1
+              ? t.dashboard.devices.revokedNoticeTitleOne
+              : t.dashboard.devices.revokedNoticeTitleMany
+            ).replace("{n}", String(revokedByEnding.length))}
+          </h2>
+          <p className="text-xs leading-relaxed text-muted">
+            {(revokedByEnding.length === 1
+              ? t.dashboard.devices.revokedNoticeBodyOne
+              : t.dashboard.devices.revokedNoticeBodyMany
+            )
+              .replace("{n}", String(revokedByEnding.length))
+              .replace("{limit}", String(entitlements.deviceLimit))}
+          </p>
+          <p className="text-[0.7rem] text-muted">
+            {revokedByEnding
+              .map((device) => `${device.name} · ${dateFormat.format(new Date(device.revokedAt))}`)
+              .join(" · ")}
+          </p>
+          <Link href="/premium" className="link text-xs">
+            {t.dashboard.devices.revokedNoticeLink}
+          </Link>
+        </section>
+      ) : null}
+
       <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -138,6 +231,13 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {willUnlink && device.status === "active" ? (
+                    <Badge tone={willUnlink.has(device.id) ? "warn" : "ok"}>
+                      {willUnlink.has(device.id)
+                        ? t.dashboard.devices.willUnlinkBadge
+                        : t.dashboard.devices.keepsBadge}
+                    </Badge>
+                  ) : null}
                   <Badge tone={device.status === "active" ? "ok" : "neutral"}>
                     {device.status === "active" ? t.dashboard.devices.statusActive : t.dashboard.devices.statusRevoked}
                   </Badge>
@@ -186,10 +286,16 @@ export default async function DashboardPage() {
         <div className="card p-5">
           <h2 className="text-base font-semibold">{t.dashboard.overview.quickActions}</h2>
           <div className="mt-3">
-            <InfoRow label={t.dashboard.subscription.status} value={status} />
+            <InfoRow label={t.dashboard.subscription.status} value={statusText} />
             <InfoRow
               label={t.dashboard.subscription.channel}
-              value={subscription.channel === "amazon" ? t.dashboard.subscription.channelAmazon : t.dashboard.subscription.channelWeb}
+              value={
+                subscription.channel === "amazon"
+                  ? t.dashboard.subscription.channelAmazon
+                  : subscription.channel === "apple"
+                    ? t.dashboard.subscription.channelApple
+                    : t.dashboard.subscription.channelWeb
+              }
             />
           </div>
           <div className="mt-4 grid gap-2">

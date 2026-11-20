@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { hashPassword, randomToken, verifyPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { get, nowIso, run } from "@/lib/db";
+import { getEntitlements } from "@/lib/entitlements";
 import { env } from "@/lib/env";
 import {
   sendMail,
@@ -13,6 +14,7 @@ import {
   ticketReceivedMail,
 } from "@/lib/mail";
 import { cancelSubscription, effectiveStatus, getSubscription } from "@/lib/payments";
+import { declineRetentionOffer, retentionOffer } from "@/lib/retention";
 import {
   currentSessionTokenHash,
   invalidateUserSessions,
@@ -55,7 +57,8 @@ export async function removeDeviceAction(formData: FormData): Promise<void> {
   if (!device) return;
 
   run(
-    `UPDATE devices SET status = 'revoked', revoked_at = ?, user_id = NULL WHERE id = ?`,
+    `UPDATE devices SET status = 'revoked', revoked_at = ?, revoked_reason = 'customer', user_id = NULL
+      WHERE id = ?`,
     nowIso(),
     deviceId,
   );
@@ -153,6 +156,18 @@ export async function createTicketAction(
   formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  // E-Mail-Support gehört zu Premium: Supportzeit ist der größte Kostenblock,
+  // deshalb erzeugen Gratis- und Trial-Konten keine Tickets, sondern werden
+  // auf den Hilfebereich verwiesen. Die Sperre sitzt serverseitig, damit sie
+  // nicht durch die Oberfläche umgangen werden kann.
+  const entitlements = getEntitlements(user.id);
+  if (entitlements.source === "none" || entitlements.source === "trial") {
+    return {
+      ok: false,
+      message:
+        "E-Mail-Support gehört zu Premium. Antworten auf die häufigsten Fragen findest du im Hilfebereich.",
+    };
+  }
   const parsed = ticketSchema.safeParse({
     subject: formData.get("subject"),
     category: formData.get("category"),
@@ -323,12 +338,17 @@ export async function cancelSubscriptionAction(
   _formData: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  // Wurde vorher ein Rettungsangebot gezeigt? Dann ist die Kündigung eine
+  // Ablehnung – erst nach erfolgreicher Kündigung festhalten, damit ein
+  // Fehlschlag das Angebot nicht verbraucht.
+  const offerShown = retentionOffer(user.id).available;
   const result = await cancelSubscription(user.id);
+  if (result.ok && offerShown) declineRetentionOffer(user.id);
   logAudit({
     action: "subscription.cancel_requested",
     actorId: user.id,
     actorEmail: user.email,
-    meta: { ok: result.ok },
+    meta: { ok: result.ok, retentionOfferShown: offerShown },
   });
   revalidatePath("/dashboard/subscription");
   return { ok: result.ok, message: result.message };

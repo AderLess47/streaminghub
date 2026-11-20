@@ -1,4 +1,4 @@
-name: Release drift
+name: Release-Abweichung
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   # Runs right after every Android release, so a fallback that a release left
   # behind is visible the same day instead of at the next scheduled check.
   workflow_run:
-    workflows: ["Android release"]
+    workflows: ["Android-Release"]
     types: [completed]
   workflow_dispatch:
 
@@ -20,49 +20,49 @@ concurrency:
 
 jobs:
   check:
-    name: Compare fallback with production
+    name: Fallback mit Produktion vergleichen
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # A cancelled or failed release published nothing, so it needs no drift report.
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       # No dependency install: the sync only uses fetch and node:fs, so the check
       # stays fast and needs no secrets or network egress beyond the site.
-      - name: Compare the committed release metadata with production
+      - name: Eingetragene Release-Metadaten mit Produktion vergleichen
         env:
           RELEASE_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           set -euo pipefail
           if node scripts/release-sync.mjs --check; then
-            echo "Committed fallback matches production (trigger: ${GITHUB_EVENT_NAME})." >> "$GITHUB_STEP_SUMMARY"
+            echo "Eingetragener Fallback stimmt mit Produktion überein (Auslöser: ${GITHUB_EVENT_NAME})." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           # Reproduce the drift in the runner so the log and summary show it.
           node scripts/release-sync.mjs
           {
-            echo "### Release fallback is stale"
+            echo "### Release-Fallback ist veraltet"
             echo
-            echo "src/content/release.ts lags behind https://streaminghub.org/api/release (trigger: \`${GITHUB_EVENT_NAME}\`)."
+            echo "src/content/release.ts liegt hinter https://streaminghub.org/api/release zurück (Auslöser: \`${GITHUB_EVENT_NAME}\`)."
             if [ -n "${RELEASE_RUN_URL}" ]; then
               echo
-              echo "Triggered by release run: ${RELEASE_RUN_URL}"
+              echo "Ausgelöst durch Release-Lauf: ${RELEASE_RUN_URL}"
             fi
             echo
-            echo "Run \`npm run release:sync\` locally and open a pull request."
+            echo "Lokal \`npm run release:sync\` ausführen und einen Pull Request öffnen."
             echo
             echo '```diff'
             git --no-pager diff -- src/content/release.ts
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error title=Release fallback is stale::src/content/release.ts lags behind https://streaminghub.org/api/release. Run 'npm run release:sync' and open a pull request."
+          echo "::error title=Release-Fallback ist veraltet::src/content/release.ts liegt hinter https://streaminghub.org/api/release zurück. 'npm run release:sync' ausführen und einen Pull Request öffnen."
           exit 1

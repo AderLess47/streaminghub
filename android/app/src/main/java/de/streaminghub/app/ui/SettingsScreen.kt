@@ -26,7 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -57,6 +59,7 @@ import de.streaminghub.app.billing.PremiumBillingState
 import de.streaminghub.app.AppUiState
 import de.streaminghub.app.BuildConfig
 import de.streaminghub.app.EpgUiState
+import de.streaminghub.app.UpdateUiState
 import de.streaminghub.app.ui.theme.Cyan
 import de.streaminghub.app.ui.theme.Foreground
 import de.streaminghub.app.ui.theme.Ink
@@ -68,6 +71,11 @@ import de.streaminghub.app.ui.theme.Rose
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.Intent
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import de.streaminghub.app.data.AppLog
 
 @Composable
 fun SettingsScreen(
@@ -98,6 +106,11 @@ fun SettingsScreen(
     premiumState: PremiumBillingState = PremiumBillingState.Loading,
     onBuyPremium: () -> Unit = {},
     onRestorePremium: () -> Unit = {},
+    updateState: UpdateUiState = UpdateUiState(),
+    onCheckUpdate: () -> Unit = {},
+    onDownloadUpdate: () -> Unit = {},
+    onInstallUpdate: () -> Unit = {},
+    onDismissUpdateError: () -> Unit = {},
 ) {
     var showRemoveConfirmation by remember { mutableStateOf(false) }
     var showRemoveEpgConfirmation by remember { mutableStateOf(false) }
@@ -573,6 +586,169 @@ fun SettingsScreen(
                             text = "Der gespeicherte Wiedergabefortschritt wurde gelöscht.",
                             color = Cyan,
                             style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+
+            if (BuildConfig.SELF_UPDATE) {
+                item {
+                    val info = updateState.available
+                    SettingsCard(
+                        title = "App-Update",
+                        subtitle = when {
+                            updateState.downloadPercent != null -> "Update wird heruntergeladen"
+                            updateState.readyToInstall -> "Bereit zur Installation"
+                            info != null -> "Version ${info.version} ist verfügbar"
+                            updateState.checking -> "Suche nach Updates …"
+                            updateState.checked -> "Du verwendest die neueste Version."
+                            else -> "Prüft beim Start, ob eine neue Sideload-Version bereitliegt."
+                        },
+                    ) {
+                        Text(
+                            text = "Direkte APK-Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}). Updates kommen von streaminghub.org, werden vor der Installation gegen ihre SHA-256-Prüfsumme geprüft und nie still installiert.",
+                            color = Muted,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+
+                        when {
+                            updateState.downloadPercent != null -> {
+                                Spacer(Modifier.height(12.dp))
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(99.dp)),
+                                    color = Cyan,
+                                    trackColor = Line,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "${updateState.downloadPercent} % geladen …",
+                                    color = Muted,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+
+                            updateState.readyToInstall -> {
+                                Spacer(Modifier.height(12.dp))
+                                PrimaryAction(
+                                    text = "Installation öffnen",
+                                    icon = Icons.Rounded.Check,
+                                    onClick = onInstallUpdate,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Android fragt vor der Installation noch einmal nach. Die App wird dabei aktualisiert; Playlist und Einstellungen bleiben erhalten.",
+                                    color = Muted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+
+                            info != null -> {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Neu: ${info.version} (Build ${info.versionCode}) · ${info.sizeLabel}",
+                                    color = Foreground,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                PrimaryAction(
+                                    text = "Update herunterladen",
+                                    icon = Icons.Rounded.Download,
+                                    onClick = onDownloadUpdate,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+
+                        if (updateState.error != null) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = updateState.error,
+                                color = Rose,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(onClick = onDismissUpdateError) {
+                                Text("Hinweis schließen", color = Muted)
+                            }
+                        }
+
+                        if (updateState.downloadPercent == null && !updateState.readyToInstall) {
+                            Spacer(Modifier.height(10.dp))
+                            SecondaryAction(
+                                text = if (updateState.checking) "Suche läuft …" else "Nach Updates suchen",
+                                icon = Icons.Rounded.Refresh,
+                                enabled = !updateState.checking,
+                                onClick = onCheckUpdate,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                val context = LocalContext.current
+                var logVisible by remember { mutableStateOf(false) }
+                var logChars by remember { mutableStateOf(AppLog.sizeChars()) }
+                SettingsCard(
+                    title = "Diagnose",
+                    subtitle = "Fehler und Gerätedaten – bleibt auf diesem Gerät",
+                ) {
+                    Text(
+                        text = "Protokoll: ${logChars} Zeichen. Aufgezeichnet werden Zeitpunkt, Stufe, Bereich, Meldung sowie Modell, Systemstand, Bildschirm und Sprache. Keine Tokens, keine E-Mail-Adressen, Playlist-Adressen ohne Zugangsdaten und ohne Query.",
+                        color = Muted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SecondaryAction(
+                            text = "Protokoll teilen",
+                            icon = Icons.Rounded.Share,
+                            onClick = {
+                                val body = AppLog.read().ifBlank { "Noch keine Einträge." }
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, "StreamingHub Diagnose")
+                                    putExtra(Intent.EXTRA_TEXT, body)
+                                }
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(share, "Protokoll teilen"))
+                                }
+                            },
+                        )
+                        SecondaryAction(
+                            text = if (logVisible) "Protokoll ausblenden" else "Protokoll anzeigen",
+                            onClick = {
+                                logVisible = !logVisible
+                                logChars = AppLog.sizeChars()
+                            },
+                        )
+                        SecondaryAction(
+                            text = "Protokoll löschen",
+                            icon = Icons.Rounded.Delete,
+                            danger = true,
+                            onClick = {
+                                AppLog.clear()
+                                logVisible = false
+                                logChars = AppLog.sizeChars()
+                            },
+                        )
+                    }
+                    if (logVisible) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = AppLog.read().takeLast(4000).ifBlank { "Noch keine Einträge." },
+                            color = Muted,
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            fontFamily = FontFamily.Monospace,
                         )
                     }
                 }

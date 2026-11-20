@@ -22,7 +22,7 @@ export type LegalDoc = {
   clausesEn: Clause[];
 };
 
-const UPDATED = "2026-11-10";
+const UPDATED = "2026-11-16";
 
 export const legalDocs: Record<string, LegalDoc> = {
   privacy: {
@@ -67,7 +67,8 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "5. Zahlungen und Abonnements",
         paragraphs: [
           "Für Premium-Abonnements über den Web-Checkout nutzen wir Stripe Payments Europe, Ltd. (Irland). Zahlungsdaten wie Kartendaten werden direkt bei Stripe eingegeben und nicht auf unseren Servern gespeichert. Wir erhalten Statusinformationen (Zahlungsstatus, Ablaufzeitpunkt, Abo-Kennung).",
-          "In Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten; es werden keine externen Zahlungsaufforderungen angezeigt und keine Abrechnungsdaten an uns übermittelt.",
+          "In Amazon-Appstore-Versionen wird Premium über Amazon In-App Purchasing verkauft. Dabei übermittelt die App den Kaufbeleg an uns; wir speichern Belegkennung, Amazon-Nutzerkennung, Produkt, Kauf-, Verlängerungs- und Kündigungsdatum sowie den Prüfstatus, um das Abo freizuschalten. Kartendaten erhalten wir nicht. Bei Käufen über den App Store prüfen wir die von Apple signierte Transaktion (Produkt, Bundle, Ablauf, Erstattung) gegen Apples öffentliche Zertifikatskette und speichern dieselben Angaben. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.",
+          "Widerrufe und Kündigungen, die über die Website erklärt werden, speichern wir mit Name, E-Mail-Adresse, betroffenem Vertrag, Zeitpunkt, Status und IP-Adresse. Das ist der Nachweis, wann welche Erklärung eingegangen ist; wir bewahren ihn bis zum Ablauf der gesetzlichen Verjährungsfristen auf. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b und lit. c DSGVO.",
           "Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO sowie Art. 6 Abs. 1 lit. c DSGVO für steuerrechtliche Aufbewahrung.",
         ],
       },
@@ -85,9 +86,9 @@ export const legalDocs: Record<string, LegalDoc> = {
         ],
       },
       {
-        heading: "8. VPN-/Proxy-Funktion",
+        heading: "8. Premiumfunktionen",
         paragraphs: [
-          "Die integrierte VPN-/Proxy-Funktion befindet sich in Entwicklung und ist nicht aktiv. Sollte sie aktiviert werden, informieren wir vorab über verarbeitete Verbindungsdaten, Serverstandorte, Speicherdauer und Auftragsverarbeiter und holen, soweit erforderlich, eine Einwilligung ein.",
+          "Premium umfasst derzeit das geräteübergreifende Weiterschauen und die geräteübergreifende Kontoverwaltung. Weitere Funktionen werden erst angeboten, wenn sie produktiv verfügbar sind. Führt eine neue Funktion zur Verarbeitung personenbezogener Daten, informieren wir vor der Aktivierung über Zwecke, Daten, Speicherdauer und Empfänger und holen, soweit erforderlich, eine Einwilligung ein.",
         ],
       },
       {
@@ -121,6 +122,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         paragraphs: [
           "Kontodaten speichern wir bis zur Löschung des Kontos. Nach Löschantrag entfernen wir personenbezogene Daten unverzüglich, soweit keine gesetzlichen Aufbewahrungspflichten (insbesondere handels- und steuerrechtliche Fristen für Abrechnungsdaten) entgegenstehen. Supportanfragen löschen wir spätestens 24 Monate nach Abschluss.",
           "Eine hinterlegte M3U-URL wird mit der Löschung des Kontos entfernt; sie kann vorher jederzeit durch einen Administrator gelöscht werden.",
+          "Kontogebundene Wiedergabepositionen (Titel-Adresse, Position, Laufzeit, Zeitpunkt, Gerät) löschen wir mit dem Konto; einzelne Positionen können jederzeit in der App gelöscht werden. Widerrufs- und Kündigungserklärungen bewahren wir als Nachweis bis zum Ablauf der Verjährungsfristen auf, auch wenn das Konto gelöscht wird.",
         ],
       },
       {
@@ -174,7 +176,8 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "5. Payments and subscriptions",
         paragraphs: [
           "For premium subscriptions via the web checkout we use Stripe Payments Europe, Ltd. (Ireland). Payment details such as card data are entered directly with Stripe and are not stored on our servers. We receive status information (payment status, period end, subscription reference).",
-          "Premium is currently not offered in Amazon Appstore builds; no external payment prompts are shown and no billing data reaches us.",
+          "In Amazon Appstore builds premium is sold through Amazon In-App Purchasing. The app sends the purchase receipt to us; we store the receipt id, Amazon user id, product, purchase, renewal and cancellation dates and the verification status in order to unlock the subscription. We do not receive card data. For App Store purchases we verify the transaction signed by Apple (product, bundle, expiry, revocation) against Apple's public certificate chain and store the same data. The legal basis is Art. 6(1)(b) GDPR.",
+          "Withdrawals and cancellations declared via the website are stored with name, email address, affected contract, time, status and IP address. This is the evidence of when which declaration arrived; we keep it until the statutory limitation periods expire. The legal basis is Art. 6(1)(b) and (c) GDPR.",
           "Legal bases are Art. 6(1)(b) GDPR and Art. 6(1)(c) GDPR for statutory retention.",
         ],
       },
@@ -192,9 +195,9 @@ export const legalDocs: Record<string, LegalDoc> = {
         ],
       },
       {
-        heading: "8. VPN/proxy capability",
+        heading: "8. Premium features",
         paragraphs: [
-          "The integrated VPN/proxy capability is in development and not active. If it is activated, we will explain in advance which connection data is processed, the server locations, retention periods and processors, and obtain consent where required.",
+          "Premium currently includes cross-device continue watching and cross-device account management. Further features are offered only once they are available in production. If a new feature processes personal data, we will explain the purposes, data, retention periods and recipients before activation and obtain consent where required.",
         ],
       },
       {
@@ -228,6 +231,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         paragraphs: [
           "Account data is stored until the account is deleted. After a deletion request we remove personal data without undue delay unless statutory retention obligations (especially commercial and tax retention for billing data) apply. Support requests are deleted no later than 24 months after closure.",
           "A stored M3U URL is deleted together with the account; an administrator can delete it at any time beforehand.",
+          "Account-bound playback positions (title address, position, duration, time, device) are deleted with the account; individual positions can be deleted in the app at any time. We keep withdrawal and cancellation declarations as evidence until the limitation periods expire, even if the account is deleted.",
         ],
       },
       {
@@ -427,27 +431,27 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "1. Preis und Steuern",
         paragraphs: [
-          "StreamingHub Premium kostet 2,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Preis wird im Checkout als Gesamtbetrag ausgewiesen. Bei Verbraucherpreisanpassungen informieren wir vorab.",
+          "StreamingHub Premium kostet 3,49 € pro Monat. Der Preis ist der Endpreis; wegen der Kleinunternehmerregelung gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. Der Preis wird im Checkout als Gesamtbetrag ausgewiesen. Bereits abgeschlossene Abonnements behalten den Preis, zu dem sie abgeschlossen wurden. Bei Verbraucherpreisanpassungen informieren wir vorab.",
         ],
       },
       {
         heading: "2. Laufzeit und Kündigung",
         paragraphs: [
-          "Das Abonnement verlängert sich monatlich um einen weiteren Monat, sofern es nicht vor Ablauf gekündigt wird. Die Kündigung ist jederzeit zum Ende des aktuellen Abrechnungszeitraums möglich. Eine Kündigung über das Dashboard beim Kanal „Web“ wird serverseitig an den Zahlungsanbieter übermittelt.",
-          "Bei Kanal „Amazon Appstore“ erfolgt die Kündigung ausschließlich in Ihrem Amazon-Konto. Eine Kündigung über die Website ist technisch nicht möglich.",
+          "Das Abonnement verlängert sich monatlich um einen weiteren Monat, sofern es nicht vor Ablauf gekündigt wird. Die Kündigung ist jederzeit zum Ende des aktuellen Abrechnungszeitraums möglich. Dafür steht auf der Website die Schaltfläche „Jetzt kündigen“ unter https://streaminghub.org/kuendigung zur Verfügung – ohne Anmeldung und ohne Rückfrage; eine Kündigung über das Dashboard beim Kanal „Web“ wird zusätzlich serverseitig an den Zahlungsanbieter übermittelt.",
+          "Bei Kanal „Amazon Appstore“ oder „App Store“ wird das Abo vom jeweiligen Store verwaltet. Die Kündigung über die Website wird belegt und bestätigt; das Abo endet zusätzlich erst mit der Kündigung im Store-Konto.",
         ],
       },
       {
         heading: "3. Zahlungswege",
         paragraphs: [
-          "Für die Sideload-Version wird der Web-Checkout über Stripe abgewickelt. In Amazon-Appstore-Versionen wird Premium derzeit nicht angeboten; in der App werden keine externen Zahlungsaufforderungen angezeigt.",
+          "Für die Sideload-Version wird der Web-Checkout über Stripe abgewickelt. In Amazon-Appstore-Versionen wird Premium über Amazon In-App Purchasing verkauft; externe Zahlungsaufforderungen werden dort nicht angezeigt.",
           "Ein Abonnement wird erst nach erfolgreicher Zahlung und serverseitiger Bestätigung begründet. Ein angezeigter Status „nicht aktiv“ bedeutet nicht, dass ein Vertrag besteht.",
         ],
       },
       {
         heading: "4. Leistungsumfang und Entwicklung",
         paragraphs: [
-          "Premium umfasst die zum jeweiligen Zeitpunkt produktiv verfügbaren Premiumfunktionen. Als „in Entwicklung“ gekennzeichnete Funktionen (insbesondere VPN-/Proxy-Funktion und erweiterte Streaming-Optimierung) sind nicht geschuldet, bis sie ausdrücklich als verfügbar gekennzeichnet werden.",
+          "Premium umfasst die zum jeweiligen Zeitpunkt produktiv verfügbaren Premiumfunktionen. Künftige, noch nicht ausdrücklich als verfügbar gekennzeichnete Funktionen sind nicht geschuldet.",
           "Der Ausfall einzelner Premiumfunktionen berechtigt nicht zur Minderung, solange die übrigen Leistungen nutzbar bleiben; gesetzliche Rechte bleiben unberührt.",
         ],
       },
@@ -460,7 +464,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "6. Widerruf",
         paragraphs: [
-          "Verbrauchern steht ein Widerrufsrecht zu. Einzelheiten und das Muster-Widerrufsformular finden Sie in den Widerrufsinformationen. Bei digitalen Diensten kann das Widerrufsrecht erlöschen, wenn die Ausführung mit ausdrücklicher Zustimmung begonnen hat und der Kunde bestätigt hat, dass er sein Widerrufsrecht damit verliert.",
+          "Verbrauchern steht ein Widerrufsrecht zu. Der Widerruf kann jederzeit über die Schaltfläche „Verträge hier widerrufen“ unter https://streaminghub.org/widerruf ohne Anmeldung erklärt werden; die Bestätigung erfolgt unmittelbar auf dem Bildschirm und per E-Mail. Einzelheiten und das Muster-Widerrufsformular finden Sie in den Widerrufsinformationen. Bei digitalen Diensten kann das Widerrufsrecht erlöschen, wenn die Ausführung mit ausdrücklicher Zustimmung begonnen hat und der Kunde bestätigt hat, dass er sein Widerrufsrecht damit verliert.",
         ],
       },
       {
@@ -474,27 +478,27 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "1. Price and taxes",
         paragraphs: [
-          "StreamingHub Premium costs €2.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. The checkout shows the total amount. We will inform you in advance of consumer price adjustments.",
+          "StreamingHub Premium costs €3.49 per month. This is the final price; no VAT is charged under the German small business regulation pursuant to § 19 of the German VAT Act. The checkout shows the total amount. Existing subscriptions keep the price at which they were taken out. We will inform you in advance of consumer price adjustments.",
         ],
       },
       {
         heading: "2. Term and cancellation",
         paragraphs: [
-          "The subscription renews monthly for a further month unless cancelled before expiry. Cancellation is possible at any time with effect from the end of the current billing period. Cancellation via the dashboard for the “web” channel is transmitted server-side to the payment provider.",
-          "For the “Amazon Appstore” channel, cancellation occurs exclusively in your Amazon account and is technically not possible via the website.",
+          "The subscription renews monthly for a further month unless cancelled before expiry. Cancellation is possible at any time with effect from the end of the current billing period. The “Cancel now” button at https://streaminghub.org/kuendigung is available for this purpose without signing in and without follow-up questions; cancellation via the dashboard for the “web” channel is additionally transmitted server-side to the payment provider.",
+          "For the “Amazon Appstore” and “App Store” channels the subscription is managed by the respective store. Cancellation via the website is recorded and confirmed; the subscription additionally ends only when cancelled in the store account.",
         ],
       },
       {
         heading: "3. Payment channels",
         paragraphs: [
-          "For the sideload version the web checkout is processed by Stripe. Premium is currently not offered in Amazon Appstore builds; no external payment prompts are shown in the app.",
+          "For the sideload version the web checkout is processed by Stripe. In Amazon Appstore builds premium is sold through Amazon In-App Purchasing; no external payment prompts are shown in the app.",
           "A subscription is formed only after successful payment and server-side confirmation. A displayed status of “not active” does not mean a contract exists.",
         ],
       },
       {
         heading: "4. Scope and development",
         paragraphs: [
-          "Premium covers the premium features productively available at the relevant time. Features marked “in development” (in particular the VPN/proxy capability and advanced streaming optimisation) are not owed until explicitly marked available.",
+          "Premium covers the premium features productively available at the relevant time. Future features that are not explicitly marked as available are not owed.",
           "Unavailability of individual premium features does not entitle to a price reduction while the remaining services remain usable; statutory rights remain unaffected.",
         ],
       },
@@ -507,7 +511,7 @@ export const legalDocs: Record<string, LegalDoc> = {
       {
         heading: "6. Withdrawal",
         paragraphs: [
-          "Consumers have a right of withdrawal. Details and the model withdrawal form are provided in the withdrawal information. For digital services the right may expire once performance has begun with express consent and the customer has confirmed losing the right of withdrawal.",
+          "Consumers have a right of withdrawal. It can be declared at any time via the “Withdraw contracts here” button at https://streaminghub.org/widerruf without signing in; confirmation is shown immediately on screen and sent by email. Details and the model withdrawal form are provided in the withdrawal information. For digital services the right may expire once performance has begun with express consent and the customer has confirmed losing the right of withdrawal.",
         ],
       },
       {
@@ -533,7 +537,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "Widerrufsrecht",
         paragraphs: [
           "Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsschlusses.",
-          "Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (Angaben siehe Impressum, E-Mail: service@streaminghub.org) mittels einer eindeutigen Erklärung (z. B. per E-Mail) über Ihren Entschluss informieren, diesen Vertrag zu widerrufen. Sie können dafür das Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.",
+          "Um Ihr Widerrufsrecht auszuüben, können Sie die Schaltfläche „Verträge hier widerrufen“ unter https://streaminghub.org/widerruf verwenden. Sie erhalten dort unmittelbar eine Bestätigung mit Datum und Inhalt Ihrer Erklärung sowie eine Bestätigung per E-Mail. Alternativ genügt eine eindeutige Erklärung an uns (Angaben siehe Impressum, E-Mail: service@streaminghub.org), z. B. per E-Mail. Sie können dafür auch das Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.",
           "Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.",
         ],
       },
@@ -574,7 +578,7 @@ export const legalDocs: Record<string, LegalDoc> = {
         heading: "Right of withdrawal",
         paragraphs: [
           "You have the right to withdraw from this contract within fourteen days without giving any reason. The withdrawal period is fourteen days from the day the contract was concluded.",
-          "To exercise your right, you must inform us (details in the legal notice, email: service@streaminghub.org) by a clear statement (e.g. by email) of your decision to withdraw. You may use the model withdrawal form, which is not mandatory.",
+          "To exercise your right you can use the “Withdraw contracts here” button at https://streaminghub.org/widerruf. You immediately receive a confirmation with the date and content of your declaration, plus a confirmation by email. Alternatively, a clear statement to us (details in the legal notice, email: service@streaminghub.org), e.g. by email, is sufficient. You may also use the model withdrawal form, which is not mandatory.",
           "To meet the deadline it is sufficient to send your communication before the withdrawal period expires.",
         ],
       },

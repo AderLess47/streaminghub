@@ -1,11 +1,11 @@
 /**
- * Android release metadata served by the website.
+ * Android-Release-Metadaten, die die Website ausliefert.
  *
- * `src/content/release.ts` is the generated fallback that `npm run release:apk`
- * writes for local builds. In production the values arrive as `APK_*`
- * environment variables: the Android release workflow stores them as Fly
- * secrets, so a new APK is published without a commit to the protected branch
- * and without a redeploy.
+ * `src/content/release.ts` ist der erzeugte Fallback, den `npm run release:apk`
+ * für lokale Builds schreibt. In Produktion kommen die Werte als
+ * `APK_*`-Umgebungsvariablen: Der Workflow `Android-Release` legt sie als
+ * Fly-Secrets ab, sodass eine neue APK ohne Commit auf den geschützten Branch
+ * und ohne erneutes Deployment erscheint.
  */
 import { androidRelease as generatedRelease } from "../content/release";
 
@@ -34,8 +34,8 @@ const sizeBytes = Number(text(process.env.APK_SIZE_BYTES) || 0);
 const fileName = text(process.env.APK_FILE_NAME) || (version ? `streaminghub-${version}.apk` : "");
 
 /**
- * The environment is only trusted when it describes a complete release;
- * otherwise the generated file keeps the site consistent.
+ * Die Umgebung zählt nur, wenn sie ein vollständiges Release beschreibt;
+ * andernfalls hält die erzeugte Datei die Website konsistent.
  */
 const published =
   Boolean(version) &&

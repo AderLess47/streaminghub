@@ -68,7 +68,7 @@ uploading or writing. For production, publish the same values as Fly secrets
 ### GitHub Actions release
 
 `.github/workflows/android-release.yml` is a manual release workflow
-(**Actions → Android release → Run workflow**). It builds and verifies the APK,
+(**Actions → Android-Release → Run workflow**). It builds and verifies the APK,
 uploads it to R2, and publishes the release metadata as Fly secrets
 (`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,
 `APK_SIZE_BYTES`, `APK_URL`). `src/lib/android-release.ts` reads them at request
@@ -101,7 +101,7 @@ the required check, because such events start no workflows.
 describe the same release (version/build, size and SHA-256); `--wait <seconds>`
 retries while the machines restart, `--skip-apk` omits the 14 MB download and
 `--base <url>` targets another origin. The release workflow runs it after
-publishing the secrets, and the *Deploy smoke* workflow repeats it every six
+publishing the secrets, and the *Deploy-Smoke-Test* workflow repeats it every six
 hours so a manual `flyctl deploy` is verified too.
 
 Configure these repository or `production` environment secrets:
@@ -123,7 +123,7 @@ starts building.
 
 **Public:** `/` · `/premium` · `/download` · `/activate` · `/help` · `/faq` ·
 `/contact` · `/status` · `/docs/api` · `/imprint` · `/privacy` · `/terms` ·
-`/subscription-terms` · `/withdrawal`
+`/subscription-terms` · `/withdrawal` · `/widerruf` · `/kuendigung`
 
 **Auth:** `/login` · `/register` · `/forgot-password` · `/reset-password?token=…`
 
@@ -154,6 +154,10 @@ starts building.
   announcement editing, email outbox, security log, status checks
 - Live system status page (real checks; no invented uptime figures)
 - Cookie consent banner; no optional trackers are loaded
+- Withdrawal function (§ 356a BGB) at `/widerruf` and cancellation button
+  (§ 312k BGB) at `/kuendigung`, both without sign-in, with stored record,
+  confirmation page and confirmation email; web subscriptions are cancelled at
+  the payment provider directly
 
 ### Prepared integration points (NOT active)
 
@@ -165,8 +169,8 @@ starts building.
 | App ↔ website API | Endpoints live and tested | Client implementation in the StreamingHub app |
 | Transactional email | Provider adapter, outbox, retry, delivery webhook and bounce/complaint suppression implemented and stub-tested | `EMAIL_API_KEY`, verified sending domain, `EMAIL_WEBHOOK_SECRET` |
 | Appme account SSO | **Not integrated** | Appme issuer URL, client ID/secret, scopes, redirect URI and API documentation |
-| VPN / proxy premium feature | Labelled "in development" | Product implementation, privacy review, activation |
-| Cross-device resume | Labelled "in development" | Product implementation |
+| VPN / proxy premium feature | **Not offered** | Removed from the premium copy; would need product implementation, privacy review and activation |
+| Cross-device resume | **Live for premium devices** | Positions sync through `/api/v1/progress`: Android resumes when a channel opens, Apple and Vega OS merge at app start; clearing the local history also removes it from the account |
 
 Payment UI never reports success without a server-side provider confirmation;
 without keys the checkout returns HTTP 503 and states that no payment occurred.
@@ -210,11 +214,17 @@ production server those two checks are skipped, since dev links are withheld.
 
 ## Documentation
 
+- `android/README.md` – Android/Fire-OS-App (Kotlin, Compose)
+- `vega/README.md` – Vega-OS-App (React Native 0.83, Fire TV mit Vega)
+- `apple/README.md` – iOS/iPadOS/macOS/Apple-TV-App (SwiftUI, ein Multiplatform-Target)
 - `docs/DEPLOYMENT.md` – hosting, HTTPS, DNS, environment, provider setup, backups
+- `docs/STAGING.md` – isolated staging app, deploy workflow, purchase-canary fallback and backup freshness gate
 - `docs/API.md` – app integration contract
 - `docs/BFSG-ANWENDUNGSBEREICH.md` – whether the accessibility act applies, with the operator's figures and the recorded decision
 - `docs/BFSG-PFLICHTEN-CHECKLISTE.md` – what to do if the micro-enterprise threshold is exceeded
 - `docs/PRUEFPROTOKOLL-VORLAGE.md` – template for accessibility test records kept as evidence
+- `docs/APP-PARITAET.md` – Android, Vega OS and Apple side by side, including the diagnostics log
+- `docs/RECHT-PRUEFUNG.md` – withdrawal (§ 356a BGB), cancellation button (§ 312k BGB), premium claims, data processing, licences and store rules as checked in the code
 - `/docs/api` – rendered API documentation + OpenAPI 3.1 JSON
 
 ## Legal content disclaimer

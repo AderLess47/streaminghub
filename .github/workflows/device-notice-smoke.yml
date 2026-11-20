@@ -1,0 +1,125 @@
+name: Geräte-Vorwarnung im Konto
+
+# Prüft nach jedem erfolgreichen Deploy – Staging und Produktion – dass die
+# Geräte-Vorwarnung im Konto wirklich rendert: Titel, Markierungen und die
+# Datumszeile für Trial und Stripe, ohne Datum bei Store-Abos.
+#
+# Der Test läuft in der jeweiligen Maschine, weil er dort ein Wegwerf-Konto mit
+# Abo und Geräten anlegt und es wieder löscht. Er braucht keine Zugangsdaten:
+# die Adresse ist auf Loopback festgelegt, damit der Lauf nur die Instanz
+# trifft, in der er läuft.
+
+on:
+  workflow_run:
+    workflows: ["Staging-Deploy", "Produktions-Deploy"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Welches Deployment geprüft wird
+        type: choice
+        options:
+          - both
+          - staging
+          - production
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: device-notice-smoke
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Geräte-Vorwarnung auf Staging prüfen
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.target != 'production') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.name == 'Staging-Deploy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+
+      # Pinned installer instead of a floating action, so this check never runs
+      # code that changed since the last deploy.
+      - name: flyctl installieren
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Smoke-Test in der Staging-Maschine ausführen
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          # 3001 is the Next server behind the staging cache proxy; the request
+          # carries a session cookie, so the cache would bypass it anyway.
+          flyctl ssh console -a streaminghub-staging \
+            -C "env SMOKE_BASE_URL=http://127.0.0.1:3001 node /app/scripts/device-notice-smoke.mjs"
+
+      - name: Zusammenfassung
+        if: always()
+        run: |
+          {
+            echo "### Geräte-Vorwarnung im Konto (Staging)"
+            echo
+            echo "- Ziel: \`streaminghub-staging\` (127.0.0.1:3001)"
+            echo "- Commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    name: Geräte-Vorwarnung auf Produktion prüfen
+    # Production serves Next directly on 3000 (no cache proxy). The run creates
+    # a throwaway account in the production database and deletes it again, so
+    # the live page is verified rather than inferred from the deployed commit.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.target != 'staging') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.name == 'Produktions-Deploy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+
+      - name: flyctl installieren
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Smoke-Test in der Produktions-Maschine ausführen
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_API_TOKEN is missing}"
+          flyctl ssh console -a streaminghub-org \
+            -C "env SMOKE_BASE_URL=http://127.0.0.1:3000 node /app/scripts/device-notice-smoke.mjs"
+
+      - name: Zusammenfassung
+        if: always()
+        run: |
+          {
+            echo "### Geräte-Vorwarnung im Konto (Produktion)"
+            echo
+            echo "- Ziel: \`streaminghub-org\` (127.0.0.1:3000)"
+            echo "- Commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"

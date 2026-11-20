@@ -6,11 +6,22 @@
  */
 import path from "node:path";
 import { androidRelease } from "./android-release";
+import { normalizeEndpoint } from "./r2";
 
 const bool = (value: string | undefined) => value === "1" || value?.toLowerCase() === "true";
 
+/** Kopierte Werte tragen oft spitze Klammern oder Leerraum mit. */
+const cleanSecret = (value: string | undefined) => (value ?? "").replace(/[<>\s"']/g, "");
+
+/** Zahl aus der Umgebung mit Grenzen; alles Unbrauchbare fällt auf den Default zurück. */
+const boundedNumber = (value: number, min: number, max: number, fallback: number) =>
+  Number.isFinite(value) && value > 0 ? Math.min(Math.max(Math.floor(value), min), max) : fallback;
+
 export const env = {
   appUrl: (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  deployEnv:
+    process.env.DEPLOY_ENV ?? (process.env.NODE_ENV === "production" ? "production" : "development"),
+  commit: process.env.GIT_COMMIT ?? process.env.COMMIT_SHA ?? "unknown",
   isProduction: process.env.NODE_ENV === "production",
   databasePath:
     process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "streaminghub.db"),
@@ -19,6 +30,8 @@ export const env = {
   adminPassword: process.env.ADMIN_PASSWORD ?? "",
   seedDemo: bool(process.env.SEED_DEMO),
   sessionDays: Number(process.env.SESSION_DAYS ?? 30),
+  /** Gemeinsames Token für die internen Trial-Jobs (`openssl rand -hex 32`). */
+  trialJobToken: process.env.TRIAL_JOB_TOKEN ?? "",
   email: {
     /** Only the Resend-compatible HTTP contract is implemented. */
     provider: (process.env.EMAIL_PROVIDER ?? "resend").toLowerCase(),
@@ -34,9 +47,15 @@ export const env = {
   billing: {
     stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
     stripePriceId: process.env.STRIPE_PRICE_ID ?? "",
+    /** Jahresabo; leer = Jahresabschluss nicht angeboten. */
+    stripeAnnualPriceId: process.env.STRIPE_PRICE_ID_ANNUAL ?? "",
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
     stripeApiBase: (process.env.STRIPE_API_BASE ?? "https://api.stripe.com").replace(/\/$/, ""),
     stripeTimeoutMs: Number(process.env.STRIPE_TIMEOUT_MS ?? 10000),
+    /** Coupon für die Umwandlung nach dem Testzeitraum; leer = kein Rabatt. */
+    stripeConversionCouponId: process.env.STRIPE_CONVERSION_COUPON_ID ?? "",
+    /** Coupon für die Kündigungs-Rettung; leer = kein Angebot. */
+    stripeWinbackCouponId: process.env.STRIPE_WINBACK_COUPON_ID ?? "",
     amazonStoreUrl: process.env.AMAZON_STORE_URL ?? "",
     /** Amazon In-App Purchasing (Appstore SDK) receipt verification. */
     amazonRvsSharedSecret: process.env.AMAZON_RVS_SHARED_SECRET ?? "",
@@ -48,6 +67,24 @@ export const env = {
     amazonIapSku: process.env.AMAZON_IAP_SKU ?? "premium_monthly",
     amazonRtnTopicArn: process.env.AMAZON_RTN_TOPIC_ARN ?? "",
     amazonSyncToken: process.env.AMAZON_SYNC_TOKEN ?? "",
+    /**
+     * Apple App Store (StoreKit 2). Der Server prueft die signierte Transaktion
+     * gegen Apples Root CA G3; ohne Bundle-ID bleibt die Anbindung aus.
+     */
+    appleIapBundleId: process.env.APPLE_IAP_BUNDLE_ID ?? "",
+    appleIapProductId: process.env.APPLE_IAP_PRODUCT_ID ?? "premium_monthly",
+    appleIapAllowSandbox: bool(process.env.APPLE_IAP_ALLOW_SANDBOX),
+  },
+  backup: {
+    /** Cloudflare R2 (S3-kompatibel) für die verschlüsselten Sicherungen. */
+    r2Endpoint: normalizeEndpoint(process.env.R2_ENDPOINT ?? ""),
+    r2Bucket: cleanSecret(process.env.R2_BUCKET),
+    r2AccessKeyId: cleanSecret(process.env.R2_ACCESS_KEY_ID),
+    r2SecretAccessKey: cleanSecret(process.env.R2_SECRET_ACCESS_KEY),
+    /** Mindestens 32 Zeichen; ein Verlust macht bestehende Sicherungen unlesbar. */
+    encryptionKey: process.env.BACKUP_ENCRYPTION_KEY ?? "",
+    maxBytes: boundedNumber(Number(process.env.BACKUP_MAX_BYTES ?? 1048576), 1024, 10485760, 1048576),
+    retentionDays: boundedNumber(Number(process.env.BACKUP_RETENTION_DAYS ?? 365), 7, 3650, 365),
   },
   downloads: {
     /**
@@ -61,6 +98,16 @@ export const env = {
     amazonStore: process.env.AMAZON_STORE_URL ?? "",
   },
   contactTo: process.env.CONTACT_TO_EMAIL ?? "service@streaminghub.org",
+  /** Aufbewahrungsfrist für Kontaktanfragen; Standard entspricht 24 Monaten. */
+  contactRetentionDays: Math.min(
+    Math.max(Number(process.env.CONTACT_RETENTION_DAYS ?? 730) || 730, 30),
+    3650,
+  ),
+  /** Sicherheitsprotokoll; die Datenschutzerklärung verspricht 90 Tage. */
+  auditRetentionDays: Math.min(
+    Math.max(Number(process.env.AUDIT_RETENTION_DAYS ?? 90) || 90, 90),
+    3650,
+  ),
 } as const;
 
 export const isEmailConfigured = () =>
@@ -73,6 +120,17 @@ export const isBillingConfigured = () =>
   );
 export const isAmazonIapConfigured = () =>
   Boolean(env.billing.amazonRvsSharedSecret && env.billing.amazonIapSku);
+export const isAppleIapConfigured = () =>
+  Boolean(env.billing.appleIapBundleId && env.billing.appleIapProductId);
+/** Ohne Endpoint, Bucket, Zugang und Schlüssel gibt es keinen Speicherort. */
+export const isBackupConfigured = () =>
+  Boolean(
+    env.backup.r2Endpoint &&
+      env.backup.r2Bucket &&
+      env.backup.r2AccessKeyId &&
+      env.backup.r2SecretAccessKey &&
+      env.backup.encryptionKey.length >= 32,
+  );
 
 /** Company / operator details. Placeholders are intentional until confirmed. */
 const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);
