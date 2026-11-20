@@ -13,7 +13,7 @@ export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | nu
       <div className="shell py-12">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div className="max-w-xs">
-            <Logo size={34} />
+            <Logo size={34} linkClassName="min-h-11" />
             <p className="mt-3 text-sm leading-relaxed text-muted">{t.footer.tagline}</p>
             <p className="mt-4 text-xs leading-relaxed text-muted/80">{t.footer.disclaimer}</p>
           </div>
