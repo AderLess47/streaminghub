@@ -88,8 +88,8 @@ jobs:
               # day instead of the next morning. A real billing failure keeps its
               # single daily run, because the open billing issue is the signal.
               if [ "$conclusion" = 'failure' ]; then
-                drift=$(open_issue "Staging deploy drift")
-                billing=$(open_issue "Staging canary failing")
+                drift=$(open_issue "Staging-Deploy-Abweichung")
+                billing=$(open_issue "Staging-Canary fehlgeschlagen")
                 if [ -n "$drift" ] && [ -z "$billing" ]; then
                   echo "Drift issue #$drift is open and no billing issue is; this slot is the drift retry."
                   run="true"
@@ -123,7 +123,7 @@ jobs:
       commit: ${{ steps.deployed_commit.outputs.sha || github.sha }}
       # Set when the canary stopped on deploy drift (staging serves another
       # commit). Such a failure never ran a billing check, so it is reported on
-      # its own issue instead of `Staging canary failing`.
+      # its own issue instead of `Staging-Canary fehlgeschlagen`.
       drift: ${{ steps.run_canary.outputs.drift }}
       served: ${{ steps.run_canary.outputs.served }}
 
@@ -189,18 +189,18 @@ jobs:
             const fs = require("node:fs");
             const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
             const lines = [
-              "### Canary orphan sweep preflight",
+              "### Canary-Sweep verwaister Objekte (Vorprüfung)",
               "",
-              "- mode: dry run (no deletions)",
-              "- cutoff: `" + plan.cutoff + "`",
-              "- old subscriptions: **" + plan.subscriptions.length + "**",
-              "- old customers: **" + plan.customers.length + "**",
+              "- Modus: Testlauf (keine Löschungen)",
+              "- Stichtag: `" + plan.cutoff + "`",
+              "- alte Abos: **" + plan.subscriptions.length + "**",
+              "- alte Kunden: **" + plan.customers.length + "**",
             ];
             if (plan.subscriptions.length) {
-              lines.push("- subscription IDs: " + plan.subscriptions.map((id) => "`" + id + "`").join(", "));
+              lines.push("- Abo-IDs: " + plan.subscriptions.map((id) => "`" + id + "`").join(", "));
             }
             if (plan.customers.length) {
-              lines.push("- customer IDs: " + plan.customers.map((id) => "`" + id + "`").join(", "));
+              lines.push("- Kunden-IDs: " + plan.customers.map((id) => "`" + id + "`").join(", "));
             }
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
             const total = plan.subscriptions.length + plan.customers.length;
@@ -274,14 +274,14 @@ jobs:
             echo "drift=true" >> "$GITHUB_OUTPUT"
             echo "served=$served" >> "$GITHUB_OUTPUT"
             {
-              echo "### Staging deploy drift"
+              echo "### Staging-Deploy-Abweichung"
               echo
-              echo "- staging serves: \`$served\`"
-              echo "- expected commit: \`$CANARY_EXPECT_COMMIT\`"
+              echo "- Staging liefert: \`$served\`"
+              echo "- Erwarteter Commit: \`$CANARY_EXPECT_COMMIT\`"
               echo
-              echo "The commit comparison failed, so the billing checks did not run."
-              echo "This is deploy drift, not a billing failure: it is reported on its own"
-              echo "issue and never comments on \`Staging canary failing\`."
+              echo "Der Commit-Vergleich ist fehlgeschlagen, deshalb liefen die Billing-Prüfungen nicht."
+              echo "Das ist eine Deploy-Abweichung und kein Billing-Fehler: Sie wird auf einem"
+              echo "eigenen Issue gemeldet und kommentiert nie \`Staging-Canary fehlgeschlagen\`."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$status"
@@ -290,11 +290,11 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Staging billing canary"
+            echo "### Staging-Billing-Canary"
             echo
-            echo "- target: \`${{ vars.STAGING_BASE_URL }}\`"
-            echo "- commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
-            echo "- result: ${{ job.status }}"
+            echo "- Ziel: \`${{ vars.STAGING_BASE_URL }}\`"
+            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify:
@@ -322,7 +322,7 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          title="Staging canary failing"
+          title="Staging-Canary fehlgeschlagen"
           case "$TRIGGER" in
             schedule) summary='Der tägliche Staging-Billing-Canary ist fehlgeschlagen.'; label='Zeitplan' ;;
             workflow_run) summary='Der Canary nach einem Staging-Deploy ist fehlgeschlagen.'; label='Deploy' ;;
@@ -365,7 +365,7 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          title="Staging deploy drift"
+          title="Staging-Deploy-Abweichung"
           case "$TRIGGER" in
             schedule) summary='Staging stellt beim täglichen Canary nicht den erwarteten Commit bereit.'; label='Zeitplan' ;;
             workflow_run) summary='Staging stellt nach dem Deploy nicht den deployten Commit bereit.'; label='Deploy' ;;
@@ -388,7 +388,7 @@ jobs:
             "- Staging liefert: $SERVED" \
             "- Auslöser: $label" \
             '' \
-            'Der Commit-Vergleich ist fehlgeschlagen, bevor eine Billing-Prüfung lief: auf Staging lief ein älterer, zurückgerollter oder unvollständiger Stand. Das ist eine Deploy-Abweichung und kein Billing-Fehler; das Issue `Staging canary failing` bleibt dafür unberührt.' \
+            'Der Commit-Vergleich ist fehlgeschlagen, bevor eine Billing-Prüfung lief: auf Staging lief ein älterer, zurückgerollter oder unvollständiger Stand. Das ist eine Deploy-Abweichung und kein Billing-Fehler; das Issue `Staging-Canary fehlgeschlagen` bleibt dafür unberührt.' \
             '' \
             'Bitte den Staging-Deploy wiederholen (Actions → Deploy staging) und den Drift-Report des Deploys prüfen. Sobald Staging den erwarteten Commit ausliefert, schließt der nächste erfolgreiche unbeaufsichtigte Lauf dieses Issue; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
           if [ -n "$existing" ]; then
@@ -407,13 +407,13 @@ jobs:
           set -euo pipefail
           echo "::error title=Staging billing canary failed::The manual staging billing canary failed ($RESULT). See $RUN_URL"
           {
-            echo "### Staging billing canary failed (manual run)"
+            echo "### Staging-Billing-Canary fehlgeschlagen (manueller Lauf)"
             echo
-            echo "- result: \`$RESULT\`"
-            echo "- commit: \`$COMMIT\`"
-            echo "- run: $RUN_URL"
+            echo "- Ergebnis: \`$RESULT\`"
+            echo "- Commit: \`$COMMIT\`"
+            echo "- Lauf: $RUN_URL"
             echo
-            echo "Manual runs are annotated only. The failure issue and the chat alert are reserved for scheduled and deploy-triggered runs."
+            echo "Manuelle Läufe werden nur annotiert. Issue und Chat-Alarm sind den Zeitplan- und Deploy-Läufen vorbehalten."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notify Discord
@@ -432,21 +432,21 @@ jobs:
           # the job log to learn that GitHub issues were the only alarm.
           summary() {
             {
-              echo "### Staging billing canary failed"
+              echo "### Staging-Billing-Canary fehlgeschlagen"
               echo
               echo "$1"
             } >> "$GITHUB_STEP_SUMMARY"
           }
           if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
             echo "::warning::DISCORD_WEBHOOK_URL is not configured; skipping the Discord notification."
-            summary '- Discord: skipped - repository secret `DISCORD_WEBHOOK_URL` is not set'
+            summary '- Discord: übersprungen – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt'
             exit 0
           fi
           case "$DISCORD_WEBHOOK_URL" in
             https://discord.com/api/webhooks/* | https://discordapp.com/api/webhooks/*) ;;
             *)
               echo "::error::DISCORD_WEBHOOK_URL must be a Discord channel webhook URL."
-              summary '- Discord: not sent - `DISCORD_WEBHOOK_URL` is not a Discord channel webhook URL'
+              summary '- Discord: nicht gesendet – `DISCORD_WEBHOOK_URL` ist keine Discord-Channel-Webhook-URL'
               exit 1
               ;;
           esac
@@ -466,11 +466,11 @@ jobs:
           case "$status" in
             200 | 204)
               echo "Discord notified (HTTP $status)."
-              summary "- Discord: notification sent (HTTP $status)"
+              summary "- Discord: Nachricht gesendet (HTTP $status)"
               ;;
             *)
               echo "::error::Discord answered HTTP ${status:-000}."
-              summary "- Discord: sending failed (HTTP ${status:-000})"
+              summary "- Discord: Senden fehlgeschlagen (HTTP ${status:-000})"
               exit 1
               ;;
           esac
@@ -485,7 +485,7 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          title="Staging canary failing"
+          title="Staging-Canary fehlgeschlagen"
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
           if [ -z "$existing" ]; then
             echo "No open canary failure issue."
@@ -513,7 +513,7 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          title="Staging deploy drift"
+          title="Staging-Deploy-Abweichung"
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --limit 100 | jq -r --arg title "$title" '[.[] | select(.title == $title)][0].number // empty')
           if [ -z "$existing" ]; then
             echo "No open staging drift issue."

@@ -163,17 +163,17 @@ jobs:
           served=$(sed -n 's/.*data-deployment-commit="\([^"]*\)".*/\1/p' "$status_file" 2>/dev/null | head -1 || true)
           served="${served:-unknown}"
           if [ "$served" = "$EXPECTED_COMMIT" ]; then
-            echo "Staging already serves ${EXPECTED_COMMIT}; the failure is not a staging drift." >> "$GITHUB_STEP_SUMMARY"
+            echo "Staging liefert bereits ${EXPECTED_COMMIT}; der Fehlschlag ist keine Staging-Abweichung." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           {
-            echo "### Staging is still behind"
+            echo "### Staging bleibt zurück"
             echo
-            echo "- intended commit: \`${EXPECTED_COMMIT}\`"
-            echo "- staging serves: \`${served}\`"
-            echo "- run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- Beabsichtigter Commit: \`${EXPECTED_COMMIT}\`"
+            echo "- Staging liefert: \`${served}\`"
+            echo "- Lauf: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo
-            echo "Staging keeps serving the previous commit until a deploy succeeds, so the next canary run will fail on the commit comparison alone."
+            echo "Staging liefert weiter den vorherigen Commit, bis ein Deploy wieder gelingt; der nächste Canary-Lauf scheitert dann schon am Commit-Vergleich."
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::error title=Staging is behind::Staging serves ${served} instead of ${EXPECTED_COMMIT}. Re-run the deploy so the canary does not fail on the commit comparison."
           exit 0
@@ -200,10 +200,10 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Staging deploy"
+            echo "### Staging-Deploy"
             echo
-            echo "- trigger: \`${{ github.event_name }}\`"
-            echo "- commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
-            echo "- result: ${{ job.status }}"
-            echo "- target: \`https://streaminghub-staging.fly.dev\`"
+            echo "- Auslöser: \`${{ github.event_name }}\`"
+            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Ziel: \`https://streaminghub-staging.fly.dev\`"
           } >> "$GITHUB_STEP_SUMMARY"

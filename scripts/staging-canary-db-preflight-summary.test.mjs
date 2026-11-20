@@ -36,11 +36,11 @@ test("database preflight summary renders candidates and counts", () => {
 
   const rendered = renderDatabaseSweepSummary(plan);
 
-  assert.match(rendered.markdown, /### Canary database sweep preflight/);
-  assert.match(rendered.markdown, /mode: dry run \(no deletions\)/);
-  assert.match(rendered.markdown, /candidate users: \*\*1\*\*/);
-  assert.match(rendered.markdown, /user IDs: `canary-old`/);
-  assert.match(rendered.markdown, /emails: `canary@resend\.dev`/);
+  assert.match(rendered.markdown, /### Canary-Datenbank-Sweep \(Vorprüfung\)/);
+  assert.match(rendered.markdown, /Modus: Testlauf \(keine Löschungen\)/);
+  assert.match(rendered.markdown, /Kandidaten: \*\*1\*\*/);
+  assert.match(rendered.markdown, /Benutzer-IDs: `canary-old`/);
+  assert.match(rendered.markdown, /E-Mail-Adressen: `canary@resend\.dev`/);
   assert.match(rendered.markdown, /outboxEmails: \*\*2\*\*/);
   assert.match(rendered.markdown, /subscriptions: \*\*1\*\*/);
   assert.equal(
@@ -52,9 +52,9 @@ test("database preflight summary renders candidates and counts", () => {
 test("database preflight summary renders an empty candidate set without a warning", () => {
   const rendered = renderDatabaseSweepSummary(basePlan);
 
-  assert.match(rendered.markdown, /candidate users: \*\*0\*\*/);
-  assert.doesNotMatch(rendered.markdown, /user IDs:/);
-  assert.doesNotMatch(rendered.markdown, /emails:/);
+  assert.match(rendered.markdown, /Kandidaten: \*\*0\*\*/);
+  assert.doesNotMatch(rendered.markdown, /Benutzer-IDs:/);
+  assert.doesNotMatch(rendered.markdown, /E-Mail-Adressen:/);
   assert.match(rendered.markdown, /auditLog: \*\*0\*\*/);
   assert.equal(rendered.warning, null);
 });
@@ -72,7 +72,7 @@ test("database preflight summary writes to GITHUB_STEP_SUMMARY", () => {
 
   try {
     writeDatabaseSweepSummary(basePlan, summaryPath);
-    assert.match(readFileSync(summaryPath, "utf8"), /candidate users: \*\*0\*\*/);
+    assert.match(readFileSync(summaryPath, "utf8"), /Kandidaten: \*\*0\*\*/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
