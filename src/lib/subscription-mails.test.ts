@@ -201,3 +201,30 @@ test("die Kaufbestätigung nennt das tatsächliche Intervall", async () => {
   });
   assert.match(monthly.text, /€3\.49 \/ month/);
 });
+
+test("the trial-start mail names the device limits from the settings", async () => {
+  const { trialStartedMail } = await import("./mail.ts");
+
+  const defaults = trialStartedMail({ name: "Max", locale: "de", trialEndsAt: "2026-12-03T22:00:00.000Z", priceEur: 3.49 });
+  assert.match(defaults.text, /bis zu 5 gekoppelte Geräte/);
+  assert.match(defaults.text, /kostenlose Tarif mit 2 Geräten/);
+
+  const setLimit = (key: string, value: string) =>
+    run(
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      key,
+      value,
+      nowIso(),
+    );
+  setLimit("free_device_limit", "3");
+  setLimit("premium_device_limit", "7");
+
+  const changed = trialStartedMail({ name: "Max", locale: "de", trialEndsAt: "2026-12-03T22:00:00.000Z", priceEur: 3.49 });
+  assert.match(changed.text, /bis zu 7 gekoppelte Geräte/);
+  assert.match(changed.text, /kostenlose Tarif mit 3 Geräten/);
+
+  const en = trialStartedMail({ name: "Max", locale: "en", trialEndsAt: "2026-12-03T22:00:00.000Z", priceEur: 3.49 });
+  assert.match(en.text, /link up to 7 devices/);
+  assert.match(en.text, /free plan with 3 devices/);
+});

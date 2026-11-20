@@ -19,9 +19,8 @@
  * Ausführung ist wiederholbar. Nur serverseitig verwenden.
  */
 import { timingSafeEqual } from "node:crypto";
-import { getSetting } from "./content";
 import { all, run } from "./db";
-import { DEFAULT_FREE_DEVICE_LIMIT } from "./entitlements";
+import { deviceLimits } from "./entitlements";
 import { sendMail, trialEndedMail, trialReminderMail } from "./mail";
 import { PREMIUM_PRICE_EUR } from "./pricing";
 
@@ -221,10 +220,9 @@ function reminderTrials(now: number, nowDate: string): TrialRow[] {
   );
 }
 
-/** Limit aus den Einstellungen, mit dem Standardwert als Rückfall. */
+/** Limit aus den Einstellungen – dieselbe Quelle wie die Rechteprüfung. */
 function freeDeviceLimit(): number {
-  const raw = Number(getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT)));
-  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : DEFAULT_FREE_DEVICE_LIMIT;
+  return deviceLimits().free;
 }
 
 /**
