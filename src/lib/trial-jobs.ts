@@ -20,7 +20,7 @@
  */
 import { timingSafeEqual } from "node:crypto";
 import { all, run } from "./db";
-import { deviceLimits } from "./entitlements";
+import { devicesOverLimit, freeDeviceLimit, revokeDevicesOverLimit } from "./device-access";
 import { sendMail, trialEndedMail, trialReminderMail } from "./mail";
 import { PREMIUM_PRICE_EUR } from "./pricing";
 
@@ -114,15 +114,7 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
     const surplus = devicesOverLimit(row.user_id, freeLimit);
     summary.devicesRevoked += surplus.length;
     if (!dryRun && surplus.length > 0) {
-      for (const device of surplus) {
-        run(
-          `UPDATE devices SET status = 'revoked', revoked_at = ?
-           WHERE id = ? AND user_id = ? AND status = 'active'`,
-          nowDate,
-          device.id,
-          row.user_id,
-        );
-      }
+      revokeDevicesOverLimit(row.user_id, nowDate, freeLimit);
     }
 
     if (!dryRun) {
@@ -220,26 +212,7 @@ function reminderTrials(now: number, nowDate: string): TrialRow[] {
   );
 }
 
-/** Limit aus den Einstellungen – dieselbe Quelle wie die Rechteprüfung. */
-function freeDeviceLimit(): number {
-  return deviceLimits().free;
-}
 
-/**
- * Aktive Geräte jenseits des Limits – die am längsten ungenutzten zuerst.
- * Sortiert wird nach letzter Nutzung, damit das Gerät, mit dem jemand gerade
- * schaut, nicht abgemeldet wird.
- */
-function devicesOverLimit(userId: string, limit: number): { id: string }[] {
-  return all<{ id: string }>(
-    `SELECT id FROM devices
-      WHERE user_id = ? AND status = 'active'
-      ORDER BY COALESCE(last_seen_at, activated_at, created_at) DESC, created_at DESC
-      LIMIT -1 OFFSET ?`,
-    userId,
-    Math.max(0, Math.floor(limit)),
-  );
-}
 
 function subscriptionPays(row: TrialRow): boolean {
   return row.status === "active" || row.status === "past_due";

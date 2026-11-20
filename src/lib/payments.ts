@@ -1,5 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { get, nowIso, run } from "./db";
+import { freeDeviceLimit, revokeDevicesOverLimit } from "./device-access";
 import { env, isBillingConfigured } from "./env";
 import {
   paymentFailedMail,
@@ -602,17 +603,26 @@ export async function notifyStoreSubscriptionEnded(input: {
       `mail:store-subscription-ended:${input.subscriptionKey}:${input.coversPeriodEnd}`,
     );
   }
+  // Wie beim Trial-Ablauf: Nach dem Ende gilt das kostenlose Limit, die
+  // zuletzt genutzten Geräte bleiben. Der Marker oben fängt Doppelläufe ab,
+  // deshalb passiert die Abmeldung je Ablauf nur einmal.
+  const deviceLimit = freeDeviceLimit();
+  const devicesRevoked = revokeDevicesOverLimit(input.userId, nowIso(), deviceLimit);
   const template =
     reason === "refunded"
       ? storeSubscriptionRefundedMail({
           name: user.display_name,
           locale: user.locale,
           store: input.store,
+          deviceLimit,
+          devicesRevoked,
         })
       : storeSubscriptionEndedMail({
           name: user.display_name,
           locale: user.locale,
           store: input.store,
+          deviceLimit,
+          devicesRevoked,
         });
   await sendMail({ to: user.email, ...template, kind: "subscription" });
   return true;
@@ -664,9 +674,16 @@ async function mailSubscriptionEnded(
   // wieder aktiv und läuft später erneut aus, soll es wieder eine Mail geben.
   const key = `mail:subscription-ended:${subscriptionId ?? userId}:${periodEnd ?? "unknown"}`;
   if (!claimMailMarker(userId, key)) return;
+  const deviceLimit = freeDeviceLimit();
+  const devicesRevoked = revokeDevicesOverLimit(userId, nowIso(), deviceLimit);
   await sendMail({
     to: user.email,
-    ...subscriptionEndedMail({ name: user.display_name, locale: user.locale }),
+    ...subscriptionEndedMail({
+      name: user.display_name,
+      locale: user.locale,
+      deviceLimit,
+      devicesRevoked,
+    }),
     kind: "subscription",
   });
 }
