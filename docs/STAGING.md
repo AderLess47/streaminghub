@@ -105,6 +105,34 @@ The isolation rules are unchanged by the automatic trigger: the workflow still
 deploys only `streaminghub-staging` with the staging-scoped token and never
 receives production Stripe or email credentials.
 
+### Geräte-Vorwarnung im Konto
+
+`Device notice smoke` prüft die Karte, die im Konto vor dem Ablauf warnt – die
+Seite selbst, nicht nur den Commit. Der Lauf startet nach jedem erfolgreichen
+`Deploy staging` und auf Zuruf (**Actions → Device notice smoke → Run
+workflow**).
+
+Der Test läuft in der Staging-Maschine (`flyctl ssh console`) und braucht keine
+Zugangsdaten: Er legt dort ein Wegwerf-Konto `device-notice-smoke+…@example.invalid`
+mit Trial und mehr Geräten als dem Gratis-Limit an, ruft `/dashboard` über HTTP
+mit einer eigenen Sitzung auf und löscht das Konto am Ende wieder. Die Adresse
+ist auf Loopback festgelegt, damit der Lauf niemals eine öffentliche Instanz
+trifft.
+
+Geprüft werden vier Zustände:
+
+| Zustand | Erwartung |
+| --- | --- |
+| Trial | „Dein Testzeitraum endet am …“ |
+| Stripe gekündigt | „Dein Abo endet am …“ |
+| Stripe läuft weiter | „Dein Abo verlängert sich am … automatisch“ |
+| Store-Abo (Amazon) | Karte mit Markierungen, aber **kein** Datum |
+
+In allen Fällen müssen der Titel „Beim Ablauf bleiben N Geräte aktiv“, die
+Gerätezahl und die Markierung „wird abgemeldet“ je überzähligem Gerät
+erscheinen. Schlägt der Lauf fehl, weicht die gerenderte Seite von den Texten in
+`dashboard.devices.preNotice*` bzw. vom Gratis-Limit aus den Einstellungen ab.
+
 ### Anonymous public HTML cache
 
 Staging can enable a small cache in front of the Next server with
