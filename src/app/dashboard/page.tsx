@@ -45,6 +45,21 @@ export default async function DashboardPage() {
       ? new Set(devicesOverLimit(user.id, freeLimit).map((device) => device.id))
       : null;
 
+  // Das konkrete Ende nennen, wo es feststeht: Trial-Ende oder das von Stripe
+  // gemeldete Periodenende. Store-Abos liefern keins – dort bleibt der Satz weg,
+  // statt ein Datum zu raten.
+  const endsAt =
+    entitlements.trialActive && entitlements.trialEndsAt
+      ? { kind: "trial" as const, date: entitlements.trialEndsAt }
+      : entitlements.source === "stripe" &&
+          subscription.current_period_end &&
+          Number.isFinite(Date.parse(subscription.current_period_end))
+        ? {
+            kind: subscription.cancel_at_period_end ? ("stripeEnd" as const) : ("stripeRenew" as const),
+            date: subscription.current_period_end,
+          }
+        : null;
+
   const openTickets =
     get<{ c: number }>(
       `SELECT COUNT(*) AS c FROM support_tickets WHERE user_id = ? AND status != 'closed'`,
@@ -137,6 +152,16 @@ export default async function DashboardPage() {
               .replace("{count}", String(activeDevices.length))
               .replace("{limit}", String(freeLimit))}
           </p>
+          {endsAt ? (
+            <p className="text-xs font-medium text-fg">
+              {(endsAt.kind === "trial"
+                ? t.dashboard.devices.preNoticeEndsAt
+                : endsAt.kind === "stripeEnd"
+                  ? t.dashboard.devices.preNoticeSubscriptionEndsAt
+                  : t.dashboard.devices.preNoticeSubscriptionRenewsAt
+              ).replace("{date}", dateFormat.format(new Date(endsAt.date)))}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
