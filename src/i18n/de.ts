@@ -515,6 +515,11 @@ export const de = {
       revokedNoticeBodyMany:
         "Weil dein Premium-Zugang geendet hat, wurden {n} Geräte über dem kostenlosen Limit abgemeldet. Aktiv geblieben sind die zuletzt genutzten; im kostenlosen Tarif sind {limit} Geräte erlaubt. Ein abgemeldetes Gerät kannst du wieder koppeln, sobald du oben ein anderes entfernst.",
       revokedNoticeLink: "Premium wieder aktivieren",
+      preNoticeTitle: "Beim Ablauf bleiben {limit} Geräte aktiv",
+      preNoticeBody:
+        "Du hast {count} aktive Geräte. Endet dein Testzeitraum oder dein Abo, bleiben die zuletzt genutzten {limit} aktiv – die übrigen werden abgemeldet, genau wie es in der Abschlussmail steht. Die Markierung unten zeigt, welche das betrifft. Willst du alle behalten, entferne eines der Geräte oder verlängere Premium.",
+      keepsBadge: "bleibt",
+      willUnlinkBadge: "wird abgemeldet",
       title: "Geräte",
       subtitle: "Verknüpfte Geräte und Aktivierungsstatus.",
       empty: "Noch keine Geräte verknüpft.",
