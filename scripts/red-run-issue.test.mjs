@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -8,6 +8,7 @@ import {
   alreadyReported,
   discordContent,
   discordPayload,
+  discordSummary,
   failureBody,
   isDiscordWebhook,
   issueTitle,
@@ -99,12 +100,15 @@ else if (call === "issue create") process.stdout.write("https://github.com/o/r/i
   );
   chmodSync(shim, 0o755);
 
+  const summaryPath = path.join(dir, "summary.md");
   const result = spawnSync(process.execPath, ["scripts/red-run-issue.mjs", mode], {
     encoding: "utf8",
     env: {
-      ...extraEnv,
       ...process.env,
+      ...extraEnv,
       PATH: `${dir}:${process.env.PATH}`,
+      // Nach process.env setzen: in CI ist GITHUB_STEP_SUMMARY schon belegt.
+      GITHUB_STEP_SUMMARY: summaryPath,
       GH_LOG: log,
       GH_STUB_PAYLOADS: JSON.stringify({
         issueList: JSON.stringify(issueList),
@@ -128,7 +132,13 @@ else if (call === "issue create") process.stdout.write("https://github.com/o/r/i
     .filter(Boolean)
     .map((line) => JSON.parse(line))
     .map((entry) => ({ call: `${entry.args[0]} ${entry.args[1]}`, args: entry.args, input: entry.input }));
-  return { calls, stdout: result.stdout ?? "", stderr: result.stderr ?? "", status: result.status };
+  return {
+    calls,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    status: result.status,
+    summary: existsSync(summaryPath) ? readFileSync(summaryPath, "utf8") : "",
+  };
 }
 
 test("a new failure opens exactly one issue with the failing job named", () => {
@@ -266,16 +276,24 @@ test("postDiscord skips with a warning when no webhook is configured", async () 
   assert.match(warnings.join("\n"), /::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt/);
 });
 
+test("the run summary says whether Discord was reached", () => {
+  assert.equal(discordSummary({ sent: true, status: 204 }), "- Discord: Nachricht gesendet (HTTP 204)");
+  assert.match(discordSummary({ sent: false, reason: "unconfigured" }), /Secret `DISCORD_WEBHOOK_URL` fehlt/);
+  assert.equal(discordSummary({ sent: false, reason: "irgendwas" }), "- Discord: nicht gesendet (irgendwas)");
+});
+
 test("a red run without a Discord secret still creates the issue and only warns", () => {
-  const { calls, stderr, status } = runWithGhStub({ mode: "--failure", jobs: ["Deploy to Fly staging"] });
+  const { calls, stderr, status, summary } = runWithGhStub({ mode: "--failure", jobs: ["Deploy to Fly staging"] });
 
   assert.equal(status, 0);
   assert.equal(calls.some((entry) => entry.call === "issue create"), true);
   assert.match(stderr, /::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt/);
+  assert.match(summary, /### Roter Lauf: Deploy staging/);
+  assert.match(summary, /- Discord: nicht gesendet – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt/);
 });
 
 test("a red run with a non-Discord URL keeps the issue but fails loudly", () => {
-  const { calls, stderr, status } = runWithGhStub({
+  const { calls, stderr, status, summary } = runWithGhStub({
     mode: "--failure",
     jobs: ["Deploy to Fly staging"],
     extraEnv: { DISCORD_WEBHOOK_URL: "https://example.com/hook" },
@@ -285,6 +303,19 @@ test("a red run with a non-Discord URL keeps the issue but fails loudly", () => 
   assert.equal(calls.some((entry) => entry.call === "issue create"), true);
   assert.equal(status, 1);
   assert.match(stderr, /Discord-Channel-Webhook-URL/);
+  assert.match(summary, /- Discord: Senden fehlgeschlagen – DISCORD_WEBHOOK_URL muss eine Discord-Channel-Webhook-URL sein\./);
+});
+
+test("a closed green run reports the recovery in the run summary", () => {
+  const { summary } = runWithGhStub({
+    mode: "--success",
+    issueList: [{ number: 9, title: "Roter Lauf: Deploy staging" }],
+    comments: "Commit: `abc1234`",
+  });
+
+  assert.match(summary, /### Grüner Lauf: Deploy staging/);
+  assert.match(summary, /- Issue: #9 geschlossen/);
+  assert.doesNotMatch(summary, /Discord/);
 });
 
 test("recovery body names run, commit and trigger", () => {
