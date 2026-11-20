@@ -3,6 +3,8 @@ import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { getSetting } from "@/lib/content";
 import { all, get, nowIso } from "@/lib/db";
+import { cleanupOverLimitDevicesAction } from "@/lib/actions/admin";
+import { countOverLimitAccounts } from "@/lib/device-cleanup";
 import { DEFAULT_FREE_DEVICE_LIMIT } from "@/lib/entitlements";
 import { isFeatureEnabled } from "@/lib/flags";
 import { REMINDER_WINDOW_HOURS } from "@/lib/trial-jobs";
@@ -21,8 +23,13 @@ const countWhere = (where: string, ...params: string[]) =>
  * abgeschlossen? Gelesen wird ausschließlich; der Ablauf selbst läuft im
  * täglichen Job.
  */
-export default async function AdminTrialPage() {
+export default async function AdminTrialPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ok?: string; accounts?: string; devices?: string }>;
+}) {
   await requireStaff();
+  const query = await searchParams;
   const { t, locale } = await getI18n();
   const copy = t.admin.trial;
 
@@ -67,22 +74,8 @@ export default async function AdminTrialPage() {
 
   // Dieselbe Grenze gilt nach einem ausgelaufenen Abo – abgemeldet wird dort
   // erst seit Kurzem. Diese Zahl zeigt den Altbestand, den kein Job rückwirkend
-  // bereinigt: Konten ohne Premium-Zugang mit mehr aktiven Geräten als erlaubt.
-  const subscriptionOverLimit =
-    get<{ c: number }>(
-      `SELECT COUNT(*) AS c FROM users u
-       LEFT JOIN subscriptions s ON s.user_id = u.id
-       WHERE u.disabled_at IS NULL
-         AND (SELECT COUNT(*) FROM devices d WHERE d.user_id = u.id AND d.status = 'active') > ?
-         AND NOT COALESCE(
-           (s.status = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > ?))
-           OR (s.trial_ends_at IS NOT NULL AND s.trial_ends_at > ?),
-           0
-         )`,
-      freeLimit,
-      now,
-      now,
-    )?.c ?? 0;
+  // bereinigt, und ist die Grundlage für den Bereinigungslauf darunter.
+  const subscriptionOverLimit = countOverLimitAccounts(freeLimit);
 
   const rows = all<{
     user_id: string;
@@ -151,6 +144,31 @@ export default async function AdminTrialPage() {
       <p className="text-xs leading-relaxed text-muted">{copy.hint}</p>
       <p className="text-xs leading-relaxed text-muted">{copy.overLimitHint}</p>
       <p className="text-xs leading-relaxed text-muted">{copy.subscriptionOverLimitHint}</p>
+
+      <section className="card grid gap-3 p-4">
+        <h2 className="text-sm font-semibold">{copy.cleanupTitle}</h2>
+        <p className="text-xs leading-relaxed text-muted">{copy.cleanupBody}</p>
+        {query.ok === "cleanup" ? (
+          <p className="text-xs text-cyan">
+            {copy.cleanupDone
+              .replace("{devices}", query.devices ?? "0")
+              .replace("{accounts}", query.accounts ?? "0")}
+          </p>
+        ) : null}
+        {subscriptionOverLimit === 0 ? (
+          <p className="text-xs text-muted">{copy.cleanupEmpty}</p>
+        ) : (
+          <form action={cleanupOverLimitDevicesAction} className="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="confirm" value="revoke" />
+            <button type="submit" className="btn btn-danger btn-sm">
+              {copy.cleanupButton}
+            </button>
+            <span className="text-xs text-muted">
+              {copy.cleanupCount.replace("{n}", String(subscriptionOverLimit))}
+            </span>
+          </form>
+        )}
+      </section>
 
       <section className="card overflow-x-auto">
         <table className="data-table">

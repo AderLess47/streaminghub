@@ -23,6 +23,7 @@
     "test:entitlements": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/entitlements.test.ts src/lib/pricing.test.ts src/lib/flags.test.ts",
     "test:trial": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/trial.test.ts",
     "test:trial-jobs": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/trial-jobs.test.ts",
+    "test:device-cleanup": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/device-cleanup.test.ts",
     "test:backup": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/backup.test.ts",
     "test:retention": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/retention.test.ts",
     "test:contracts": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/contract-requests.test.ts",

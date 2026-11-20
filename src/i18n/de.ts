@@ -1050,6 +1050,13 @@ export const de = {
       overLimitHint:
         "„Über Free-Limit“ zählt abgelaufene Trials mit mehr aktiven Geräten als erlaubt – etwa weil der Trial vor dieser Regel endete oder das Limit gesenkt wurde. Beim Ablauf werden überzählige Geräte automatisch abgemeldet, die zuletzt genutzten bleiben.",
       overLimitRow: "Mehr aktive Geräte als im kostenlosen Tarif",
+      cleanupTitle: "Altbestand bereinigen",
+      cleanupBody:
+        "Konten ohne Premium-Zugang, deren Abo schon vor der automatischen Abmeldung ausgelaufen ist, behalten ihre Geräte. Dieser Lauf meldet die überzähligen ab – die zuletzt genutzten bleiben – und verschickt bewusst keine Mail, weil die Abschlussmails längst raus sind. Wiederholbar: Er ändert nur, was noch über dem Limit liegt.",
+      cleanupCount: "{n} Konten betroffen",
+      cleanupButton: "Altbestand bereinigen",
+      cleanupDone: "Bereinigt: {devices} Geräte bei {accounts} Konten abgemeldet.",
+      cleanupEmpty: "Kein Altbestand: alle Konten ohne Premium-Zugang liegen im Limit.",
       subscriptionOverLimit: "Abo beendet, über Limit",
       subscriptionOverLimitHint:
         "„Abo beendet, über Limit“ zählt Konten ohne Premium-Zugang – ausgelaufenes Abo, fehlgeschlagene Zahlung oder nie abgeschlossen – mit mehr aktiven Geräten als der kostenlose Tarif erlaubt. Solche Konten stammen aus der Zeit vor der automatischen Abmeldung; sie werden nicht rückwirkend bereinigt, sondern erst, wenn das jeweilige Abo erneut endet.",

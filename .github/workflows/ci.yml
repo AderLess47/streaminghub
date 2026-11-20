@@ -72,6 +72,9 @@ jobs:
       - name: Subscription mail tests
         run: npm run test:subscription-mails
 
+      - name: Device cleanup tests
+        run: npm run test:device-cleanup
+
       - name: Test cross-device resume rules
         run: npm run test:progress
 
