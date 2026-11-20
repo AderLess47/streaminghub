@@ -40,10 +40,56 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/**
+ * Ein einzelner Netzaussetzer darf einen erfolgreichen Rollout nicht rot
+ * machen: Am 2026-11-20 scheiterte dieser Check direkt nach dem Deploy mit
+ * `fetch failed`, während derselbe Check von Hand sofort grün war.
+ *
+ * Wiederholt werden nur Transportfehler (DNS, Reset, Timeout) und 502/503/504 –
+ * also Antworten, die ein gerade ausrollender Proxy liefert. Fachliche
+ * Abweichungen (200 mit falschem Cache-Header) werden weiterhin sofort geprüft
+ * und gemeldet, nicht wiederholt.
+ */
+const ATTEMPTS = 4;
+const RETRY_DELAYS_MS = [1_500, 3_000, 5_000];
+
+function describe(error) {
+  if (!(error instanceof Error)) return String(error);
+  const code = error.cause?.code;
+  return code ? `${error.message} (${code})` : error.message;
+}
+
+function isTransientStatus(status) {
+  return status === 502 || status === 503 || status === 504;
+}
+
 async function fetchPage(url, cookie) {
   const headers = { accept: "text/html" };
   if (cookie) headers.cookie = cookie;
-  return fetch(url, { headers });
+
+  let lastError;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers, signal: AbortSignal.timeout(20_000) });
+      if (!isTransientStatus(response.status) || attempt === ATTEMPTS) return response;
+      // Body leeren, damit der Socket frei wird, bevor der nächste Versuch startet.
+      await response.text().catch(() => "");
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < ATTEMPTS) {
+      const delay = RETRY_DELAYS_MS[Math.min(attempt - 1, RETRY_DELAYS_MS.length - 1)];
+      console.error(
+        `[staging-cache] transient failure on attempt ${attempt}/${ATTEMPTS} (${describe(lastError)}) – retrying in ${delay / 1000}s`,
+      );
+      await wait(delay);
+    }
+  }
+
+  throw new Error(
+    `[staging-cache] request failed after ${ATTEMPTS} attempts: ${describe(lastError)}`,
+  );
 }
 
 async function main() {
