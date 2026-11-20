@@ -109,15 +109,22 @@ receives production Stripe or email credentials.
 
 `Device notice smoke` prüft die Karte, die im Konto vor dem Ablauf warnt – die
 Seite selbst, nicht nur den Commit. Der Lauf startet nach jedem erfolgreichen
-`Deploy staging` und auf Zuruf (**Actions → Device notice smoke → Run
-workflow**).
+`Deploy staging` (Job **Staging**) und nach jedem erfolgreichen `Deploy` in
+Produktion (Job **Produktion**), außerdem auf Zuruf (**Actions → Device notice
+smoke → Run workflow** mit `target`).
 
-Der Test läuft in der Staging-Maschine (`flyctl ssh console`) und braucht keine
-Zugangsdaten: Er legt dort ein Wegwerf-Konto `device-notice-smoke+…@example.invalid`
-mit Trial und mehr Geräten als dem Gratis-Limit an, ruft `/dashboard` über HTTP
-mit einer eigenen Sitzung auf und löscht das Konto am Ende wieder. Die Adresse
-ist auf Loopback festgelegt, damit der Lauf niemals eine öffentliche Instanz
-trifft.
+Der Test läuft in der jeweiligen Maschine (`flyctl ssh console`) und braucht
+keine Zugangsdaten: Er legt dort ein Wegwerf-Konto
+`device-notice-smoke+…@example.invalid` mit Trial und mehr Geräten als dem
+Gratis-Limit an, ruft `/dashboard` über HTTP mit einer eigenen Sitzung auf und
+löscht das Konto am Ende wieder. Die Adresse ist auf Loopback festgelegt (Staging
+127.0.0.1:3001 hinter dem Cache-Proxy, Produktion 127.0.0.1:3000), damit der
+Lauf niemals eine öffentliche Instanz trifft.
+
+Der Produktionslauf schreibt dafür kurz in die Produktionsdatenbank (Konto,
+Sitzung, Abo, vier Geräte) und löscht alles im selben Lauf; es werden keine
+Mails verschickt. Bricht die Maschine mitten im Lauf ab, räumt der nächste Lauf
+die Reste mit demselben E-Mail-Präfix weg.
 
 Geprüft werden vier Zustände:
 

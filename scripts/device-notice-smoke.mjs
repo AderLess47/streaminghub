@@ -7,10 +7,11 @@
  * – Trial-Ende und Stripe-Ende mit Datum, Verlängerung als Verlängerung, und bei
  * Store-Abos ohne Periodenende gar kein Datum.
  *
- * Das Skript läuft in der Staging-Maschine (`flyctl ssh console`) und legt dort
- * ein Wegwerf-Konto mit Abo und Geräten an; danach ruft es `/dashboard` über
- * HTTP auf und räumt alles wieder ab. Keine Secrets, keine echten Konten, keine
- * Produktionsdaten – der Dienst muss auf Loopback laufen.
+ * Das Skript läuft in der Maschine, deren Seite geprüft werden soll (Staging
+ * oder Produktion, `flyctl ssh console`), und legt dort ein Wegwerf-Konto mit
+ * Abo und Geräten an; danach ruft es `/dashboard` über HTTP auf und räumt alles
+ * wieder ab. Keine Secrets, keine echten Konten – der Dienst muss auf Loopback
+ * laufen, damit der Lauf nur die eigene Instanz trifft.
  *
  *   SMOKE_BASE_URL  Standard http://127.0.0.1:3001 (Next hinter dem Cache-Proxy)
  *   DATABASE_PATH   Standard data/streaminghub.db
