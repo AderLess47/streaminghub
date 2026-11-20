@@ -43,22 +43,22 @@ jobs:
         run: |
           set -euo pipefail
           if node scripts/release-sync.mjs --check; then
-            echo "Committed fallback matches production (trigger: ${GITHUB_EVENT_NAME})." >> "$GITHUB_STEP_SUMMARY"
+            echo "Eingetragener Fallback stimmt mit Produktion überein (Auslöser: ${GITHUB_EVENT_NAME})." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           # Reproduce the drift in the runner so the log and summary show it.
           node scripts/release-sync.mjs
           {
-            echo "### Release fallback is stale"
+            echo "### Release-Fallback ist veraltet"
             echo
-            echo "src/content/release.ts lags behind https://streaminghub.org/api/release (trigger: \`${GITHUB_EVENT_NAME}\`)."
+            echo "src/content/release.ts liegt hinter https://streaminghub.org/api/release zurück (Auslöser: \`${GITHUB_EVENT_NAME}\`)."
             if [ -n "${RELEASE_RUN_URL}" ]; then
               echo
-              echo "Triggered by release run: ${RELEASE_RUN_URL}"
+              echo "Ausgelöst durch Release-Lauf: ${RELEASE_RUN_URL}"
             fi
             echo
-            echo "Run \`npm run release:sync\` locally and open a pull request."
+            echo "Lokal \`npm run release:sync\` ausführen und einen Pull Request öffnen."
             echo
             echo '```diff'
             git --no-pager diff -- src/content/release.ts

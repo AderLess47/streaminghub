@@ -100,9 +100,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Deploy"
+            echo "### Produktions-Deploy"
             echo
-            echo "- trigger: \`${{ github.event_name }}\`"
-            echo "- commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
-            echo "- result: ${{ job.status }}"
+            echo "- Auslöser: \`${{ github.event_name }}\`"
+            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
+            echo "- Ergebnis: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"

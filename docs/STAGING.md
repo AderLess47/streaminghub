@@ -217,10 +217,11 @@ The two mismatches are deliberately not the same failure:
   is pointed at something it must never test;
 - a **different commit** is deploy drift (`exit 3`): staging serves an older,
   rolled-back or half-deployed image, no billing check ran, and billing is not
-  implicated. The workflow reports it on the separate issue `Staging deploy
-  drift` and leaves `Staging canary failing` alone. This separation exists
-  because the first real scheduled run failed on a stale staging commit and
-  opened `Staging canary failing`, which named the wrong problem.
+  implicated. The workflow reports it on the separate issue
+  `Staging-Deploy-Abweichung` and leaves `Staging-Canary fehlgeschlagen` alone.
+  This separation exists because the first real scheduled run failed on a stale
+  staging commit and opened `Staging-Canary fehlgeschlagen`, which named the
+  wrong problem.
 
 The canary creates a real Stripe test-mode Checkout Session through the app,
 creates a test subscription with a test payment method, and sends the signed
@@ -277,15 +278,15 @@ canary nor a second failure comment on the same day. A retry slot still appears
 as a run in which the `guard` job decided to skip; that is normal.
 
 The one exception is deploy drift. When the last completed scheduled attempt
-failed, the issue `Staging deploy drift` is open and `Staging canary failing` is
-not, the `guard` lets the next slot run the canary again. A drift run stopped at
-the commit comparison and never reached a billing check, so its slot proved
-nothing about billing; the retry means a deploy fix restores the daily scheduled
-success and its heartbeat on the same day instead of the next morning, and it
-closes the drift issue with `Auslöser: Zeitplan`. A genuine billing failure keeps
-its single daily run, because the open billing issue is the signal, and while the
-drift persists every retried slot comments on the drift issue again so the
-broken state stays visible.
+failed, the issue `Staging-Deploy-Abweichung` is open and
+`Staging-Canary fehlgeschlagen` is not, the `guard` lets the next slot run the
+canary again. A drift run stopped at the commit comparison and never reached a
+billing check, so its slot proved nothing about billing; the retry means a
+deploy fix restores the daily scheduled success and its heartbeat on the same
+day instead of the next morning, and it closes the drift issue with `Auslöser:
+Zeitplan`. A genuine billing failure keeps its single daily run, because the
+open billing issue is the signal, and while the drift persists every retried
+slot comments on the drift issue again so the broken state stays visible.
 
 Even five slots only help while GitHub delivers *some* slot. Nothing inside
 Actions can notice that its own scheduler stopped, so the successful scheduled
@@ -296,21 +297,23 @@ signal that still reaches someone when a whole day of slots is dropped.
 
 | Trigger | When it runs | What it produces on failure |
 | --- | --- | --- |
-| Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day, plus a retry in each remaining slot while a drift issue is open | issue `Staging canary failing`, commented again every day so a persistent failure keeps its heartbeat |
+| Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day, plus a retry in each remaining slot while a drift issue is open | issue `Staging-Canary fehlgeschlagen`, commented again every day so a persistent failure keeps its heartbeat |
 | Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
-| Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging deploy drift` with the expected and served commit; never `Staging canary failing` |
+| Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging-Deploy-Abweichung` with the expected and served commit; never `Staging-Canary fehlgeschlagen` |
 | External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
 | External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 12 hours |
+
+All alarm issue titles and run summaries are written in German.
 
 The properties that hold across all of them:
 
 - The issue is the primary alarm and needs nothing but the workflow's own
   `GITHUB_TOKEN`; it works without any chat or monitoring integration.
-- `Staging canary failing` always means a billing, provider or cleanup check
-  failed. A run that stops on the commit comparison never reaches a billing
-  check, so it opens `Staging deploy drift` instead; that issue names the
-  expected and the served commit and asks for a fresh deploy.
+- `Staging-Canary fehlgeschlagen` always means a billing, provider or cleanup
+  check failed. A run that stops on the commit comparison never reaches a
+  billing check, so it opens `Staging-Deploy-Abweichung` instead; that issue
+  names the expected and the served commit and asks for a fresh deploy.
 - `DISCORD_WEBHOOK_URL` and `CANARY_HEARTBEAT_URL` are optional. When they are
   missing the step logs a warning and skips, so a missing secret can never
   suppress or delay the issue.
@@ -329,16 +332,17 @@ The properties that hold across all of them:
 
 The subsections below describe each part in detail.
 
-A run that fails on deploy drift opens (or updates) `Staging deploy drift` with
-the expected commit, the commit staging actually served and the run link. It is
-the same single-issue bookkeeping as the billing alarm: unattended triggers only,
-repeated drift for the same expected commit adds no second comment, the daily run
-comments again, and the next successful unattended run comments on and closes it
-— a green run also closes the drift issue of an earlier failure.
+A run that fails on deploy drift opens (or updates)
+`Staging-Deploy-Abweichung` with the expected commit, the commit staging
+actually served and the run link. It is the same single-issue bookkeeping as the
+billing alarm: unattended triggers only, repeated drift for the same expected
+commit adds no second comment, the daily run comments again, and the next
+successful unattended run comments on and closes it — a green run also closes
+the drift issue of an earlier failure.
 
-A failed run opens (or updates) the issue `Staging canary failing` with the run
-link and commit. Both unattended paths do this: the daily scheduled run and the
-automatic run after a successful **Deploy staging**. A failed manual run
+A failed run opens (or updates) the issue `Staging-Canary fehlgeschlagen` with
+the run link and commit. Both unattended paths do this: the daily scheduled run
+and the automatic run after a successful **Deploy staging**. A failed manual run
 (`workflow_dispatch`) instead annotates its own run and writes a step summary,
 because whoever started it is already watching it; it never opens, comments on
 or closes the issue. A deploy failure that repeats the commit already reported on
@@ -357,11 +361,12 @@ posts to the channel it was created in; the step rejects anything that is not a
 posts for failed scheduled and deploy-triggered runs; if the secret is missing it
 logs a warning and skips, and the GitHub issue is still created. The URL is never
 printed or committed. The step also writes its state to the run summary, so the
-optional part is visible without the job log: `- Discord: notification sent (HTTP
-204)`, `- Discord: skipped - repository secret \`DISCORD_WEBHOOK_URL\` is not set`,
-`- Discord: not sent - \`DISCORD_WEBHOOK_URL\` is not a Discord channel webhook
-URL` or `- Discord: sending failed (HTTP …)`. Only the Discord step runs for a
-failed run, so a green canary writes no Discord line.
+optional part is visible without the job log: `- Discord: Nachricht gesendet
+(HTTP 204)`, `- Discord: übersprungen – Repository-Secret \`DISCORD_WEBHOOK_URL\`
+fehlt`, `- Discord: nicht gesendet – \`DISCORD_WEBHOOK_URL\` ist keine
+Discord-Channel-Webhook-URL` oder `- Discord: Senden fehlgeschlagen (HTTP …)`.
+Only the Discord step runs for a failed run, so a green canary writes no Discord
+line.
 
 To check the webhook and the channel without waiting for a failed scheduled
 run, send the same payload once from a local shell where the URL is exported

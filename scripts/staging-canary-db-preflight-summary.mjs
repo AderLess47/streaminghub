@@ -20,15 +20,15 @@ export function renderDatabaseSweepSummary(plan) {
   }
 
   const lines = [
-    "### Canary database sweep preflight",
+    "### Canary-Datenbank-Sweep (Vorprüfung)",
     "",
-    "- mode: dry run (no deletions)",
-    `- cutoff: ${code(plan.cutoff)}`,
-    `- candidate users: **${plan.users.length}**`,
+    "- Modus: Testlauf (keine Löschungen)",
+    `- Stichtag: ${code(plan.cutoff)}`,
+    `- Kandidaten: **${plan.users.length}**`,
   ];
   if (plan.users.length) {
-    lines.push(`- user IDs: ${plan.users.map((user) => code(user.id)).join(", ")}`);
-    lines.push(`- emails: ${plan.users.map((user) => code(user.email)).join(", ")}`);
+    lines.push(`- Benutzer-IDs: ${plan.users.map((user) => code(user.id)).join(", ")}`);
+    lines.push(`- E-Mail-Adressen: ${plan.users.map((user) => code(user.email)).join(", ")}`);
   }
   for (const [name, count] of Object.entries(plan.counts)) {
     lines.push(`- ${name}: **${count}**`);
