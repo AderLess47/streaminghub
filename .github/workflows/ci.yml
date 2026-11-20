@@ -162,6 +162,10 @@ jobs:
       - name: Staging canary assert tests
         run: npm run test:staging-canary
 
+      # Meldung roter Deploy-/Smoke-Läufe: Titel, Text und Dedupe ohne GitHub.
+      - name: Red run issue tests
+        run: npm run test:red-run-issue
+
       # Staging cache: only anonymous public HTML may be shared.
       - name: Public HTML cache tests
         run: npm run test:public-cache
