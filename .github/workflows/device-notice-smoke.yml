@@ -1,0 +1,69 @@
+name: Device notice smoke
+
+# Prüft nach jedem erfolgreichen Staging-Deploy (und auf Zuruf), dass die
+# Geräte-Vorwarnung im Konto wirklich rendert: Titel, Markierungen und die
+# Datumszeile für Trial und Stripe, ohne Datum bei Store-Abos.
+#
+# Der Test läuft in der Staging-Maschine, weil er dort ein Wegwerf-Konto mit
+# Abo und Geräten anlegt und es wieder löscht. Er braucht keine Zugangsdaten:
+# die Adresse ist auf Loopback festgelegt, damit kein echter Bestand getroffen
+# werden kann.
+
+on:
+  workflow_run:
+    workflows: ["Deploy staging"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: device-notice-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Geräte-Vorwarnung auf Staging prüfen
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+
+      # Pinned installer instead of a floating action, so this check never runs
+      # code that changed since the last deploy.
+      - name: Install flyctl
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Run the smoke test inside the staging machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
+          # 3001 is the Next server behind the staging cache proxy; the request
+          # carries a session cookie, so the cache would bypass it anyway.
+          flyctl ssh console -a streaminghub-staging \
+            -C "env SMOKE_BASE_URL=http://127.0.0.1:3001 node /app/scripts/device-notice-smoke.mjs"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Geräte-Vorwarnung im Konto"
+            echo
+            echo "- target: \`streaminghub-staging\` (127.0.0.1:3001)"
+            echo "- commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
