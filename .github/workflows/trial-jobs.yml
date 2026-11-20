@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Only report what the job would do
+        description: Nur melden, was der Job tun würde
         type: boolean
         default: false
 
@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${TRIAL_JOB_TOKEN}" ]; then
-            echo "::notice title=Trial-Jobs übersprungen::TRIAL_JOB_TOKEN is not set, so no trial is reminded or closed yet. Add the same value as the Fly secret, see docs/DEPLOYMENT.md."
+            echo "::notice title=Trial-Jobs übersprungen::TRIAL_JOB_TOKEN ist nicht gesetzt, deshalb wird noch kein Trial erinnert oder beendet. Setze denselben Wert wie das Fly-Secret, siehe docs/DEPLOYMENT.md."
             exit 0
           fi
 
@@ -65,5 +65,5 @@ jobs:
 
           failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
           if [ "${failed}" != "0" ]; then
-            echo "::warning title=Trial-Jobs mit Fehlern::${failed} trial(s) could not be reminded or closed. Check TRIAL_JOB_TOKEN and the server log."
+            echo "::warning title=Trial-Jobs mit Fehlern::${failed} Trial(s) konnten nicht erinnert oder beendet werden. Prüfe TRIAL_JOB_TOKEN und das Server-Log."
           fi

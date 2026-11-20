@@ -10,7 +10,7 @@ const baseUrl = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, 
 const token = process.env.AMAZON_SYNC_TOKEN ?? "";
 
 if (!token) {
-  console.error("AMAZON_SYNC_TOKEN is not set – nothing to do.");
+  console.error("AMAZON_SYNC_TOKEN ist nicht gesetzt – nichts zu tun.");
   process.exit(2);
 }
 
@@ -21,13 +21,13 @@ try {
     headers: { "x-amazon-sync-token": token },
   });
 } catch (error) {
-  console.error("Amazon sync could not reach the server:", error.message);
+  console.error("Amazon-IAP-Abgleich konnte den Server nicht erreichen:", error.message);
   process.exit(1);
 }
 
 const body = await response.json().catch(() => null);
 if (!response.ok) {
-  console.error("Amazon sync failed:", response.status, body?.error?.code ?? "");
+  console.error("Amazon-IAP-Abgleich fehlgeschlagen:", response.status, body?.error?.code ?? "");
   process.exit(1);
 }
 

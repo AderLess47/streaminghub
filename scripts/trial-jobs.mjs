@@ -11,7 +11,7 @@ const token = process.env.TRIAL_JOB_TOKEN ?? "";
 const dryRun = process.argv.includes("--dry-run");
 
 if (!token) {
-  console.error("TRIAL_JOB_TOKEN is not set – nothing to do.");
+  console.error("TRIAL_JOB_TOKEN ist nicht gesetzt – nichts zu tun.");
   process.exit(2);
 }
 
@@ -24,13 +24,13 @@ try {
     headers: { "x-trial-job-token": token },
   });
 } catch (error) {
-  console.error("Trial jobs could not reach the server:", error.message);
+  console.error("Trial-Jobs konnten den Server nicht erreichen:", error.message);
   process.exit(1);
 }
 
 const body = await response.json().catch(() => null);
 if (!response.ok) {
-  console.error("Trial jobs failed:", response.status, body?.error?.code ?? "");
+  console.error("Trial-Jobs fehlgeschlagen:", response.status, body?.error?.code ?? "");
   process.exit(1);
 }
 
