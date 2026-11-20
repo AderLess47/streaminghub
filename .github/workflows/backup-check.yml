@@ -1,4 +1,4 @@
-name: Backup check
+name: Backup-Prüfung
 
 # Read-only operational check. It lists the daily backups on the production
 # volume and never prints the database or any secrets.
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   check:
-    name: List production backups
+    name: Produktions-Backups auflisten
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

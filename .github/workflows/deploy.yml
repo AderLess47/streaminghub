@@ -5,7 +5,7 @@ name: Produktions-Deploy
 # älterer Commit oder ein Rollback ausrollen, ohne CI zu wiederholen.
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI-Prüfungen"]
     types: [completed]
     branches: [main]
   workflow_dispatch:

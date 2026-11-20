@@ -1,4 +1,4 @@
-name: Apple app
+name: Apple-App
 
 # Baut die SwiftUI-App für iOS, tvOS und macOS und startet den iOS-Smoke-Test.
 # Die Core-Tests laufen weiterhin in `ci.yml` auf Linux; hier geht es um das, was
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   ios:
-    name: iOS build and smoke test
+    name: iOS-Build und Smoke-Test
     runs-on: macos-15
     timeout-minutes: 20
 
@@ -92,7 +92,7 @@ jobs:
           PY
 
   tvos:
-    name: tvOS build
+    name: tvOS-Build
     runs-on: macos-15
     timeout-minutes: 15
 
@@ -119,7 +119,7 @@ jobs:
             -quiet build
 
   macos:
-    name: macOS build
+    name: macOS-Build
     runs-on: macos-15
     timeout-minutes: 15
 

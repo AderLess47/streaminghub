@@ -367,7 +367,7 @@ run is `npm run amazon:sync`, which calls the token-protected
 `POST /api/internal/amazon-sync` on the deployed app.
 
 `.github/workflows/amazon-sync.yml` runs it daily at 04:41 UTC and on demand via
-*Actions → Amazon IAP sync → Run workflow*. Without `AMAZON_SYNC_TOKEN` the job
+*Actions → Amazon-IAP-Abgleich → Run workflow*. Without `AMAZON_SYNC_TOKEN` the job
 skips with a notice instead of failing, so the schedule stays quiet until IAP is
 live.
 
@@ -381,7 +381,7 @@ live.
 | `AMAZON_IAP_SKU` | Fly env (optional) | Defaults to `premium_monthly`; must match the console IAP item |
 | `AMAZON_RTN_TOPIC_ARN` | Fly env | SNS topic from the Real-Time Notifications registration; leave empty during registration (§ 11.5) |
 | `AMAZON_SYNC_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for the internal sync endpoint (`openssl rand -hex 32`) |
-| `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial jobs* workflow skips |
+| `TRIAL_JOB_TOKEN` | Fly secret **and** GitHub Actions secret | Shared token for `POST /api/internal/trial-jobs` (trial reminders and expiry, `openssl rand -hex 32`); without it the endpoint answers 503 and the *Trial-Jobs* workflow skips |
 | `STRIPE_PRICE_ID_ANNUAL` | fly.toml (`price_1Udbs9Pmp8Jh8xSPwsWMiajx`) | Annual price (34,99 EUR/year); the annual option is only shown while `annual_enabled` is on |
 | `R2_ENDPOINT` | Fly secret | `https://<account_id>.r2.cloudflarestorage.com` – storage for cloud backups |
 | `R2_BUCKET` | Fly secret | Bucket name, e.g. `streaminghub-backups` |
@@ -395,7 +395,7 @@ live.
 The easiest path needs no local tooling: add the values under *GitHub → Settings
 → Secrets and variables → Actions* as `AMAZON_RVS_SHARED_SECRET`,
 `AMAZON_SYNC_TOKEN` (and later `AMAZON_RTN_TOPIC_ARN`), then run *Actions →
-Configure Amazon secrets → Run workflow*. That workflow copies them to Fly with
+Amazon-Secrets einrichten → Run workflow*. That workflow copies them to Fly with
 the existing `FLY_API_TOKEN` and prints only their names.
 
 ```bash
@@ -470,7 +470,7 @@ the response and in the log), and rejects every other message with `503`.
 2. Register `https://streaminghub.org/api/webhooks/amazon/rtn` in the Amazon
    Developer Console and let it confirm.
 3. Copy the topic ARN, add it as the `AMAZON_RTN_TOPIC_ARN` repository secret and
-   run *Configure Amazon secrets* again.
+   run *Amazon-Secrets einrichten* again.
 
 From then on, notifications are processed; a foreign topic answers `403`.
 
@@ -530,7 +530,7 @@ Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,
 ### 12.3 Ausrollen
 
 Ein Merge auf `main` rollt sich selbst aus: Sobald der CI-Lauf für diesen
-Commit grün ist, startet der Workflow **Produktions-Deploy** (`workflow_run` auf `CI`) und
+Commit grün ist, startet der Workflow **Produktions-Deploy** (`workflow_run` auf `CI-Prüfungen`) und
 rollt **genau diesen Commit** nach `streaminghub-org`. Der Lauf endet erst
 erfolgreich, wenn `/status` denselben Commit meldet – ein stiller Leerlauf
 (zurückgerollte Ausrollung, hängender Builder) wird damit rot statt übersehen.

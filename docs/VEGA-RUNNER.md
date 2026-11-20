@@ -114,7 +114,7 @@ Prüfen, ob der Runner auftaucht: **Settings → Actions → Runners** zeigt ihn
 ## 5. Workflow einmal starten
 
 ```bash
-gh workflow run "Vega Shaka smoke test" \
+gh workflow run "Vega-Shaka-Smoke-Test" \
   -f device=VirtualDevice:Tv \
   -f smoke_url=https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8 \
   -f start_vvd=true -f vvd_no_gui=true -f skip_build=false
@@ -122,7 +122,7 @@ gh workflow run "Vega Shaka smoke test" \
 gh run watch
 ```
 
-Oder über die Weboberfläche: **Actions → Vega Shaka smoke test → Run workflow**.
+Oder über die Weboberfläche: **Actions → Vega-Shaka-Smoke-Test → Run workflow**.
 Der Lauf dauert je nach SDK-Cache 20–60 Minuten (Shaka-Bau plus App-Build).
 
 ## 6. Ergebnis lesen

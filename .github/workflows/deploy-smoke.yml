@@ -1,4 +1,4 @@
-name: Deploy smoke
+name: Deploy-Smoke-Test
 
 on:
   schedule:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   smoke:
-    name: Check the deployed release
+    name: Deployten Release prüfen
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

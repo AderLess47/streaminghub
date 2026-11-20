@@ -68,7 +68,7 @@ uploading or writing. For production, publish the same values as Fly secrets
 ### GitHub Actions release
 
 `.github/workflows/android-release.yml` is a manual release workflow
-(**Actions → Android release → Run workflow**). It builds and verifies the APK,
+(**Actions → Android-Release → Run workflow**). It builds and verifies the APK,
 uploads it to R2, and publishes the release metadata as Fly secrets
 (`APK_VERSION`, `APK_VERSION_CODE`, `APK_FILE_NAME`, `APK_SHA256`,
 `APK_SIZE_BYTES`, `APK_URL`). `src/lib/android-release.ts` reads them at request
@@ -101,7 +101,7 @@ the required check, because such events start no workflows.
 describe the same release (version/build, size and SHA-256); `--wait <seconds>`
 retries while the machines restart, `--skip-apk` omits the 14 MB download and
 `--base <url>` targets another origin. The release workflow runs it after
-publishing the secrets, and the *Deploy smoke* workflow repeats it every six
+publishing the secrets, and the *Deploy-Smoke-Test* workflow repeats it every six
 hours so a manual `flyctl deploy` is verified too.
 
 Configure these repository or `production` environment secrets:
