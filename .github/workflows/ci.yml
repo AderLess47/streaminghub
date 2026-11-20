@@ -256,7 +256,7 @@ jobs:
             SDKMANAGER="$(command -v sdkmanager || true)"
           fi
           if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
-            echo "sdkmanager not found under $ANDROID_HOME" >&2
+            echo "sdkmanager nicht unter $ANDROID_HOME gefunden" >&2
             exit 1
           fi
           set +e

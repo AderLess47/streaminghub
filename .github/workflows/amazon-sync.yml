@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${AMAZON_SYNC_TOKEN}" ]; then
-            echo "::notice title=Amazon-IAP-Abgleich übersprungen::AMAZON_SYNC_TOKEN is not set, so no Amazon subscription is syncable yet. Add it once IAP is configured, see docs/DEPLOYMENT.md section 11."
+            echo "::notice title=Amazon-IAP-Abgleich übersprungen::AMAZON_SYNC_TOKEN ist nicht gesetzt, deshalb lässt sich noch kein Amazon-Abo abgleichen. Setze ihn, sobald IAP eingerichtet ist, siehe docs/DEPLOYMENT.md Abschnitt 11."
             exit 0
           fi
 
@@ -53,5 +53,5 @@ jobs:
 
           failed=$(node -e 'const d = JSON.parse(process.argv[1]); console.log(d.failed ?? 0)' "${output}")
           if [ "${failed}" != "0" ]; then
-            echo "::warning title=Amazon-IAP-Abgleich mit Fehlern::${failed} receipt(s) could not be verified. Check AMAZON_RVS_SHARED_SECRET and RVS availability."
+            echo "::warning title=Amazon-IAP-Abgleich mit Fehlern::${failed} Beleg(e) konnten nicht geprüft werden. Prüfe AMAZON_RVS_SHARED_SECRET und die Erreichbarkeit von RVS."
           fi
