@@ -54,7 +54,7 @@ jobs:
       run: ${{ steps.decide.outputs.run }}
 
     steps:
-      - name: Check the last scheduled attempt
+      - name: Letzten geplanten Versuch prüfen
         id: decide
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -128,7 +128,7 @@ jobs:
       served: ${{ steps.run_canary.outputs.served }}
 
     steps:
-      - name: Resolve deployed commit
+      - name: Deployten Commit ermitteln
         if: github.event_name == 'workflow_run'
         id: deployed_commit
         env:
@@ -142,31 +142,31 @@ jobs:
           commit="$(tr -d '[:space:]' < "$artifact_dir/commit.txt")"
           case "$commit" in
             ""|*[!0-9a-f]*)
-              echo "::error::The deploy artifact does not contain a valid commit SHA."
+              echo "::error::Das Deploy-Artefakt enthält keinen gültigen Commit-SHA."
               exit 1
               ;;
           esac
           if [ "${#commit}" -ne 40 ]; then
-            echo "::error::The deploy artifact commit is not a full 40-character SHA."
+            echo "::error::Der Commit im Deploy-Artefakt ist kein vollständiger 40-stelliger SHA."
             exit 1
           fi
           echo "sha=$commit" >> "$GITHUB_OUTPUT"
 
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.deployed_commit.outputs.sha || github.sha }}
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install dependencies
+      - name: Abhängigkeiten installieren
         run: npm ci
 
-      - name: Sweep preflight (dry run)
+      - name: Sweep-Vorprüfung (Testlauf)
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           # Explicitly keep the preflight non-destructive even if a repository
@@ -178,7 +178,7 @@ jobs:
           case "$STRIPE_SECRET_KEY" in
             sk_test_*) ;;
             *)
-              echo "::error::STRIPE_TEST_SECRET_KEY must start with sk_test_."
+              echo "::error::STRIPE_TEST_SECRET_KEY muss mit sk_test_ beginnen."
               exit 1
               ;;
           esac
@@ -205,17 +205,17 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
             const total = plan.subscriptions.length + plan.customers.length;
             if (total) {
-              console.log("::warning::" + total + " old canary Stripe object(s) found; dry run only, nothing deleted.");
+              console.log("::warning::Gefundene alte Canary-Stripe-Objekte: " + total + "; nur Testlauf, nichts gelöscht.");
             }
           ' "$RUNNER_TEMP/staging-canary-sweep.json"
 
-      - name: Install flyctl
+      - name: flyctl installieren
         run: |
           set -euo pipefail
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
-      - name: Database sweep preflight (dry run)
+      - name: Datenbank-Sweep-Vorprüfung (Testlauf)
         env:
           STAGING_APP: streaminghub-staging
           FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
@@ -228,7 +228,7 @@ jobs:
           printf '%s\n' "$output" > "$RUNNER_TEMP/staging-canary-db-sweep.json"
           node scripts/staging-canary-db-preflight-summary.mjs "$RUNNER_TEMP/staging-canary-db-sweep.json"
 
-      - name: Run canary
+      - name: Canary ausführen
         id: run_canary
         env:
           STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
@@ -249,14 +249,14 @@ jobs:
           : "${FLY_API_TOKEN:?FLY_STAGING_API_TOKEN is missing}"
           case "$STAGING_BASE_URL" in
             https://streaminghub.org|https://streaminghub.org/*)
-              echo "::error::Refusing to run the canary against production."
+              echo "::error::Der Canary wird nicht gegen Produktion ausgeführt."
               exit 1
               ;;
           esac
           case "$STRIPE_SECRET_KEY" in
             sk_test_*) ;;
             *)
-              echo "::error::STRIPE_TEST_SECRET_KEY must start with sk_test_."
+              echo "::error::STRIPE_TEST_SECRET_KEY muss mit sk_test_ beginnen."
               exit 1
               ;;
           esac
@@ -286,7 +286,7 @@ jobs:
           fi
           exit "$status"
 
-      - name: Summary
+      - name: Zusammenfassung
         if: always()
         run: |
           {
@@ -311,7 +311,7 @@ jobs:
       issues: write
 
     steps:
-      - name: Open or update the failure issue
+      - name: Fehler-Issue öffnen oder aktualisieren
         # Drift never reaches a billing check, so it stays out of this issue.
         if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
@@ -354,7 +354,7 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
 
-      - name: Open or update the drift issue
+      - name: Abweichungs-Issue öffnen oder aktualisieren
         if: needs.canary.result == 'failure' && needs.canary.outputs.drift == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -397,7 +397,7 @@ jobs:
             gh issue create --title "$title" --body "$body"
           fi
 
-      - name: Annotate a failed manual run
+      - name: Fehlgeschlagenen manuellen Lauf annotieren
         if: needs.canary.result == 'failure' && github.event_name == 'workflow_dispatch' && github.event.inputs.source != 'external'
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -405,7 +405,7 @@ jobs:
           RESULT: ${{ needs.canary.result }}
         run: |
           set -euo pipefail
-          echo "::error title=Staging billing canary failed::The manual staging billing canary failed ($RESULT). See $RUN_URL"
+          echo "::error title=Staging-Billing-Canary fehlgeschlagen::Der manuelle Staging-Billing-Canary ist fehlgeschlagen ($RESULT). Siehe $RUN_URL"
           {
             echo "### Staging-Billing-Canary fehlgeschlagen (manueller Lauf)"
             echo
@@ -416,7 +416,7 @@ jobs:
             echo "Manuelle Läufe werden nur annotiert. Issue und Chat-Alarm sind den Zeitplan- und Deploy-Läufen vorbehalten."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Notify Discord
+      - name: Discord benachrichtigen
         # Drift has its own issue and the deploy run reports it; posting the
         # billing alert for it would name the wrong problem.
         if: needs.canary.result == 'failure' && needs.canary.outputs.drift != 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
@@ -438,14 +438,14 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           }
           if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
-            echo "::warning::DISCORD_WEBHOOK_URL is not configured; skipping the Discord notification."
+            echo "::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt; Discord-Benachrichtigung wird übersprungen."
             summary '- Discord: übersprungen – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt'
             exit 0
           fi
           case "$DISCORD_WEBHOOK_URL" in
             https://discord.com/api/webhooks/* | https://discordapp.com/api/webhooks/*) ;;
             *)
-              echo "::error::DISCORD_WEBHOOK_URL must be a Discord channel webhook URL."
+              echo "::error::DISCORD_WEBHOOK_URL muss eine Discord-Channel-Webhook-URL sein."
               summary '- Discord: nicht gesendet – `DISCORD_WEBHOOK_URL` ist keine Discord-Channel-Webhook-URL'
               exit 1
               ;;
@@ -469,13 +469,13 @@ jobs:
               summary "- Discord: Nachricht gesendet (HTTP $status)"
               ;;
             *)
-              echo "::error::Discord answered HTTP ${status:-000}."
+              echo "::error::Discord antwortete mit HTTP ${status:-000}."
               summary "- Discord: Senden fehlgeschlagen (HTTP ${status:-000})"
               exit 1
               ;;
           esac
 
-      - name: Close the failure issue after recovery
+      - name: Fehler-Issue nach Erholung schließen
         if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
         continue-on-error: true
         env:
@@ -500,7 +500,7 @@ jobs:
           gh issue comment "$existing" --body "Der Staging-Canary läuft wieder erfolgreich (Auslöser: $trigger): $RUN_URL"
           gh issue close "$existing" --reason completed
 
-      - name: Close the drift issue after recovery
+      - name: Abweichungs-Issue nach Erholung schließen
         # A green unattended run proves staging now serves the expected commit,
         # so a drift issue left over from an earlier run is resolved as well.
         if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
@@ -528,7 +528,7 @@ jobs:
           gh issue comment "$existing" --body "Staging liefert wieder den erwarteten Commit \`$COMMIT\` und der Canary läuft erfolgreich (Auslöser: $trigger): $RUN_URL"
           gh issue close "$existing" --reason completed
 
-      - name: Report the daily success to the heartbeat
+      - name: Täglichen Erfolg an den Heartbeat melden
         # Runs after the closing step on purpose: a healthchecks.io outage must not
         # keep a recovered issue open. Only a real scheduled run proves that
         # GitHub's scheduler still delivers; deploy-triggered and manual runs must
@@ -539,13 +539,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${HEARTBEAT_URL:-}" ]; then
-            echo "::warning::CANARY_HEARTBEAT_URL is not configured; skipping the heartbeat ping."
+            echo "::warning::CANARY_HEARTBEAT_URL ist nicht gesetzt; Heartbeat-Ping wird übersprungen."
             exit 0
           fi
           case "$HEARTBEAT_URL" in
             https://hc-ping.com/*) ;;
             *)
-              echo "::error::CANARY_HEARTBEAT_URL must be a healthchecks.io ping URL (https://hc-ping.com/...)."
+              echo "::error::CANARY_HEARTBEAT_URL muss eine healthchecks.io-Ping-URL sein (https://hc-ping.com/...)."
               exit 1
               ;;
           esac

@@ -37,35 +37,35 @@ jobs:
       github.event.workflow_run.event == 'push')
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
         with:
           # On `workflow_run` GITHUB_SHA is the default-branch head, not the
           # commit CI passed; deploy the run that triggered this deploy.
           ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'main' }}
 
-      - name: Validate staging target
+      - name: Staging-Ziel prüfen
         env:
           FLY_STAGING_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${FLY_STAGING_API_TOKEN:-}" ]; then
-            echo "::error::FLY_STAGING_API_TOKEN is missing. Configure it in the staging environment."
+            echo "::error::FLY_STAGING_API_TOKEN fehlt. Hinterlege es in der Staging-Umgebung."
             exit 1
           fi
           grep -qx 'app = "streaminghub-staging"' fly.staging.toml
           grep -q 'APP_URL = "https://streaminghub-staging.fly.dev"' fly.staging.toml
           if grep -q 'sk_live_' fly.staging.toml; then
-            echo "::error::A live Stripe key is present in fly.staging.toml. Refusing to deploy."
+            echo "::error::In fly.staging.toml steht ein Live-Stripe-Schlüssel. Deploy wird abgelehnt."
             exit 1
           fi
           if ! grep -q 'source = "streaminghub_staging_data"' fly.staging.toml; then
-            echo "::error::The staging volume is not configured. Refusing to deploy."
+            echo "::error::Das Staging-Volume ist nicht konfiguriert. Deploy wird abgelehnt."
             exit 1
           fi
           echo "Staging target validated: streaminghub-staging / streaminghub_staging_data"
 
-      - name: Resolve deployed commit
+      - name: Deployten Commit ermitteln
         id: deployed_commit
         run: |
           set -euo pipefail
@@ -74,20 +74,20 @@ jobs:
           mkdir -p "$RUNNER_TEMP/deployed-commit"
           printf '%s\n' "$sha" > "$RUNNER_TEMP/deployed-commit/commit.txt"
 
-      - name: Record deployed commit
+      - name: Deployten Commit aufzeichnen
         uses: actions/upload-artifact@v4
         with:
           name: deployed-commit
           path: ${{ runner.temp }}/deployed-commit/commit.txt
           if-no-files-found: error
 
-      - name: Install flyctl
+      - name: flyctl installieren
         run: |
           set -euo pipefail
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
-      - name: Deploy
+      - name: Deployen
         # Backstop: the shell timeout below reports the hang itself, but a stuck
         # flyctl process must not be able to hold the job either.
         timeout-minutes: 12
@@ -116,12 +116,12 @@ jobs:
           set -e
           # 124 = timeout fired, 137 = the process had to be killed.
           if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
-            echo "::error title=Fly deploy hung::flyctl deploy made no progress within $((DEPLOY_TIMEOUT_SECONDS / 60)) minutes. The remote builder is most likely stuck; staging was not updated and still serves the previous commit. Re-run the deploy."
+            echo "::error title=Fly-Deploy hängt::flyctl deploy kam innerhalb von $((DEPLOY_TIMEOUT_SECONDS / 60)) Minuten nicht voran. Der Remote-Builder hängt höchstwahrscheinlich; Staging wurde nicht aktualisiert und liefert weiterhin den vorherigen Commit. Deploy erneut starten."
             exit 1
           fi
           exit "$status"
 
-      - name: Verify staging health
+      - name: Staging-Zustand prüfen
         # HTTP 200 alone is not proof: a rolled back or half-finished rollout can
         # answer 200 while still serving the previous commit. The /status page
         # names the commit it runs, so require that commit to be the deployed one.
@@ -142,10 +142,10 @@ jobs:
             echo "Attempt ${attempt}: HTTP ${code:-no response}, serving commit ${served:-unknown} (expected ${EXPECTED_COMMIT}); retrying in 5s ..."
             sleep 5
           done
-          echo "::error title=Staging does not serve the deployed commit::After 120 seconds staging answered HTTP ${code:-none} with commit ${served:-unknown} instead of ${EXPECTED_COMMIT}."
+          echo "::error title=Staging liefert nicht den deployten Commit::Nach 120 Sekunden antwortete Staging mit HTTP ${code:-none} und Commit ${served:-unknown} statt ${EXPECTED_COMMIT}."
           exit 1
 
-      - name: Report the staging drift
+      - name: Staging-Abweichung melden
         # Runs whenever the job fails after the commit was resolved, so a failed
         # or hung deploy states explicitly which commit staging still serves
         # instead of leaving the drift to be discovered by a later canary run.
@@ -175,10 +175,10 @@ jobs:
             echo
             echo "Staging liefert weiter den vorherigen Commit, bis ein Deploy wieder gelingt; der nächste Canary-Lauf scheitert dann schon am Commit-Vergleich."
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error title=Staging is behind::Staging serves ${served} instead of ${EXPECTED_COMMIT}. Re-run the deploy so the canary does not fail on the commit comparison."
+          echo "::error title=Staging bleibt zurück::Staging liefert ${served} statt ${EXPECTED_COMMIT}. Deploy erneut starten, damit der Canary nicht schon am Commit-Vergleich scheitert."
           exit 0
 
-      - name: Verify Next and cache proxy processes
+      - name: Next- und Cache-Proxy-Prozesse prüfen
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_STAGING_API_TOKEN }}
           STAGING_APP: streaminghub-staging
@@ -189,14 +189,14 @@ jobs:
           flyctl ssh console -a "$STAGING_APP" \
             -C "node -e \"eval(Buffer.from('${script_b64}','base64').toString())\""
 
-      - name: Verify anonymous cache hit and session bypass
+      - name: Anonymen Cache-Treffer und Session-Bypass prüfen
         env:
           STAGING_BASE_URL: https://streaminghub-staging.fly.dev
         run: |
           set -euo pipefail
           node scripts/staging-cache-check.mjs "$STAGING_BASE_URL"
 
-      - name: Summary
+      - name: Zusammenfassung
         if: always()
         run: |
           {

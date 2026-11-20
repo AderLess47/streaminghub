@@ -27,17 +27,17 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       # No dependency install: the sync only uses fetch and node:fs, so the check
       # stays fast and needs no secrets or network egress beyond the site.
-      - name: Compare the committed release metadata with production
+      - name: Eingetragene Release-Metadaten mit Produktion vergleichen
         env:
           RELEASE_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
@@ -64,5 +64,5 @@ jobs:
             git --no-pager diff -- src/content/release.ts
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error title=Release fallback is stale::src/content/release.ts lags behind https://streaminghub.org/api/release. Run 'npm run release:sync' and open a pull request."
+          echo "::error title=Release-Fallback ist veraltet::src/content/release.ts liegt hinter https://streaminghub.org/api/release zurück. 'npm run release:sync' ausführen und einen Pull Request öffnen."
           exit 1

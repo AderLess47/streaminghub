@@ -34,7 +34,7 @@ jobs:
     steps:
       # Bewusst der Default-Branch: gemeldet wird mit dem geprüften Skript,
       # nicht mit Code aus dem roten Lauf.
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
       - name: Issue öffnen oder kommentieren
@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
       - name: Issue kommentieren und schließen

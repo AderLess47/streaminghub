@@ -45,7 +45,7 @@ test("database preflight summary renders candidates and counts", () => {
   assert.match(rendered.markdown, /subscriptions: \*\*1\*\*/);
   assert.equal(
     rendered.warning,
-    "::warning::1 old canary database account(s) found; dry run only, nothing deleted.",
+    "::warning::Gefundene alte Canary-Datenbankkonten: 1; nur Testlauf, nichts gelöscht.",
   );
 });
 

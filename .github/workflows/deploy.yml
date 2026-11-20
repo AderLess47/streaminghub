@@ -35,7 +35,7 @@ jobs:
       github.event.workflow_run.event == 'push')
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
         with:
           # Bei `workflow_run` ist GITHUB_SHA der Kopf des Default-Branches,
@@ -45,7 +45,7 @@ jobs:
 
       # Der ausgerollte Commit wird aus dem Checkout gelesen, nicht aus
       # GITHUB_SHA: nur so stimmen Image, /status und der Prüfschritt überein.
-      - name: Resolve deployed commit
+      - name: Deployten Commit ermitteln
         id: deployed_commit
         run: |
           set -euo pipefail
@@ -54,13 +54,13 @@ jobs:
 
       # Pinned installer instead of a floating action, so a deploy never runs
       # code that changed since the last one.
-      - name: Install flyctl
+      - name: flyctl installieren
         run: |
           set -euo pipefail
           curl -fsSL https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
-      - name: Deploy
+      - name: Deployen
         # Ein hängender Remote-Builder soll den Job nicht 25 Minuten blockieren.
         timeout-minutes: 15
         env:
@@ -71,7 +71,7 @@ jobs:
           flyctl deploy --remote-only --config fly.toml --app streaminghub-org \
             --build-arg "GIT_COMMIT=$DEPLOY_COMMIT"
 
-      - name: Verify production serves the deployed commit
+      - name: Prüfen, dass Produktion den deployten Commit liefert
         # HTTP 200 allein ist kein Beweis: eine zurückgerollte oder halb
         # abgeschlossene Ausrollung antwortet weiter mit dem alten Commit.
         # /status nennt den laufenden Commit, also muss er hier auftauchen –
@@ -93,10 +93,10 @@ jobs:
             echo "Attempt ${attempt}: HTTP ${code:-no response}, serving commit ${served:-unknown} (expected ${EXPECTED_COMMIT}); retrying in 5s ..."
             sleep 5
           done
-          echo "::error title=Production does not serve the deployed commit::After 120 seconds production answered HTTP ${code:-none} with commit ${served:-unknown} instead of ${EXPECTED_COMMIT}."
+          echo "::error title=Produktion liefert nicht den deployten Commit::Nach 120 Sekunden antwortete Produktion mit HTTP ${code:-none} und Commit ${served:-unknown} statt ${EXPECTED_COMMIT}."
           exit 1
 
-      - name: Summary
+      - name: Zusammenfassung
         if: always()
         run: |
           {

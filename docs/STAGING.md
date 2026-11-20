@@ -304,7 +304,8 @@ signal that still reaches someone when a whole day of slots is dropped.
 | External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
 | External heartbeat (Healthchecks.io) | outside Actions entirely | e-mail once no successful scheduled ping arrived for 1 day + 12 hours |
 
-All alarm issue titles and run summaries are written in German.
+All alarm issue titles, run summaries, `::error::`/`::warning::` annotations and
+step names are written in German.
 
 The properties that hold across all of them:
 
