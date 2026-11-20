@@ -1050,6 +1050,9 @@ export const de = {
       overLimitHint:
         "„Über Free-Limit“ zählt abgelaufene Trials mit mehr aktiven Geräten als erlaubt – etwa weil der Trial vor dieser Regel endete oder das Limit gesenkt wurde. Beim Ablauf werden überzählige Geräte automatisch abgemeldet, die zuletzt genutzten bleiben.",
       overLimitRow: "Mehr aktive Geräte als im kostenlosen Tarif",
+      subscriptionOverLimit: "Abo beendet, über Limit",
+      subscriptionOverLimitHint:
+        "„Abo beendet, über Limit“ zählt Konten ohne Premium-Zugang – ausgelaufenes Abo, fehlgeschlagene Zahlung oder nie abgeschlossen – mit mehr aktiven Geräten als der kostenlose Tarif erlaubt. Solche Konten stammen aus der Zeit vor der automatischen Abmeldung; sie werden nicht rückwirkend bereinigt, sondern erst, wenn das jeweilige Abo erneut endet.",
       flagOff:
         "Der Testzeitraum ist ausgeschaltet. Laufende Trials enden trotzdem zum hinterlegten Datum.",
     },
