@@ -1,19 +1,28 @@
 name: Device notice smoke
 
-# Prüft nach jedem erfolgreichen Staging-Deploy (und auf Zuruf), dass die
+# Prüft nach jedem erfolgreichen Deploy – Staging und Produktion – dass die
 # Geräte-Vorwarnung im Konto wirklich rendert: Titel, Markierungen und die
 # Datumszeile für Trial und Stripe, ohne Datum bei Store-Abos.
 #
-# Der Test läuft in der Staging-Maschine, weil er dort ein Wegwerf-Konto mit
+# Der Test läuft in der jeweiligen Maschine, weil er dort ein Wegwerf-Konto mit
 # Abo und Geräten anlegt und es wieder löscht. Er braucht keine Zugangsdaten:
-# die Adresse ist auf Loopback festgelegt, damit kein echter Bestand getroffen
-# werden kann.
+# die Adresse ist auf Loopback festgelegt, damit der Lauf nur die Instanz
+# trifft, in der er läuft.
 
 on:
   workflow_run:
-    workflows: ["Deploy staging"]
+    workflows: ["Deploy staging", "Deploy"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      target:
+        description: Welches Deployment geprüft wird
+        type: choice
+        options:
+          - both
+          - staging
+          - production
+        default: both
 
 permissions:
   contents: read
@@ -23,11 +32,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  smoke:
+  staging:
     name: Geräte-Vorwarnung auf Staging prüfen
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event_name == 'workflow_dispatch' && inputs.target != 'production') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.name == 'Deploy staging')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: staging
@@ -61,9 +72,54 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Geräte-Vorwarnung im Konto"
+            echo "### Geräte-Vorwarnung im Konto (Staging)"
             echo
             echo "- target: \`streaminghub-staging\` (127.0.0.1:3001)"
+            echo "- commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
+            echo "- result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    name: Geräte-Vorwarnung auf Produktion prüfen
+    # Production serves Next directly on 3000 (no cache proxy). The run creates
+    # a throwaway account in the production database and deletes it again, so
+    # the live page is verified rather than inferred from the deployed commit.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.target != 'staging') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.name == 'Deploy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+
+      - name: Install flyctl
+        run: |
+          set -euo pipefail
+          curl -fsSL https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Run the smoke test inside the production machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${FLY_API_TOKEN:?FLY_API_TOKEN is missing}"
+          flyctl ssh console -a streaminghub-org \
+            -C "env SMOKE_BASE_URL=http://127.0.0.1:3000 node /app/scripts/device-notice-smoke.mjs"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Geräte-Vorwarnung im Konto (Produktion)"
+            echo
+            echo "- target: \`streaminghub-org\` (127.0.0.1:3000)"
             echo "- commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
             echo "- result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"

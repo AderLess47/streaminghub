@@ -560,6 +560,7 @@ Der Reihe nach, jede Zeile mit Befehl oder Blick:
 - [ ] **Neue Rechtsseiten:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/widerruf https://streaminghub.org/kuendigung` → zweimal `200` (vor dem Release: `404`)
 - [ ] **Admin-Route vorhanden:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/admin/contracts` → `307` (Weiterleitung zum Login), nicht `404`
 - [ ] **Release-Konsistenz:** `npm run smoke:deploy -- --base https://streaminghub.org` → „serves one consistent release“
+- [ ] **Geräte-Vorwarnung:** *Actions → Deploy* ist grün und der daran hängende Lauf *Device notice smoke* (Job **Produktion**) ebenfalls – er prüft die gerenderte Karte mit einem Wegwerf-Konto und räumt es wieder ab (siehe `docs/STAGING.md`)
 - [ ] **Anmeldung:** Admin-Login mit MFA; `/admin` zeigt die Zeile „Offene Erklärungen“, `/admin/contracts` listet die Vorgänge
 - [ ] **Widerruf von Ende zu Ende:** `/widerruf` mit einer Testadresse abschicken → Bestätigungsseite, Eintrag erscheint in `/admin/contracts`, bei konfiguriertem Versand eine Mail in **Admin → E-Mail-Ausgang**
 - [ ] **Zahlung:** `/status` meldet den Zahlungsanbieter als verbunden; mit Testkarte `4242 4242 4242 4242` eine Testbuchung (nur mit gesetzten Stripe-Schlüsseln)
