@@ -42,32 +42,32 @@ jobs:
     runs-on: [self-hosted, vega]
     timeout-minutes: 90
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Node einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Set up Java 21
+      - name: Java 21 einrichten
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Show SDK version
+      - name: SDK-Version anzeigen
         run: vega --version
 
-      - name: Install Vega dependencies
+      - name: Vega-Abhängigkeiten installieren
         working-directory: vega
         run: npm ci --no-audit --no-fund
 
-      - name: Build Amazon's Shaka player
+      - name: Shaka-Player von Amazon bauen
         working-directory: vega
         run: npm run setup:shaka
 
-      - name: Setup, build and HLS smoke test
+      - name: Setup, Build und HLS-Smoke-Test
         working-directory: vega
         env:
           SMOKE_URL: ${{ inputs.smoke_url }}
@@ -79,7 +79,7 @@ jobs:
           if [ "${{ inputs.skip_build }}" = "true" ]; then args+=(--skip-build); fi
           npm run verify:shaka -- "${args[@]}"
 
-      - name: Upload device logs
+      - name: Geräte-Logs hochladen
         if: always()
         uses: actions/upload-artifact@v4
         with:
