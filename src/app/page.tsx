@@ -162,7 +162,7 @@ export default async function HomePage() {
           <ol className="mt-10 grid gap-4 md:grid-cols-3">
             {t.home.workflow.steps.map((step, index) => (
               <li key={step.title} className="card relative p-5">
-                <span className="text-3xl font-semibold text-brand/45">0{index + 1}</span>
+                <span className="text-3xl font-semibold text-brand-light">0{index + 1}</span>
                 <h3 className="mt-2 text-[1rem] font-semibold">{step.title}</h3>
                 <p className="mt-1.5 text-[0.86rem] leading-relaxed text-muted">{step.description}</p>
               </li>

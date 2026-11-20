@@ -17,7 +17,7 @@ export default async function ContactPage() {
       <p className="mt-4 max-w-2xl text-xs leading-relaxed text-muted">{t.contact.supportPremiumNote}</p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.7fr] lg:items-start">
-        <ContactForm t={t.contact} privacyLabel={t.footer.privacy} />
+        <ContactForm t={t.contact} privacyLabel={t.footer.privacy} busy={t.ui.sending} />
 
         <aside className="grid gap-4">
           <div className="card p-5">

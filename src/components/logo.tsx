@@ -7,8 +7,27 @@ type LogoProps = {
   href?: string | null;
 };
 
+/**
+ * Der Verlauf wird einmal pro Dokument definiert und von jedem Logo per
+ * `url(#sh-logo-gradient)` referenziert – als Teil des Logos entstand sonst
+ * auf jeder Seite eine doppelte id, und `url()` löst nur auf das erste
+ * Vorkommen auf.
+ */
+export function LogoGradientDefs() {
+  return (
+    <svg aria-hidden="true" focusable="false" width="0" height="0" className="absolute">
+      <defs>
+        <linearGradient id="sh-logo-gradient" x1="4" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#3B82F6" />
+          <stop offset="0.55" stopColor="#2563EB" />
+          <stop offset="1" stopColor="#06B6D4" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
 export function LogoMark({ size = 36 }: { size?: number }) {
-  const id = "sh-logo-gradient";
   return (
     <svg
       width={size}
@@ -18,13 +37,6 @@ export function LogoMark({ size = 36 }: { size?: number }) {
       aria-label="StreamingHub"
       className="shrink-0"
     >
-      <defs>
-        <linearGradient id={id} x1="4" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#3B82F6" />
-          <stop offset="0.55" stopColor="#2563EB" />
-          <stop offset="1" stopColor="#06B6D4" />
-        </linearGradient>
-      </defs>
       <rect x="1.5" y="1.5" width="45" height="45" rx="13" fill="url(#sh-logo-gradient)" />
       <rect
         x="1.5"

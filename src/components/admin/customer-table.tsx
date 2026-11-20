@@ -191,7 +191,12 @@ export function CustomerTable({
                       <option value="support">support</option>
                       <option value="admin">admin</option>
                     </select>
-                    <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
+                    <button
+                      type="submit"
+                      className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                      title={t.ui.save}
+                      aria-label={t.ui.save}
+                    >
                       <Icon name="check" size={13} />
                     </button>
                   </form>
@@ -213,6 +218,7 @@ export function CustomerTable({
                         type="submit"
                         className="btn btn-ghost btn-sm !min-w-11 !px-2"
                         title={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
+                        aria-label={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
                       >
                         <Icon name={row.disabled ? "check" : "close"} size={13} />
                       </button>
@@ -224,6 +230,7 @@ export function CustomerTable({
                         type="submit"
                         className="btn btn-ghost btn-sm !min-w-11 !px-2"
                         title={t.admin.customers.resetMfa}
+                        aria-label={t.admin.customers.resetMfa}
                       >
                         <Icon name="shield" size={13} />
                       </button>
@@ -232,6 +239,7 @@ export function CustomerTable({
                       href={`/admin/customers/${row.id}`}
                       className="btn btn-ghost btn-sm !min-w-11 !px-2"
                       title={t.ui.details}
+                      aria-label={t.ui.details}
                     >
                       <Icon name="arrow-right" size={13} />
                     </Link>

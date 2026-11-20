@@ -25,7 +25,7 @@ export default async function ResetPasswordPage({
         </div>
         <div className="card p-6">
           {token.length >= 10 ? (
-            <ResetPasswordForm t={t.auth} token={token} />
+            <ResetPasswordForm t={t.auth} token={token} busy={t.ui.sending} />
           ) : (
             <div className="grid gap-4 text-center">
               <p className="text-sm text-rose-300">{t.auth.resetInvalid}</p>

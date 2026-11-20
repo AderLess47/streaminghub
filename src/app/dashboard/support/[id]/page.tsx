@@ -87,6 +87,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
               title: t.dashboard.support.reply,
               cta: t.dashboard.support.replyCta,
               placeholder: t.dashboard.support.replyPlaceholder,
+              busy: t.ui.sending,
             }}
           />
         </div>

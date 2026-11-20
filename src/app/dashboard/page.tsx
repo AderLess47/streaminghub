@@ -277,6 +277,7 @@ export default async function DashboardPage() {
                 toLogin: t.nav.login,
                 toDashboard: t.nav.dashboard,
                 securityNote: t.activate.securityNote,
+                busy: t.ui.sending,
               }}
             />
           </div>

@@ -28,7 +28,7 @@ export default async function RegisterPage({
           <p className="mt-1.5 text-sm text-muted">{t.auth.registerSubtitle}</p>
         </div>
         <div className="card p-6">
-          <RegisterForm t={t.auth} locale={locale} next={next} />
+          <RegisterForm t={t.auth} locale={locale} next={next} busy={t.ui.sending} />
         </div>
         <div className="mt-4 rounded-xl border border-line/60 bg-white/2 px-4 py-3 text-[0.7rem] leading-relaxed text-muted">
           {t.auth.registerSubtitle}

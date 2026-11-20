@@ -1,4 +1,5 @@
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { FormStatus } from "@/components/form-status";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { deleteFaqAction, saveFaqAction, saveSettingsAction } from "@/lib/actions/admin";
@@ -77,6 +78,7 @@ export default async function AdminContentPage({
             />
           </div>
         </div>
+        <FormStatus label={t.ui.saving} />
         <button type="submit" className="btn btn-primary btn-sm justify-self-start">
           {t.ui.save}
         </button>
@@ -143,6 +145,7 @@ export default async function AdminContentPage({
                 </div>
               </div>
               <div className="flex gap-2">
+                <FormStatus label={t.ui.saving} />
                 <button type="submit" className="btn btn-primary btn-sm">
                   {t.admin.content.update}
                 </button>
@@ -184,6 +187,7 @@ export default async function AdminContentPage({
           <textarea name="answerDe" rows={3} placeholder={t.admin.content.answerDe} required className="field" aria-label={t.admin.content.answerDe} />
           <textarea name="answerEn" rows={3} placeholder={t.admin.content.answerEn} className="field" aria-label={t.admin.content.answerEn} />
         </div>
+        <FormStatus label={t.ui.saving} />
         <button type="submit" className="btn btn-primary btn-sm justify-self-start">
           {t.admin.content.create}
         </button>

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { CookieConsent } from "@/components/cookie-consent";
+import { LogoGradientDefs } from "@/components/logo";
+import { RouteAnnouncer } from "@/components/route-announcer";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { getI18n } from "@/i18n";
@@ -65,6 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // richtige Dokumentsprache, und die übersetzten Stellen tragen lang={locale}.
     <html lang={localeMeta[locale].complete ? locale : "en"} dir={dir} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
+        <LogoGradientDefs />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -81,7 +84,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }
           isStaffUser={Boolean(user && isStaff(user.role))}
         />
-        <main id="main">{children}</main>
+        <main id="main" tabIndex={-1} className="focus:outline-none">
+          {children}
+        </main>
+        <RouteAnnouncer />
         <SiteFooter t={t} role={user?.role ?? null} locale={locale} />
         <CookieConsent t={t.consent} />
       </body>

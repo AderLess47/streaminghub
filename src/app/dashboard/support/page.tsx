@@ -81,7 +81,11 @@ export default async function SupportPage() {
           </h2>
           <div className="mt-4">
             {supportEntitled ? (
-              <NewTicketForm action={createTicketAction} t={t.dashboard.support} />
+              <NewTicketForm
+                action={createTicketAction}
+                t={t.dashboard.support}
+                busy={t.ui.sending}
+              />
             ) : (
               <div className="grid gap-3">
                 <p className="text-xs leading-relaxed text-muted">{t.dashboard.support.supportPremiumBody}</p>

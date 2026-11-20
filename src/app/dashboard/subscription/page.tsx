@@ -192,10 +192,18 @@ export default async function SubscriptionPage({
                 </div>
                 {/* Die Kündigung bleibt unverändert daneben stehen; das Angebot
                     ist ein Vorschlag, keine Hürde. */}
-                <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+                <CancelSubscriptionForm
+                  action={cancelSubscriptionAction}
+                  label={t.dashboard.subscription.cancelCta}
+                  busy={t.ui.saving}
+                />
               </div>
             ) : (
-              <CancelSubscriptionForm action={cancelSubscriptionAction} label={t.dashboard.subscription.cancelCta} />
+              <CancelSubscriptionForm
+                action={cancelSubscriptionAction}
+                label={t.dashboard.subscription.cancelCta}
+                busy={t.ui.saving}
+              />
             )
           ) : null}
 
