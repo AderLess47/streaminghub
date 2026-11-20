@@ -1,4 +1,4 @@
-name: Admin smoke
+name: Admin-Prüfung
 
 # Prüft die laufende Seite mit einem eigenen Prüf-Konto: Anmeldung mit
 # Zwei-Faktor, Zähler auf /admin, Widerrufsliste, Sicherheitsprotokoll.

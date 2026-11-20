@@ -1,4 +1,4 @@
-name: Deploy staging
+name: Staging-Deploy
 
 # Runs after a green CI run on `main`, so staging always mirrors what passed the
 # checks. The workflow never deploys the production app and never receives
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to Fly staging
+    name: Auf Fly-Staging deployen
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: staging

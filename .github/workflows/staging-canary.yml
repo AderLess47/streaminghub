@@ -1,6 +1,6 @@
-name: Staging billing canary
+name: Staging-Billing-Canary
 
-# Runs manually, daily, and after any successful Deploy staging run. Automatic
+# Runs manually, daily, and after any successful Staging-Deploy run. Automatic
 # runs download the exact commit recorded by that deploy, so custom refs and
 # non-main deploys are verified without trusting the default-branch tip.
 on:
@@ -28,7 +28,7 @@ on:
           - external
         default: manual
   workflow_run:
-    workflows: ["Deploy staging"]
+    workflows: ["Staging-Deploy"]
     types: [completed]
 
 permissions:
@@ -41,7 +41,7 @@ concurrency:
 
 jobs:
   guard:
-    name: Decide whether today's scheduled canary runs
+    name: Entscheiden, ob der geplante Canary heute läuft
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -103,7 +103,7 @@ jobs:
           echo "Run the canary now: $run"
 
   canary:
-    name: Run the staging billing canary
+    name: Staging-Billing-Canary ausführen
     needs: guard
     # always() is required: a job that needs a skipped job is skipped as well, and
     # `guard` only runs for schedule events. Without it every deploy-triggered and
@@ -298,7 +298,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify:
-    name: Notify about canary failures
+    name: Über Canary-Fehler benachrichtigen
     needs: canary
     # Runs after every canary attempt that actually started, but only failures do
     # anything. Scheduled and deploy-triggered failures open or update the single
@@ -390,7 +390,7 @@ jobs:
             '' \
             'Der Commit-Vergleich ist fehlgeschlagen, bevor eine Billing-Prüfung lief: auf Staging lief ein älterer, zurückgerollter oder unvollständiger Stand. Das ist eine Deploy-Abweichung und kein Billing-Fehler; das Issue `Staging-Canary fehlgeschlagen` bleibt dafür unberührt.' \
             '' \
-            'Bitte den Staging-Deploy wiederholen (Actions → Deploy staging) und den Drift-Report des Deploys prüfen. Sobald Staging den erwarteten Commit ausliefert, schließt der nächste erfolgreiche unbeaufsichtigte Lauf dieses Issue; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
+            'Bitte den Staging-Deploy wiederholen (Actions → Staging-Deploy) und den Drift-Report des Deploys prüfen. Sobald Staging den erwarteten Commit ausliefert, schließt der nächste erfolgreiche unbeaufsichtigte Lauf dieses Issue; ein manueller Lauf aus der Actions-Oberfläche ändert es nicht.')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else

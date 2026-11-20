@@ -131,7 +131,7 @@ Automatische Erinnerung: `npm run bfsg:review` prüft das Datum im
 Entscheidungsblock und schlägt nach 365 Tagen an. Dieselbe Prüfung läuft
 jährlich am 1. Februar als GitHub-Workflow `.github/workflows/bfsg-review.yml`
 und legt dann ein Issue mit Checkliste an. Der Workflow kann auch von Hand
-unter „Actions → BFSG review → Run workflow“ gestartet werden.
+unter „Actions → BFSG-Prüfung → Run workflow“ gestartet werden.
 
 Einschränkung, die man kennen muss: GitHub pausiert geplante Workflows nach 60
 Tagen ohne Repository-Aktivität. Das Issue kommt dann nicht – die Prüfung ist

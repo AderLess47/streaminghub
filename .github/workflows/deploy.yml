@@ -1,4 +1,4 @@
-name: Deploy
+name: Produktions-Deploy
 
 # Nach jedem grünen CI-Lauf auf `main` geht genau der getestete Commit nach
 # Produktion. `workflow_dispatch` bleibt als Notausgang: damit lässt sich ein
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to Fly
+    name: Auf Fly deployen
     runs-on: ubuntu-latest
     timeout-minutes: 25
     # `workflow_run` feuert auch für fehlgeschlagene oder abgebrochene Läufe

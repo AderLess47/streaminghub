@@ -1,4 +1,4 @@
-name: Release drift
+name: Release-Abweichung
 
 on:
   schedule:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   check:
-    name: Compare fallback with production
+    name: Fallback mit Produktion vergleichen
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # A cancelled or failed release published nothing, so it needs no drift report.

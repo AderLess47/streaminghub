@@ -19,10 +19,10 @@ import {
 
 const commit = "199f96095683434572ccb3ee07ebaae38807f5a8";
 
-test("issue title names the workflow and cannot collide between Deploy and Deploy staging", () => {
-  assert.equal(issueTitle("Deploy"), "Roter Lauf: Deploy");
-  assert.equal(issueTitle("Deploy staging"), "Roter Lauf: Deploy staging");
-  assert.notEqual(issueTitle("Deploy"), issueTitle("Deploy staging"));
+test("issue title names the workflow and cannot collide between Produktions-Deploy and Staging-Deploy", () => {
+  assert.equal(issueTitle("Produktions-Deploy"), "Roter Lauf: Produktions-Deploy");
+  assert.equal(issueTitle("Staging-Deploy"), "Roter Lauf: Staging-Deploy");
+  assert.notEqual(issueTitle("Produktions-Deploy"), issueTitle("Staging-Deploy"));
 });
 
 test("shortSha keeps seven characters and tolerates missing commits", () => {
@@ -33,7 +33,7 @@ test("shortSha keeps seven characters and tolerates missing commits", () => {
 
 test("failure body names run, commit, branch, trigger and failed jobs", () => {
   const body = failureBody({
-    workflowName: "Deploy staging",
+    workflowName: "Staging-Deploy",
     runUrl: "https://github.com/o/r/actions/runs/1",
     commit,
     branch: "main",
@@ -42,7 +42,7 @@ test("failure body names run, commit, branch, trigger and failed jobs", () => {
     failedJobs: ["Deploy to Fly staging"],
   });
 
-  assert.match(body, /Der Workflow \*\*Deploy staging\*\* ist fehlgeschlagen\./);
+  assert.match(body, /Der Workflow \*\*Staging-Deploy\*\* ist fehlgeschlagen\./);
   assert.match(body, /Lauf: https:\/\/github\.com\/o\/r\/actions\/runs\/1/);
   assert.match(body, new RegExp(`Commit: \`${commit}\``));
   assert.match(body, /Branch: `main`/);
@@ -53,7 +53,7 @@ test("failure body names run, commit, branch, trigger and failed jobs", () => {
 
 test("failure body marks a timeout and omits an empty job list", () => {
   const body = failureBody({
-    workflowName: "Device notice smoke",
+    workflowName: "Geräte-Vorwarnung im Konto",
     runUrl: "https://example.invalid/run",
     commit,
     branch: "main",
@@ -118,7 +118,7 @@ else if (call === "issue create") process.stdout.write("https://github.com/o/r/i
       GH_TOKEN: "stub-token",
       GH_REPO: "o/r",
       RUN_ID: "1",
-      WORKFLOW_NAME: "Deploy staging",
+      WORKFLOW_NAME: "Staging-Deploy",
       COMMIT: commit,
       RUN_URL: "https://github.com/o/r/actions/runs/1",
       BRANCH: "main",
@@ -146,7 +146,7 @@ test("a new failure opens exactly one issue with the failing job named", () => {
   const creates = calls.filter((entry) => entry.call === "issue create");
 
   assert.equal(creates.length, 1);
-  assert.equal(creates[0].args[3], "Roter Lauf: Deploy staging");
+  assert.equal(creates[0].args[3], "Roter Lauf: Staging-Deploy");
   assert.match(creates[0].input, new RegExp(`Commit: \`${commit}\``));
   assert.match(creates[0].input, /- Deploy to Fly staging/);
   assert.equal(calls.some((entry) => entry.call === "issue comment"), false);
@@ -155,7 +155,7 @@ test("a new failure opens exactly one issue with the failing job named", () => {
 test("a repeated failure for the same commit writes nothing", () => {
   const { calls } = runWithGhStub({
     mode: "--failure",
-    issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
+    issueList: [{ number: 12, title: "Roter Lauf: Staging-Deploy" }],
     comments: `- Commit: \`${commit}\`\n`,
     jobs: ["Deploy to Fly staging"],
   });
@@ -168,7 +168,7 @@ test("a repeated failure for the same commit writes nothing", () => {
 test("a new commit comments on the open issue instead of opening another", () => {
   const { calls } = runWithGhStub({
     mode: "--failure",
-    issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
+    issueList: [{ number: 12, title: "Roter Lauf: Staging-Deploy" }],
     comments: "- Commit: `deadbeefdeadbeefdeadbeefdeadbeefdeadbeef`\n",
     jobs: ["Deploy to Fly staging"],
   });
@@ -182,7 +182,7 @@ test("a new commit comments on the open issue instead of opening another", () =>
 test("a green run closes the open issue", () => {
   const { calls } = runWithGhStub({
     mode: "--success",
-    issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
+    issueList: [{ number: 12, title: "Roter Lauf: Staging-Deploy" }],
   });
 
   assert.equal(calls.filter((entry) => entry.call === "issue comment").length, 1);
@@ -201,7 +201,7 @@ test("a green run without an open issue writes nothing", () => {
 
 test("discord content names workflow, result, commit, run and issue", () => {
   const fields = {
-    workflowName: "Deploy staging",
+    workflowName: "Staging-Deploy",
     conclusion: "failure",
     commit,
     runUrl: "https://github.com/o/r/actions/runs/1",
@@ -209,7 +209,7 @@ test("discord content names workflow, result, commit, run and issue", () => {
   };
   const content = discordContent(fields);
 
-  assert.match(content, /Roter Lauf: Deploy staging/);
+  assert.match(content, /Roter Lauf: Staging-Deploy/);
   assert.match(content, /Ergebnis: `failure`/);
   assert.match(content, new RegExp(`Commit: \`${commit}\``));
   assert.match(content, /Lauf: https:\/\/github\.com\/o\/r\/actions\/runs\/1/);
@@ -234,7 +234,7 @@ test("postDiscord sends the payload as JSON without mentions", async () => {
     return { ok: true, status: 204 };
   };
   const payload = discordPayload({
-    workflowName: "Deploy",
+    workflowName: "Produktions-Deploy",
     conclusion: "failure",
     commit,
     runUrl: "https://github.com/o/r/actions/runs/3",
@@ -288,7 +288,7 @@ test("a red run without a Discord secret still creates the issue and only warns"
   assert.equal(status, 0);
   assert.equal(calls.some((entry) => entry.call === "issue create"), true);
   assert.match(stderr, /::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt/);
-  assert.match(summary, /### Roter Lauf: Deploy staging/);
+  assert.match(summary, /### Roter Lauf: Staging-Deploy/);
   assert.match(summary, /- Discord: nicht gesendet – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt/);
 });
 
@@ -309,24 +309,24 @@ test("a red run with a non-Discord URL keeps the issue but fails loudly", () => 
 test("a closed green run reports the recovery in the run summary", () => {
   const { summary } = runWithGhStub({
     mode: "--success",
-    issueList: [{ number: 9, title: "Roter Lauf: Deploy staging" }],
+    issueList: [{ number: 9, title: "Roter Lauf: Staging-Deploy" }],
     comments: "Commit: `abc1234`",
   });
 
-  assert.match(summary, /### Grüner Lauf: Deploy staging/);
+  assert.match(summary, /### Grüner Lauf: Staging-Deploy/);
   assert.match(summary, /- Issue: #9 geschlossen/);
   assert.doesNotMatch(summary, /Discord/);
 });
 
 test("recovery body names run, commit and trigger", () => {
   const body = recoveryBody({
-    workflowName: "Deploy",
+    workflowName: "Produktions-Deploy",
     runUrl: "https://github.com/o/r/actions/runs/2",
     commit,
     event: "workflow_run",
   });
 
-  assert.match(body, /Der Workflow \*\*Deploy\*\* läuft wieder erfolgreich\./);
+  assert.match(body, /Der Workflow \*\*Produktions-Deploy\*\* läuft wieder erfolgreich\./);
   assert.match(body, /Läuft wieder erfolgreich|wieder erfolgreich/);
   assert.match(body, new RegExp(`Commit: \`${commit}\``));
   assert.match(body, /Auslöser: `workflow_run`/);
