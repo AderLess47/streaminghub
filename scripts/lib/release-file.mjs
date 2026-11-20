@@ -1,8 +1,8 @@
 /**
- * Shared renderer/validator for `src/content/release.ts`.
+ * Gemeinsamer Renderer/Validator für `src/content/release.ts`.
  *
- * The file is generated, so both writers (the release build and the sync that
- * follows production) must produce byte-identical output.
+ * Die Datei wird erzeugt; beide Schreiber (der Release-Build und der Abgleich
+ * nach Produktion) müssen deshalb byte-identische Ausgabe erzeugen.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,8 +34,9 @@ export const androidRelease = {
 }
 
 /**
- * Accepts the payload of `GET /api/release` (or a generated release object) and
- * returns the normalised release, or null when it describes no usable download.
+ * Nimmt die Antwort von `GET /api/release` (oder ein erzeugtes Release-Objekt)
+ * entgegen und liefert den normalisierten Release oder null, wenn sich daraus
+ * kein nutzbarer Download ergibt.
  */
 export function validateRelease(payload) {
   if (!payload || typeof payload !== "object") return null;
