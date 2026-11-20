@@ -233,6 +233,19 @@ Support: <a href="mailto:${env.supportEmail}" style="color:#64748b">${env.suppor
 
 type MailTemplate = { subject: string; text: string };
 
+/**
+ * Absatz, wenn ein Premium-Zugang endet und dabei Geräte über dem kostenlosen
+ * Limit abgemeldet wurden. Trial-Ablauf und Abo-Ende nutzen denselben Wortlaut,
+ * damit die Zusage zum Geräte-Limit überall gleich ist. Ohne Abmeldung `null`.
+ */
+function surplusDevicesNote(de: boolean, limit: number, revoked: number): string | null {
+  if (revoked <= 0) return null;
+  const count = revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`;
+  return de
+    ? `Ab jetzt gilt der kostenlose Tarif mit ${limit} Geräten. Davon bleiben die ${limit} zuletzt genutzten aktiv; ${count} deshalb abgemeldet. Deine Playlist bleibt gespeichert.`
+    : `The free plan with ${limit} devices applies from now on. The ${limit} most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored.`;
+}
+
 const signature = (de: boolean) =>
   de
     ? `\n\nBei Fragen antworte einfach auf diese E-Mail oder schreibe an ${env.supportEmail}.`
@@ -526,18 +539,18 @@ export function trialEndedMail(input: {
   const link = `${env.appUrl}/premium`;
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const revoked = input.devicesRevoked ?? 0;
-  // Zwei Varianten: "nichts abgemeldet" ist eine andere Zusage als eine
-  // Abmeldung, und der Satzbau unterscheidet sich.
-  const deviceNote = {
-    de:
-      revoked > 0
-        ? `Davon bleiben die ${limit} zuletzt genutzten aktiv; ${revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`} deshalb abgemeldet. Deine Playlist bleibt gespeichert. Brauchst du später wieder mehr Geräte, kannst du im Konto Platz schaffen oder Premium dazunehmen.`
-        : "Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.",
-    en:
-      revoked > 0
-        ? `The ${limit} most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored. If you need more devices again later, you can free up a slot in your account or add Premium.`
-        : "Your devices stay linked and your playlist stays stored, so you can keep watching at any time.",
-  };
+  // Ohne Abmeldung bleibt die alte Zusage stehen; mit Abmeldung nennt der
+  // gemeinsame Absatz Limit und Zahl.
+  const devices =
+    (surplusDevicesNote(de, limit, revoked) ??
+      (de
+        ? `Ab jetzt gilt der kostenlose Tarif mit ${limit} Geräten. Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.`
+        : `The free plan with ${limit} devices applies from now on. Your devices stay linked and your playlist stays stored, so you can keep watching at any time.`)) +
+    (revoked > 0
+      ? de
+        ? " Brauchst du später wieder mehr Geräte, kannst du im Konto Platz schaffen oder Premium dazunehmen."
+        : " If you need more devices again later, you can free up a slot in your account or add Premium."
+      : "");
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
     style: "currency",
     currency: "EUR",
@@ -546,8 +559,8 @@ export function trialEndedMail(input: {
   return {
     subject: de ? "Dein Testzeitraum ist beendet – StreamingHub" : "Your trial has ended – StreamingHub",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\nAb jetzt gilt der kostenlose Tarif mit ${limit} Geräten. ${deviceNote.de}\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\nThe free plan with ${limit} devices applies from now on. ${deviceNote.en}\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium ist beendet. Es wurde nichts abgebucht, und es läuft kein Abo.\n\n${devices}\n\nPremium kostet ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has ended. Nothing was charged and no subscription is running.\n\n${devices}\n\nPremium costs ${price} per month and can be cancelled monthly:\n${link}${signature(false)}`,
   };
 }
 
@@ -555,16 +568,29 @@ export function trialEndedMail(input: {
  * Abschlussmail, wenn ein Abo nach fehlgeschlagenen Zahlungen ausläuft. Die
  * normale Kündigung bekommt ihre eigene Bestätigung.
  */
-export function subscriptionEndedMail(input: { name: string; locale: string }): MailTemplate {
+export function subscriptionEndedMail(input: {
+  name: string;
+  locale: string;
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Abo-Ende abgemeldet wurden. */
+  devicesRevoked?: number;
+}): MailTemplate {
   const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
   const link = `${env.appUrl}/dashboard/subscription`;
   return {
     subject: de
       ? "Dein Premium-Abo ist ausgelaufen – Zahlung fehlgeschlagen"
       : "Your Premium subscription has ended – payment failed",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo ist ausgelaufen, weil die offene Zahlung nicht eingegangen ist. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Du kannst Premium jederzeit neu abschließen:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription has ended because the outstanding payment did not arrive. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. You can subscribe to Premium again at any time:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo ist ausgelaufen, weil die offene Zahlung nicht eingegangen ist. Premium ist damit beendet.\n\n${devices} Du kannst Premium jederzeit neu abschließen:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription has ended because the outstanding payment did not arrive. Premium is therefore switched off.\n\n${devices} You can subscribe to Premium again at any time:\n${link}${signature(false)}`,
   };
 }
 
@@ -576,8 +602,18 @@ export function storeSubscriptionEndedMail(input: {
   name: string;
   locale: string;
   store: "apple" | "amazon";
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ende abgemeldet wurden. */
+  devicesRevoked?: number;
 }): MailTemplate {
   const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
   const link = `${env.appUrl}/dashboard/subscription`;
   const store = de
     ? input.store === "apple"
@@ -589,8 +625,8 @@ export function storeSubscriptionEndedMail(input: {
   return {
     subject: de ? "Dein Premium-Abo ist ausgelaufen" : "Your Premium subscription has ended",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo über ${store} ist ausgelaufen. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Wenn du Premium weiter nutzen willst, schließe es erneut ab.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription via ${store} has ended. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. If you want to keep using Premium, subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein StreamingHub-Premium-Abo über ${store} ist ausgelaufen. Premium ist damit beendet.\n\n${devices} Wenn du Premium weiter nutzen willst, schließe es erneut ab.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour StreamingHub Premium subscription via ${store} has ended. Premium is therefore switched off.\n\n${devices} If you want to keep using Premium, subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
   };
 }
 
@@ -602,8 +638,18 @@ export function storeSubscriptionRefundedMail(input: {
   name: string;
   locale: string;
   store: "apple" | "amazon";
+  /** Limit des kostenlosen Tarifs; ohne Angabe der Standardwert. */
+  deviceLimit?: number;
+  /** Geräte, die beim Ende abgemeldet wurden. */
+  devicesRevoked?: number;
 }): MailTemplate {
   const de = input.locale !== "en";
+  const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
+  const devices =
+    surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
+    (de
+      ? "Deine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert."
+      : "Your devices stay linked and your playlist stays stored.");
   const link = `${env.appUrl}/dashboard/subscription`;
   const store = de
     ? input.store === "apple"
@@ -615,8 +661,8 @@ export function storeSubscriptionRefundedMail(input: {
   return {
     subject: de ? "Dein Premium-Abo wurde erstattet" : "Your Premium subscription was refunded",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nder Kauf deines StreamingHub-Premium-Abos über ${store} wurde erstattet. Premium ist damit beendet.\n\nDeine Geräte bleiben gekoppelt und deine Playlist bleibt gespeichert. Wenn du Premium weiter nutzen willst, kannst du es erneut abschließen.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of the StreamingHub Premium subscription via ${store} was refunded. Premium is therefore switched off.\n\nYour devices stay linked and your playlist stays stored. If you want to keep using Premium, you can subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nder Kauf deines StreamingHub-Premium-Abos über ${store} wurde erstattet. Premium ist damit beendet.\n\n${devices} Wenn du Premium weiter nutzen willst, kannst du es erneut abschließen.\n\nStatus und Abrechnungszeitraum siehst du hier:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour purchase of the StreamingHub Premium subscription via ${store} was refunded. Premium is therefore switched off.\n\n${devices} If you want to keep using Premium, you can subscribe again.\n\nYou can see the status and billing period here:\n${link}${signature(false)}`,
   };
 }
 

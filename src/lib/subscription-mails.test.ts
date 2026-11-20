@@ -227,6 +227,10 @@ test("the trial-start mail names the device limits from the settings", async () 
   const en = trialStartedMail({ name: "Max", locale: "en", trialEndsAt: "2026-12-03T22:00:00.000Z", priceEur: 3.49 });
   assert.match(en.text, /link up to 7 devices/);
   assert.match(en.text, /free plan with 3 devices/);
+
+  // Zurück auf die Standardwerte, damit spätere Tests dieselben Limits sehen.
+  setLimit("free_device_limit", "2");
+  setLimit("premium_device_limit", "5");
 });
 
 test("the cancellation confirmation greets by name when the account has one", async () => {
@@ -244,4 +248,93 @@ test("the cancellation confirmation greets by name when the account has one", as
   assert.match(cancellationMail({ ...base, name: "Max" }).text, /^Hallo Max,/);
   assert.match(cancellationMail({ ...base, name: "" }).text, /^Hallo,/);
   assert.match(cancellationMail({ ...base, name: "Max", locale: "en" }).text, /^Hello Max,/);
+});
+
+function seedDevice(userId: string, id: string, lastSeenAt: string) {
+  run(
+    `INSERT INTO devices (id, user_id, name, platform, status, activated_at, last_seen_at, created_at)
+     VALUES (?, ?, ?, 'web', 'active', ?, ?, ?)`,
+    id,
+    userId,
+    `Gerät ${id}`,
+    lastSeenAt,
+    lastSeenAt,
+    lastSeenAt,
+  );
+}
+
+function activeDeviceIds(userId: string) {
+  return all<{ id: string }>(
+    `SELECT id FROM devices WHERE user_id = ? AND status = 'active' ORDER BY id`,
+    userId,
+  ).map((row) => row.id);
+}
+
+function lastMailText() {
+  return all<{ body_text: string }>(
+    `SELECT body_text FROM outbox_emails ORDER BY created_at DESC LIMIT 1`,
+  )[0].body_text;
+}
+
+test("an ended web subscription unlinks devices over the free limit", async () => {
+  seedUser("devices-web", "cus_devices_web");
+  // Vier Geräte, das erste zuletzt genutzt: es muss bleiben.
+  for (let i = 0; i < 4; i += 1) {
+    seedDevice("devices-web", `web-${i}`, new Date(now - i * 1_000).toISOString());
+  }
+
+  await stripeEvent("evt_devices_unpaid", "customer.subscription.updated", {
+    id: "sub_devices_web",
+    customer: "cus_devices_web",
+    status: "unpaid",
+    current_period_end: Math.floor((now - DAY) / 1000),
+  });
+
+  assert.deepEqual(activeDeviceIds("devices-web"), ["web-0", "web-1"]);
+  assert.match(lastMailText(), /2 weitere Geräte wurden deshalb abgemeldet/);
+  assert.doesNotMatch(lastMailText(), /Deine Geräte bleiben gekoppelt/);
+
+  // Zweite Meldung für denselben Zeitraum: keine weitere Mail, keine weitere Abmeldung.
+  const mailed = mailCount();
+  await stripeEvent("evt_devices_unpaid_again", "customer.subscription.updated", {
+    id: "sub_devices_web",
+    customer: "cus_devices_web",
+    status: "unpaid",
+    current_period_end: Math.floor((now - DAY) / 1000),
+  });
+  assert.equal(mailCount(), mailed);
+  assert.deepEqual(activeDeviceIds("devices-web"), ["web-0", "web-1"]);
+});
+
+test("a subscription ending with enough devices leaves them linked", async () => {
+  seedUser("devices-few", "cus_devices_few");
+  seedDevice("devices-few", "few-0", new Date(now - 1_000).toISOString());
+
+  await stripeEvent("evt_devices_few_unpaid", "customer.subscription.updated", {
+    id: "sub_devices_few",
+    customer: "cus_devices_few",
+    status: "unpaid",
+    current_period_end: Math.floor((now - DAY) / 1000),
+  });
+
+  assert.deepEqual(activeDeviceIds("devices-few"), ["few-0"]);
+  assert.match(lastMailText(), /Deine Geräte bleiben gekoppelt/);
+  assert.doesNotMatch(lastMailText(), /abgemeldet/);
+});
+
+test("an ended store subscription unlinks devices over the free limit", async () => {
+  seedUser("devices-store");
+  for (let i = 0; i < 3; i += 1) {
+    seedDevice("devices-store", `store-${i}`, new Date(now - i * 1_000).toISOString());
+  }
+
+  const sent = await notifyStoreSubscriptionEnded({
+    userId: "devices-store",
+    store: "apple",
+    subscriptionKey: "apple:tx-devices",
+    periodEnd: new Date(now - DAY).toISOString(),
+  });
+  assert.equal(sent, true);
+  assert.deepEqual(activeDeviceIds("devices-store"), ["store-0", "store-1"]);
+  assert.match(lastMailText(), /ein weiteres Gerät wurde deshalb abgemeldet/);
 });
