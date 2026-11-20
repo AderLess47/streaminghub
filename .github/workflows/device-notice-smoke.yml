@@ -1,4 +1,4 @@
-name: Device notice smoke
+name: Geräte-Vorwarnung im Konto
 
 # Prüft nach jedem erfolgreichen Deploy – Staging und Produktion – dass die
 # Geräte-Vorwarnung im Konto wirklich rendert: Titel, Markierungen und die
@@ -11,7 +11,7 @@ name: Device notice smoke
 
 on:
   workflow_run:
-    workflows: ["Deploy staging", "Deploy"]
+    workflows: ["Staging-Deploy", "Produktions-Deploy"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -38,7 +38,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.target != 'production') ||
       (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.name == 'Deploy staging')
+      github.event.workflow_run.name == 'Staging-Deploy')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: staging
@@ -88,7 +88,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.target != 'staging') ||
       (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.name == 'Deploy')
+      github.event.workflow_run.name == 'Produktions-Deploy')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

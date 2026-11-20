@@ -1,4 +1,4 @@
-name: BFSG review
+name: BFSG-Prüfung
 
 # Jährliche Erinnerung: Die Einordnung als Kleinstunternehmen nach § 2 Nr. 17
 # BFSG hängt an Beschäftigtenzahl und Umsatz. Beides ändert sich, die Ausnahme
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   review:
-    name: Check the BFSG classification
+    name: BFSG-Einordnung prüfen
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

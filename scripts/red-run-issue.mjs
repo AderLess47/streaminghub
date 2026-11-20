@@ -4,7 +4,7 @@
  * sobald derselbe Workflow grün ist.
  *
  * Damit steht ein Fehlschlag nicht nur im Actions-Tab: `Deploy`,
- * `Deploy staging` und `Device notice smoke` bekommen je ein Issue
+ * `Staging-Deploy` und `Geräte-Vorwarnung im Konto` bekommen je ein Issue
  * „Roter Lauf: <Workflow>“. Ein zweiter roter Lauf für denselben Commit
  * kommentiert nicht doppelt, und der nächste grüne Lauf schließt das Issue.
  *

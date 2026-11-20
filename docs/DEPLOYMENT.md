@@ -530,18 +530,18 @@ Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,
 ### 12.3 Ausrollen
 
 Ein Merge auf `main` rollt sich selbst aus: Sobald der CI-Lauf für diesen
-Commit grün ist, startet der Workflow **Deploy** (`workflow_run` auf `CI`) und
+Commit grün ist, startet der Workflow **Produktions-Deploy** (`workflow_run` auf `CI`) und
 rollt **genau diesen Commit** nach `streaminghub-org`. Der Lauf endet erst
 erfolgreich, wenn `/status` denselben Commit meldet – ein stiller Leerlauf
 (zurückgerollte Ausrollung, hängender Builder) wird damit rot statt übersehen.
 
-Beobachten: *Actions → Deploy*. Ein fehlgeschlagener CI-Lauf deployt nichts,
+Beobachten: *Actions → Produktions-Deploy*. Ein fehlgeschlagener CI-Lauf deployt nichts,
 der vorherige Stand bleibt online.
 
 Manuell bleibt der Workflow für Rollbacks und ältere Commits:
 
 ```bash
-# Actions → Deploy → Run workflow, Feld `ref` = Tag, Branch oder Commit
+# Actions → Produktions-Deploy → Run workflow, Feld `ref` = Tag, Branch oder Commit
 git switch main && git pull
 fly deploy -a streaminghub-org --remote-only   # nur wenn Actions nicht verfügbar ist
 fly status -a streaminghub-org
@@ -560,7 +560,7 @@ Der Reihe nach, jede Zeile mit Befehl oder Blick:
 - [ ] **Neue Rechtsseiten:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/widerruf https://streaminghub.org/kuendigung` → zweimal `200` (vor dem Release: `404`)
 - [ ] **Admin-Route vorhanden:** `curl -s -o /dev/null -w '%{http_code}\n' https://streaminghub.org/admin/contracts` → `307` (Weiterleitung zum Login), nicht `404`
 - [ ] **Release-Konsistenz:** `npm run smoke:deploy -- --base https://streaminghub.org` → „serves one consistent release“
-- [ ] **Geräte-Vorwarnung:** *Actions → Deploy* ist grün und der daran hängende Lauf *Device notice smoke* (Job **Produktion**) ebenfalls – er prüft die gerenderte Karte mit einem Wegwerf-Konto und räumt es wieder ab (siehe `docs/STAGING.md`)
+- [ ] **Geräte-Vorwarnung:** *Actions → Produktions-Deploy* ist grün und der daran hängende Lauf *Geräte-Vorwarnung im Konto* (Job **Geräte-Vorwarnung auf Produktion prüfen**) ebenfalls – er prüft die gerenderte Karte mit einem Wegwerf-Konto und räumt es wieder ab (siehe `docs/STAGING.md`)
 - [ ] **Anmeldung:** Admin-Login mit MFA; `/admin` zeigt die Zeile „Offene Erklärungen“, `/admin/contracts` listet die Vorgänge
 - [ ] **Widerruf von Ende zu Ende:** `/widerruf` mit einer Testadresse abschicken → Bestätigungsseite, Eintrag erscheint in `/admin/contracts`, bei konfiguriertem Versand eine Mail in **Admin → E-Mail-Ausgang**
 - [ ] **Zahlung:** `/status` meldet den Zahlungsanbieter als verbunden; mit Testkarte `4242 4242 4242 4242` eine Testbuchung (nur mit gesetzten Stripe-Schlüsseln)
@@ -614,7 +614,7 @@ gibt es ein eigenes Prüf-Konto und zwei Wege:
 
 **Prüfen**
 
-- In GitHub unter *Actions → Admin smoke → Run workflow*. Das Protokoll zeigt
+- In GitHub unter *Actions → Admin-Prüfung → Run workflow*. Das Protokoll zeigt
   jede Prüfung einzeln: Anmeldung mit Zwei-Faktor, `/admin`, Zähler „Offene
   Erklärungen“, `/admin/contracts` mit Überschrift und Liste,
   `/admin/audit`. Ergebnis ist grün, wenn alle Punkte bestehen.

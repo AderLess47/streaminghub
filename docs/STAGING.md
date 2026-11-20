@@ -70,14 +70,14 @@ GitHub environment `staging` needs:
 
 ## 4. Deploy
 
-Staging deploys itself: once CI on `main` is green, the **Deploy staging**
+Staging deploys itself: once CI on `main` is green, the **Staging-Deploy**
 workflow starts through `workflow_run` and deploys exactly the commit that
 passed, not the current default-branch head. A red, cancelled or
 pull-request run deploys nothing, so staging keeps its previous commit instead
 of moving to an untested state.
 
-Manual runs stay available for staging-only rollbacks: **Actions → Deploy
-staging → Run workflow** with a `ref`.
+Manual runs stay available for staging-only rollbacks: **Actions →
+Staging-Deploy → Run workflow** with a `ref`.
 
 The workflow:
 
@@ -107,11 +107,12 @@ receives production Stripe or email credentials.
 
 ### Geräte-Vorwarnung im Konto
 
-`Device notice smoke` prüft die Karte, die im Konto vor dem Ablauf warnt – die
-Seite selbst, nicht nur den Commit. Der Lauf startet nach jedem erfolgreichen
-`Deploy staging` (Job **Staging**) und nach jedem erfolgreichen `Deploy` in
-Produktion (Job **Produktion**), außerdem auf Zuruf (**Actions → Device notice
-smoke → Run workflow** mit `target`).
+`Geräte-Vorwarnung im Konto` prüft die Karte, die im Konto vor dem Ablauf warnt –
+die Seite selbst, nicht nur den Commit. Der Lauf startet nach jedem erfolgreichen
+`Staging-Deploy` (Job **Geräte-Vorwarnung auf Staging prüfen**) und nach jedem
+erfolgreichen `Produktions-Deploy` in Produktion (Job **Geräte-Vorwarnung auf
+Produktion prüfen**), außerdem auf Zuruf (**Actions → Geräte-Vorwarnung im Konto
+→ Run workflow** mit `target`).
 
 Der Test läuft in der jeweiligen Maschine (`flyctl ssh console`) und braucht
 keine Zugangsdaten: Er legt dort ein Wegwerf-Konto
@@ -142,8 +143,9 @@ erscheinen. Schlägt der Lauf fehl, weicht die gerenderte Seite von den Texten i
 
 ### Rote Deploy- und Smoke-Läufe
 
-`Red run issue` öffnet bei einem fehlgeschlagenen (`failure` oder `timed_out`)
-Lauf von `Deploy`, `Deploy staging` oder `Device notice smoke` das Issue
+`Rote Läufe melden` öffnet bei einem fehlgeschlagenen (`failure` oder
+`timed_out`) Lauf von `Produktions-Deploy`, `Staging-Deploy` oder
+`Geräte-Vorwarnung im Konto` das Issue
 „Roter Lauf: <Workflow>“ mit Lauf-Link, Commit, Branch, Auslöser und den
 fehlgeschlagenen Jobs. Ein weiterer roter Lauf für denselben Commit kommentiert
 nicht doppelt; der nächste grüne Lauf desselben Workflows kommentiert und
@@ -256,8 +258,8 @@ FLY_API_TOKEN=... \
 npm run staging:canary
 ```
 
-Or use **Actions → Staging billing canary → Run workflow**. The workflow also
-runs automatically after any successful **Deploy staging** run, including custom
+Or use **Actions → Staging-Billing-Canary → Run workflow**. The workflow also
+runs automatically after any successful **Staging-Deploy** run, including custom
 `ref` values and non-`main` deploys. The deploy checks out the requested ref,
 records the resolved `git rev-parse HEAD` in a `deployed-commit` artifact, and
 builds with that exact SHA. The automatic canary downloads the artifact, checks
@@ -298,7 +300,7 @@ signal that still reaches someone when a whole day of slots is dropped.
 | Trigger | When it runs | What it produces on failure |
 | --- | --- | --- |
 | Schedule (`47 5`, `47 9`, `47 13`, `47 17`, `47 21` UTC, gated by `guard`) | at most one unattended run per day, plus a retry in each remaining slot while a drift issue is open | issue `Staging-Canary fehlgeschlagen`, commented again every day so a persistent failure keeps its heartbeat |
-| Successful **Deploy staging** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
+| Successful **Staging-Deploy** (`workflow_run`) | after every green staging deploy | the same issue, without a second comment for a commit that is already reported |
 | Manual (`workflow_dispatch`) | on demand | `::error::` annotation and a step summary only; it never touches the issue |
 | Deploy drift (any unattended trigger) | when staging serves a commit other than the one being verified | its own issue `Staging-Deploy-Abweichung` with the expected and served commit; never `Staging-Canary fehlgeschlagen` |
 | External fallback (Cloudflare Worker, hourly) | when no canary ran for 22 hours | starts the canary as an unattended run, so the alarms above apply to it |
@@ -343,7 +345,7 @@ the drift issue of an earlier failure.
 
 A failed run opens (or updates) the issue `Staging-Canary fehlgeschlagen` with
 the run link and commit. Both unattended paths do this: the daily scheduled run
-and the automatic run after a successful **Deploy staging**. A failed manual run
+and the automatic run after a successful **Staging-Deploy**. A failed manual run
 (`workflow_dispatch`) instead annotates its own run and writes a step summary,
 because whoever started it is already watching it; it never opens, comments on
 or closes the issue. A deploy failure that repeats the commit already reported on

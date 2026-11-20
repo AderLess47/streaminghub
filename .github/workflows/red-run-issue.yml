@@ -1,4 +1,4 @@
-name: Red run issue
+name: Rote Läufe melden
 
 # Meldet fehlgeschlagene Deploy- und Smoke-Läufe als Issue, damit ein rotes
 # Ergebnis nicht nur im Actions-Tab steht. Ein grüner Lauf desselben Workflows
@@ -10,7 +10,7 @@ name: Red run issue
 
 on:
   workflow_run:
-    workflows: ["Deploy", "Deploy staging", "Device notice smoke"]
+    workflows: ["Produktions-Deploy", "Staging-Deploy", "Geräte-Vorwarnung im Konto"]
     types: [completed]
 
 permissions:
