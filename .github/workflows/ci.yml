@@ -20,19 +20,19 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install dependencies
+      - name: Abhängigkeiten installieren
         run: npm ci
 
-      - name: App version alignment
+      - name: App-Versionen abgleichen
         run: npm run check:app-versions
 
       - name: Typecheck
@@ -40,140 +40,140 @@ jobs:
 
       # Die Vega-App ist ein eigenes Paket mit eigenen Abhaengigkeiten; die
       # Website-Pruefung blendet sie aus, damit beide Staende getrennt geprueft werden.
-      - name: Typecheck Vega app
+      - name: Typecheck der Vega-App
         working-directory: vega
         run: npm ci && npx tsc --noEmit
 
       # Parser und HLS-Nahtstelle der Vega-App unter Node; ein Virtual Device
       # braucht es dafuer nicht.
-      - name: Vega logic tests
+      - name: Vega-Logik-Tests
         working-directory: vega
         run: npm run test:headless
 
       # Fortschritt und Fortsetzen: App-Regeln gegen die Serverregeln aus
       # src/lib/watch-progress.ts.
-      - name: Vega resume rules
+      - name: Vega-Resume-Regeln
         working-directory: vega
         run: npm run test:resume
 
-      - name: Download page test
+      - name: Test der Download-Seite
         run: npm run test:download-page
 
-      - name: Database migration test
+      - name: Test der Datenbankmigration
         run: npm run test:db-migration
 
-      - name: Amazon IAP receipt tests
+      - name: Amazon-IAP-Belegtests
         run: npm run test:amazon-iap
 
-      - name: Apple IAP receipt tests
+      - name: Apple-IAP-Belegtests
         run: npm run test:apple-iap
 
       # Auslaufen, Wiederkauf und Dedupe der Abschlussmails.
-      - name: Subscription mail tests
+      - name: Tests der Abo-Mails
         run: npm run test:subscription-mails
 
-      - name: Device cleanup tests
+      - name: Tests der Gerätebereinigung
         run: npm run test:device-cleanup
 
-      - name: Test cross-device resume rules
+      - name: Tests der geräteübergreifenden Resume-Regeln
         run: npm run test:progress
 
       # App-API: Fortschritt, Geräte-Aktivierung, Playlist-Abruf.
-      - name: API route tests
+      - name: Tests der API-Routen
         run: npm run test:api
 
       # Store-Refresh-Routen mit Auslaufmail, Wiederkauf und Dedupe.
-      - name: Store refresh route tests
+      - name: Tests der Store-Refresh-Route
         run: npm run test:store-api
 
       # Stripe-Webhook: Signatur, Mailzyklus und Dedupe.
-      - name: Stripe webhook route tests
+      - name: Tests der Stripe-Webhook-Route
         run: npm run test:stripe-webhook
 
       # Outbox: Zustellung, Wiederholversuche, Fehler und Suppression.
-      - name: Mail outbox tests
+      - name: Tests der Mail-Outbox
         run: npm run test:mail-outbox
 
       # Resend-Webhook: Signatur, Zustellung und Sperrung von Adressen.
-      - name: Resend webhook tests
+      - name: Tests des Resend-Webhooks
         run: npm run test:resend-webhook
 
       # Admin: Aufheben einer E-Mail-Sperre inklusive Audit-Eintrag.
-      - name: Admin suppression tests
+      - name: Tests der Admin-Sperrliste
         run: npm run test:admin-suppression
 
       # Admin: erneuter Mailversand inklusive Audit-Metadaten.
-      - name: Admin retry tests
+      - name: Tests der Admin-Wiederholungen
         run: npm run test:admin-retry
 
       # Passwort-Reset: Anfrage, Token, neues Passwort, Login.
-      - name: Password reset flow tests
+      - name: Tests des Passwort-Zurücksetzens
         run: npm run test:password-reset
 
       # E-Mail-Verifizierung: Registrierung, Link, erneuter Versand, Login.
-      - name: Email verification flow tests
+      - name: Tests der E-Mail-Bestätigung
         run: npm run test:email-verification
 
       # MFA fuer Staff: zweiter Faktor, Recovery-Code, gesperrte Sitzung.
-      - name: MFA login flow tests
+      - name: Tests der MFA-Anmeldung
         run: npm run test:mfa-login
 
       # Logout und Sitzungsablauf inklusive Sperre abgelaufener Sitzungen.
-      - name: Session logout tests
+      - name: Tests der Sitzungsabmeldung
         run: npm run test:session-logout
 
       # Geraete-Kopplung vom Pairing-Code bis zum Geraete-Token.
-      - name: Pairing flow tests
+      - name: Tests des Pairings
         run: npm run test:pairing
 
       # Geraet entfernen/sperren und sofortige Token-Sperre.
-      - name: Device revoke tests
+      - name: Tests des Geräte-Abmeldens
         run: npm run test:device-revoke
 
       # Datenexport und Loeschungsanfrage inklusive Passwortpruefung.
-      - name: Data request tests
+      - name: Tests der Datenauskunft
         run: npm run test:data-requests
 
       # Passwort aendern inklusive Abmeldung anderer Sitzungen.
-      - name: Change password tests
+      - name: Tests des Passwortwechsels
         run: npm run test:change-password
 
       # Support-Ticket vom Kunden bis zur Admin-Antwort.
-      - name: Support ticket tests
+      - name: Tests der Support-Tickets
         run: npm run test:support-tickets
 
       # Widerruf und Kuendigung inklusive Bestaetigung und Admin-Vermerk.
-      - name: Withdrawal and cancellation tests
+      - name: Tests für Widerruf und Kündigung
         run: npm run test:withdrawal-cancellation
 
       # Kontaktformular: Spamschutz, Mail und Audit.
-      - name: Contact form tests
+      - name: Tests des Kontaktformulars
         run: npm run test:contact-form
 
       # Admin-Posteingang fuer Kontaktanfragen.
-      - name: Admin contact inbox tests
+      - name: Tests des Admin-Kontaktpostfachs
         run: npm run test:admin-contacts
 
       # Aufbewahrung des Sicherheitsprotokolls (90 Tage).
-      - name: Audit log retention tests
+      - name: Tests der Aufbewahrung des Audit-Logs
         run: npm run test:audit-retention
 
       # Staging canary: DB-/Outbox-Auswertung und Cleanup-Schutz.
-      - name: Staging canary assert tests
+      - name: Tests der Staging-Canary-Prüfungen
         run: npm run test:staging-canary
 
       # Meldung roter Deploy-/Smoke-Läufe: Titel, Text und Dedupe ohne GitHub.
-      - name: Red run issue tests
+      - name: Tests der Meldung roter Läufe
         run: npm run test:red-run-issue
 
       # Staging cache: only anonymous public HTML may be shared.
-      - name: Public HTML cache tests
+      - name: Tests des öffentlichen HTML-Caches
         run: npm run test:public-cache
 
-      - name: Staging process check syntax
+      - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
-      - name: Staging cache check syntax
+      - name: Syntaxprüfung des Staging-Cache-Checks
         run: node --check scripts/staging-cache-check.mjs
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
@@ -187,19 +187,19 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install dependencies
+      - name: Abhängigkeiten installieren
         run: npm ci
 
-      - name: Next.js build
+      - name: Next.js-Build
         run: npm run build
 
   # Builds the actual production image and starts the staging two-process
@@ -211,10 +211,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Build staging image
+      - name: Staging-Image bauen
         run: |
           set -euo pipefail
           docker build \
@@ -222,7 +222,7 @@ jobs:
             --tag streaminghub-staging-smoke \
             .
 
-      - name: Smoke-test two-process staging entrypoint
+      - name: Zweiprozess-Staging-Entrypoint im Smoke-Test prüfen
         run: bash scripts/docker-staging-smoke.sh streaminghub-staging-smoke
 
   android:
@@ -231,22 +231,22 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Java 17 einrichten
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
 
-      - name: Set up Gradle
+      - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.11.1"
 
-      - name: Install Android SDK packages
+      - name: Android-SDK-Pakete installieren
         run: |
           set -euo pipefail
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
@@ -271,7 +271,7 @@ jobs:
 
       # Compiles main code and runs JVM/Robolectric tests for every distribution
       # flavor. No emulator is needed; device and DRM checks stay manual.
-      - name: Run unit tests for all flavors
+      - name: Unit-Tests für alle Flavors ausführen
         working-directory: android
         run: ./gradlew --no-daemon testDirectDebugUnitTest testAmazonDebugUnitTest testPlayDebugUnitTest
 
@@ -283,10 +283,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Test StreamingHubCore
+      - name: StreamingHubCore testen
         run: |
           docker run --rm \
             -v "$PWD/apple":/src \

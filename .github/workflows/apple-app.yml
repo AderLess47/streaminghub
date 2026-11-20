@@ -31,16 +31,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install XcodeGen
+      - name: XcodeGen installieren
         run: brew install xcodegen
 
-      - name: Generate Xcode project
+      - name: Xcode-Projekt erzeugen
         working-directory: apple
         run: xcodegen generate
 
       # Der Simulator-Start dauert oft länger als der Build; er läuft deshalb
       # schon während des Builds im Hintergrund.
-      - name: Boot simulator in the background
+      - name: Simulator im Hintergrund starten
         run: |
           UDID=$(xcrun simctl list devices available --json | python3 -c '
           import json, sys
@@ -50,7 +50,7 @@ jobs:
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$UDID" || true
 
-      - name: Build app and tests
+      - name: App und Tests bauen
         working-directory: apple
         run: |
           set -o pipefail
@@ -62,7 +62,7 @@ jobs:
             ONLY_ACTIVE_ARCH=YES \
             -quiet build-for-testing
 
-      - name: Simulator smoke test
+      - name: Simulator-Smoke-Test
         working-directory: apple
         timeout-minutes: 8
         run: |
@@ -99,14 +99,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install XcodeGen
+      - name: XcodeGen installieren
         run: brew install xcodegen
 
-      - name: Generate Xcode project
+      - name: Xcode-Projekt erzeugen
         working-directory: apple
         run: xcodegen generate
 
-      - name: Build tvOS
+      - name: tvOS bauen
         working-directory: apple
         run: |
           set -o pipefail
@@ -126,14 +126,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install XcodeGen
+      - name: XcodeGen installieren
         run: brew install xcodegen
 
-      - name: Generate Xcode project
+      - name: Xcode-Projekt erzeugen
         working-directory: apple
         run: xcodegen generate
 
-      - name: Build macOS
+      - name: macOS bauen
         working-directory: apple
         run: |
           set -o pipefail
