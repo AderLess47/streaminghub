@@ -22,6 +22,23 @@ import {
 export const DEFAULT_FREE_DEVICE_LIMIT = 2;
 export const DEFAULT_PREMIUM_DEVICE_LIMIT = 5;
 
+/**
+ * Beide Geräte-Limits aus den Einstellungen, mit den Defaults als Rückfall.
+ * Eine Quelle für Rechte und Mails, damit ein geändertes Limit überall gilt.
+ */
+export function deviceLimits(): { free: number; premium: number } {
+  return {
+    free: deviceLimit(
+      Number(getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT))),
+      DEFAULT_FREE_DEVICE_LIMIT,
+    ),
+    premium: deviceLimit(
+      Number(getSetting("premium_device_limit", String(DEFAULT_PREMIUM_DEVICE_LIMIT))),
+      DEFAULT_PREMIUM_DEVICE_LIMIT,
+    ),
+  };
+}
+
 export type PlanSource = "none" | "trial" | "stripe" | "amazon" | "apple" | "manual";
 
 /** Die Felder des Abos, die für Rechte zählen – inklusive späterer Trial-Spalten. */
@@ -96,15 +113,12 @@ export function resolveEntitlements(input: EntitlementsInput): Entitlements {
 /** Liest Abo und Geräte-Limits und löst daraus die Rechte des Kontos auf. */
 export function getEntitlements(userId: string): Entitlements {
   const subscription = getSubscription(userId);
+  const limits = deviceLimits();
   return resolveEntitlements({
     status: effectiveStatus(subscription),
     subscription,
-    freeDeviceLimit: Number(
-      getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT)),
-    ),
-    premiumDeviceLimit: Number(
-      getSetting("premium_device_limit", String(DEFAULT_PREMIUM_DEVICE_LIMIT)),
-    ),
+    freeDeviceLimit: limits.free,
+    premiumDeviceLimit: limits.premium,
   });
 }
 

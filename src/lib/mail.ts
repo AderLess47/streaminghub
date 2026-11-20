@@ -1,6 +1,6 @@
 import { randomToken } from "./auth";
 import { get, nowIso, run } from "./db";
-import { DEFAULT_FREE_DEVICE_LIMIT } from "./entitlements";
+import { DEFAULT_FREE_DEVICE_LIMIT, deviceLimits } from "./entitlements";
 import { env, isEmailConfigured } from "./env";
 
 export type MailKind =
@@ -457,14 +457,16 @@ export function trialStartedMail(input: {
     style: "currency",
     currency: "EUR",
   }).format(input.priceEur);
+  // Limits aus den Einstellungen: die Mail nennt, was der Tarif wirklich erlaubt.
+  const limits = deviceLimits();
 
   return {
     subject: de
       ? "Dein kostenloser Testzeitraum beginnt – StreamingHub"
       : "Your free trial has started – StreamingHub",
     text: de
-      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium hat begonnen.${endDate ? `\n\nTestzeitraum bis: ${endDate}` : ""}\n\nIn dieser Zeit hast du bis zu 5 gekoppelte Geräte und kannst auf allen Geräten weiterschauen. Danach gilt wieder der kostenlose Tarif mit 2 Geräten.\n\nEs wird nichts abgebucht: Ohne Abschluss eines Abos endet der Testzeitraum automatisch. Wenn du Premium behalten willst, kostet es danach ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
-      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has started.${endDate ? `\n\nTrial ends: ${endDate}` : ""}\n\nDuring the trial you can link up to 5 devices and continue watching on all of them. Afterwards the free plan with 2 devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. If you want to keep Premium, it costs ${price} per month afterwards and can be cancelled monthly:\n${link}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\ndein kostenloser Testzeitraum für StreamingHub Premium hat begonnen.${endDate ? `\n\nTestzeitraum bis: ${endDate}` : ""}\n\nIn dieser Zeit hast du bis zu ${limits.premium} gekoppelte Geräte und kannst auf allen Geräten weiterschauen. Danach gilt wieder der kostenlose Tarif mit ${limits.free} Geräten.\n\nEs wird nichts abgebucht: Ohne Abschluss eines Abos endet der Testzeitraum automatisch. Wenn du Premium behalten willst, kostet es danach ${price} pro Monat und ist monatlich kündbar:\n${link}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nyour free trial of StreamingHub Premium has started.${endDate ? `\n\nTrial ends: ${endDate}` : ""}\n\nDuring the trial you can link up to ${limits.premium} devices and continue watching on all of them. Afterwards the free plan with ${limits.free} devices applies again.\n\nNothing is charged: without a subscription the trial simply ends. If you want to keep Premium, it costs ${price} per month afterwards and can be cancelled monthly:\n${link}${signature(false)}`,
   };
 }
 
