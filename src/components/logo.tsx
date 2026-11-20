@@ -5,6 +5,8 @@ type LogoProps = {
   withWordmark?: boolean;
   className?: string;
   href?: string | null;
+  /** Höhe des Link-Kastens; die Logogröße bleibt davon unberührt. */
+  linkClassName?: string;
 };
 
 /**
@@ -60,7 +62,13 @@ export function LogoMark({ size = 36 }: { size?: number }) {
   );
 }
 
-export function Logo({ size = 36, withWordmark = true, className = "", href = "/" }: LogoProps) {
+export function Logo({
+  size = 36,
+  withWordmark = true,
+  className = "",
+  href = "/",
+  linkClassName = "min-h-6",
+}: LogoProps) {
   const content = (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <LogoMark size={size} />
@@ -74,7 +82,7 @@ export function Logo({ size = 36, withWordmark = true, className = "", href = "/
 
   if (!href) return content;
   return (
-    <Link href={href} aria-label="StreamingHub Startseite" className="inline-flex min-h-6 items-center rounded-lg">
+    <Link href={href} aria-label="StreamingHub Startseite" className={`inline-flex ${linkClassName} items-center rounded-lg`}>
       {content}
     </Link>
   );
