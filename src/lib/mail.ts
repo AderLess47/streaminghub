@@ -302,6 +302,8 @@ export function cancellationMail(input: {
   reference: string;
   contract: string;
   receivedAt: string;
+  /** Name aus dem Konto; ohne Angabe bleibt die Anrede neutral. */
+  name?: string;
   effectiveAt: string | null;
   status: string;
   channel: string | null;
@@ -327,8 +329,8 @@ export function cancellationMail(input: {
       ? `Bestätigung deiner Kündigung – ${input.reference}`
       : `Confirmation of your cancellation – ${input.reference}`,
     text: de
-      ? `Hallo,\n\nwir bestätigen den Eingang deiner Kündigung.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(true)}`
-      : `Hello,\n\nwe confirm that your cancellation has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(false)}`,
+      ? `Hallo${input.name ? ` ${input.name}` : ""},\n\nwir bestätigen den Eingang deiner Kündigung.\n\nReferenz: ${input.reference}\nVertrag: ${input.contract}\nEingang: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(true)}`
+      : `Hello${input.name ? ` ${input.name}` : ""},\n\nwe confirm that your cancellation has reached us.\n\nReference: ${input.reference}\nContract: ${input.contract}\nReceived: ${input.receivedAt}\n\n${ends}${store ? `\n\n${store}` : ""}${signature(false)}`,
   };
 }
 

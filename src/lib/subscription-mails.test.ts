@@ -228,3 +228,20 @@ test("the trial-start mail names the device limits from the settings", async () 
   assert.match(en.text, /link up to 7 devices/);
   assert.match(en.text, /free plan with 3 devices/);
 });
+
+test("the cancellation confirmation greets by name when the account has one", async () => {
+  const { cancellationMail } = await import("./mail.ts");
+  const base = {
+    reference: "KND-1",
+    contract: "StreamingHub Premium, monatlich",
+    receivedAt: "20.11.2026, 21:20",
+    effectiveAt: "3. Dezember 2026",
+    status: "canceled_web",
+    channel: null,
+    locale: "de",
+  };
+
+  assert.match(cancellationMail({ ...base, name: "Max" }).text, /^Hallo Max,/);
+  assert.match(cancellationMail({ ...base, name: "" }).text, /^Hallo,/);
+  assert.match(cancellationMail({ ...base, name: "Max", locale: "en" }).text, /^Hello Max,/);
+});
