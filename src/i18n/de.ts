@@ -518,6 +518,10 @@ export const de = {
       preNoticeTitle: "Beim Ablauf bleiben {limit} Geräte aktiv",
       preNoticeBody:
         "Du hast {count} aktive Geräte. Endet dein Testzeitraum oder dein Abo, bleiben die zuletzt genutzten {limit} aktiv – die übrigen werden abgemeldet, genau wie es in der Abschlussmail steht. Die Markierung unten zeigt, welche das betrifft. Willst du alle behalten, entferne eines der Geräte oder verlängere Premium.",
+      preNoticeEndsAt: "Dein Testzeitraum endet am {date}.",
+      preNoticeSubscriptionEndsAt: "Dein Abo endet am {date}.",
+      preNoticeSubscriptionRenewsAt:
+        "Dein Abo verlängert sich am {date} automatisch – ohne Kündigung bleibt Premium bestehen.",
       keepsBadge: "bleibt",
       willUnlinkBadge: "wird abgemeldet",
       title: "Geräte",

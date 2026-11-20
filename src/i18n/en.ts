@@ -515,6 +515,10 @@ export const en: Dictionary = {
       preNoticeTitle: "{limit} devices stay active when it ends",
       preNoticeBody:
         "You have {count} active devices. When your trial or subscription ends, the {limit} most recently used ones stay active – the rest are unlinked, exactly as the closing email says. The badges below show which is which. To keep them all, remove one of the devices or extend Premium.",
+      preNoticeEndsAt: "Your trial ends on {date}.",
+      preNoticeSubscriptionEndsAt: "Your subscription ends on {date}.",
+      preNoticeSubscriptionRenewsAt:
+        "Your subscription renews automatically on {date}; Premium continues unless you cancel.",
       keepsBadge: "stays",
       willUnlinkBadge: "will be unlinked",
       title: "Devices",
