@@ -1,4 +1,4 @@
-name: Android release
+name: Android-Release
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build, upload and publish
+    name: Bauen, hochladen und veröffentlichen
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production

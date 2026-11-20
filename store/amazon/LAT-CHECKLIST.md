@@ -14,7 +14,7 @@ receipts.
       is submitted with the app.
 - [ ] `AMAZON_RVS_SHARED_SECRET` is set on the Fly app; `GET /api/v1/amazon/refresh`
       without a token answers `401` (not `503 not_configured`).
-- [ ] `AMAZON_RTN_TOPIC_ARN` is set and the *Configure Amazon secrets* workflow ran,
+- [ ] `AMAZON_RTN_TOPIC_ARN` is set and the *Amazon-Secrets einrichten* workflow ran,
       so renewals and cancellations arrive without polling.
 - [ ] `AMAZON_RVS_SANDBOX=1` is set on the Fly app for the duration of the round.
 - [ ] Two test accounts exist in App Tester (one for premium, one to prove that a

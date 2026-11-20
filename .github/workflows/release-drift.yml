@@ -7,7 +7,7 @@ on:
   # Runs right after every Android release, so a fallback that a release left
   # behind is visible the same day instead of at the next scheduled check.
   workflow_run:
-    workflows: ["Android release"]
+    workflows: ["Android-Release"]
     types: [completed]
   workflow_dispatch:
 

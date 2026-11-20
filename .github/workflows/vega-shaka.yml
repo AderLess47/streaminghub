@@ -1,4 +1,4 @@
-name: Vega Shaka smoke test
+name: Vega-Shaka-Smoke-Test
 
 # Läuft nur auf einem selbst gehosteten Runner mit Vega SDK, weil der Build
 # zwingend die Vega-CLI, JDK 21 und eine Amazon-Anmeldung braucht. Bewusst nur
@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Shaka setup, build and HLS playback
+    name: Shaka-Setup, Build und HLS-Wiedergabe
     runs-on: [self-hosted, vega]
     timeout-minutes: 90
     steps:
