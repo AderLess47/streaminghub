@@ -529,9 +529,21 @@ Bereits in `fly.toml` unter `[env]` und daher **keine** Secrets: `APP_URL`,
 
 ### 12.3 Ausrollen
 
+Ein Merge auf `main` rollt sich selbst aus: Sobald der CI-Lauf für diesen
+Commit grün ist, startet der Workflow **Deploy** (`workflow_run` auf `CI`) und
+rollt **genau diesen Commit** nach `streaminghub-org`. Der Lauf endet erst
+erfolgreich, wenn `/status` denselben Commit meldet – ein stiller Leerlauf
+(zurückgerollte Ausrollung, hängender Builder) wird damit rot statt übersehen.
+
+Beobachten: *Actions → Deploy*. Ein fehlgeschlagener CI-Lauf deployt nichts,
+der vorherige Stand bleibt online.
+
+Manuell bleibt der Workflow für Rollbacks und ältere Commits:
+
 ```bash
+# Actions → Deploy → Run workflow, Feld `ref` = Tag, Branch oder Commit
 git switch main && git pull
-fly deploy -a streaminghub-org --remote-only
+fly deploy -a streaminghub-org --remote-only   # nur wenn Actions nicht verfügbar ist
 fly status -a streaminghub-org
 fly logs -a streaminghub-org
 ```
