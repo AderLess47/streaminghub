@@ -154,6 +154,14 @@ abgelöster Lauf, kein Fehler. Die Meldung nutzt bewusst das Skript vom
 Default-Branch, nicht Code aus dem roten Lauf. Formatierung und Dedupe sind mit
 `npm run test:red-run-issue` abgedeckt.
 
+Ist das Repository-Secret `DISCORD_WEBHOOK_URL` gesetzt, geht bei einem roten
+Lauf zusätzlich eine Nachricht in den Channel – mit Workflow, Ergebnis, Commit,
+Lauf-Link und Issue-Link. Ohne Secret läuft der Job weiter und warnt nur; eine
+ungültige URL bricht mit einer klaren Meldung ab. Die URL selbst wird nie
+geloggt, und `allowed_mentions` ist leer, damit die Nachricht niemanden pings.
+Nur Fehlschläge melden sich; ein grüner Lauf schließt still das Issue – so wie
+beim Staging-Canary.
+
 ### Anonymous public HTML cache
 
 Staging can enable a small cache in front of the Next server with

@@ -13,10 +13,12 @@
  *   node scripts/red-run-issue.mjs --success
  *
  * Erwartete Umgebung: GH_TOKEN, GH_REPO, RUN_ID, WORKFLOW_NAME, COMMIT,
- * RUN_URL, BRANCH, EVENT, CONCLUSION.
+ * RUN_URL, BRANCH, EVENT, CONCLUSION. Optional DISCORD_WEBHOOK_URL: dann geht
+ * bei einem roten Lauf zusätzlich eine Discord-Nachricht raus (wie beim
+ * Staging-Canary). Fehlt das Secret, wird nur gewarnt.
  *
- * Die Formatierung ist bewusst eine reine Funktion, damit sie ohne GitHub
- * testbar bleibt (siehe scripts/red-run-issue.test.mjs).
+ * Formatierung und Discord-Payload sind bewusst reine Funktionen, damit sie
+ * ohne GitHub und ohne Netz testbar bleiben (siehe scripts/red-run-issue.test.mjs).
  */
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
@@ -67,6 +69,63 @@ export function failureBody({ workflowName, runUrl, commit, branch, event, concl
   );
 
   return lines.join("\n");
+}
+
+const DISCORD_WEBHOOK_PREFIXES = [
+  "https://discord.com/api/webhooks/",
+  "https://discordapp.com/api/webhooks/",
+];
+
+/** Inhalt der Discord-Nachricht für einen roten Lauf. */
+export function discordContent({ workflowName, conclusion, commit, runUrl, issueUrl }) {
+  const lines = [
+    `**:rotating_light: Roter Lauf: ${workflowName}**`,
+    "",
+    `Ergebnis: \`${conclusion}\``,
+    `Commit: \`${commit}\``,
+    `Lauf: ${runUrl}`,
+  ];
+  if (issueUrl) lines.push(`Issue: ${issueUrl}`);
+  return lines.join("\n");
+}
+
+/** Payload mit leerem `allowed_mentions`, damit niemand versehentlich gepingt wird. */
+export function discordPayload(fields) {
+  return { content: discordContent(fields), allowed_mentions: { parse: [] } };
+}
+
+export function isDiscordWebhook(url) {
+  return DISCORD_WEBHOOK_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
+/**
+ * Schickt den Payload an den Channel-Webhook. Die URL ist ein Bearer-Secret für
+ * genau einen Channel und wird nie ausgegeben. `fetchImpl` ist nur für Tests da.
+ */
+export async function postDiscord(payload, { webhookUrl, fetchImpl = fetch } = {}) {
+  const url = (webhookUrl ?? "").trim();
+  if (!url) {
+    emitWarning("DISCORD_WEBHOOK_URL ist nicht gesetzt; Discord-Benachrichtigung übersprungen.");
+    return { sent: false, reason: "unconfigured" };
+  }
+  if (!isDiscordWebhook(url)) {
+    throw new Error("DISCORD_WEBHOOK_URL muss eine Discord-Channel-Webhook-URL sein.");
+  }
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Discord antwortete HTTP ${response.status}.`);
+  }
+  console.log(`Discord benachrichtigt (HTTP ${response.status}).`);
+  return { sent: true, status: response.status };
+}
+
+function emitWarning(message) {
+  console.warn(`::warning::${message}`);
 }
 
 export function recoveryBody({ workflowName, runUrl, commit, event }) {
@@ -149,6 +208,7 @@ async function main() {
 
   const title = issueTitle(workflowName);
   const existing = findOpenIssue(title);
+  const issueUrlOf = (number) => `https://github.com/${repo}/issues/${number}`;
 
   if (mode === "success") {
     if (!existing) {
@@ -188,12 +248,24 @@ async function main() {
     gh(["issue", "comment", String(existing), "--body", "-"], body);
     console.log(`Issue #${existing} kommentiert (${workflowName}, ${shortSha(commit)}).`);
     summarize(`- Issue: #${existing} kommentiert`);
+    await notifyDiscord({ workflowName, conclusion: process.env.CONCLUSION ?? "failure", commit, runUrl, issueUrl: issueUrlOf(existing) });
     return;
   }
 
   const created = gh(["issue", "create", "--title", title, "--body", "-"], body).trim();
   console.log(`Issue geöffnet: ${created}`);
   summarize(`- Issue: ${created}`);
+  await notifyDiscord({
+    workflowName,
+    conclusion: process.env.CONCLUSION ?? "failure",
+    commit,
+    runUrl,
+    issueUrl: created || undefined,
+  });
+}
+
+async function notifyDiscord(fields) {
+  await postDiscord(discordPayload(fields), { webhookUrl: process.env.DISCORD_WEBHOOK_URL });
 }
 
 const invokedDirectly =
