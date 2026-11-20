@@ -1047,6 +1047,9 @@ export const en: Dictionary = {
       overLimitHint:
         "“Above free limit” counts expired trials with more active devices than allowed – for example because the trial ended before this rule or the limit was lowered. On expiry, surplus devices are unlinked automatically; the most recently used ones stay.",
       overLimitRow: "More active devices than the free plan allows",
+      subscriptionOverLimit: "Subscription ended, above limit",
+      subscriptionOverLimitHint:
+        "“Subscription ended, above limit” counts accounts without premium access – lapsed subscription, failed payment or never subscribed – that still have more active devices than the free plan allows. These accounts predate the automatic unlinking; they are not cleaned up retroactively, only when that subscription ends again.",
       flagOff: "The trial is switched off. Running trials still end on their stored date.",
     },
   },

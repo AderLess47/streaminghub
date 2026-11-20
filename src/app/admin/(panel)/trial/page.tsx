@@ -50,15 +50,38 @@ export default async function AdminTrialPage() {
   // Nach dem Trial gilt das Free-Limit. Die Geräte bleiben verknüpft (so steht
   // es in der Abschlussmail), also zeigt diese Zahl, wie viele Konten darüber
   // liegen – Grundlage für die Entscheidung, ob durchgegriffen werden soll.
-  const freeLimit = Number(
+  const configuredLimit = Number(
     getSetting("free_device_limit", String(DEFAULT_FREE_DEVICE_LIMIT)),
   );
+  const freeLimit =
+    Number.isFinite(configuredLimit) && configuredLimit >= 0
+      ? Math.floor(configuredLimit)
+      : DEFAULT_FREE_DEVICE_LIMIT;
   const overLimit =
     get<{ c: number }>(
       `SELECT COUNT(*) AS c FROM subscriptions s
        WHERE s.trial_ended_at IS NOT NULL AND s.trial_converted_at IS NULL
          AND (SELECT COUNT(*) FROM devices d WHERE d.user_id = s.user_id AND d.status = 'active') > ?`,
-      Number.isFinite(freeLimit) ? freeLimit : DEFAULT_FREE_DEVICE_LIMIT,
+      freeLimit,
+    )?.c ?? 0;
+
+  // Dieselbe Grenze gilt nach einem ausgelaufenen Abo – abgemeldet wird dort
+  // erst seit Kurzem. Diese Zahl zeigt den Altbestand, den kein Job rückwirkend
+  // bereinigt: Konten ohne Premium-Zugang mit mehr aktiven Geräten als erlaubt.
+  const subscriptionOverLimit =
+    get<{ c: number }>(
+      `SELECT COUNT(*) AS c FROM users u
+       LEFT JOIN subscriptions s ON s.user_id = u.id
+       WHERE u.disabled_at IS NULL
+         AND (SELECT COUNT(*) FROM devices d WHERE d.user_id = u.id AND d.status = 'active') > ?
+         AND NOT COALESCE(
+           (s.status = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > ?))
+           OR (s.trial_ends_at IS NOT NULL AND s.trial_ends_at > ?),
+           0
+         )`,
+      freeLimit,
+      now,
+      now,
     )?.c ?? 0;
 
   const rows = all<{
@@ -98,6 +121,11 @@ export default async function AdminTrialPage() {
     },
     { label: copy.expired, value: expired },
     { label: copy.overLimit, value: overLimit, hint: `${freeLimit}` },
+    {
+      label: copy.subscriptionOverLimit,
+      value: subscriptionOverLimit,
+      hint: `${freeLimit}`,
+    },
   ];
 
   return (
@@ -106,7 +134,7 @@ export default async function AdminTrialPage() {
 
       {!isFeatureEnabled("trial") ? <Alert tone="warning">{copy.flagOff}</Alert> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="card p-4">
             <div className="flex items-baseline justify-between gap-2">
@@ -122,6 +150,7 @@ export default async function AdminTrialPage() {
 
       <p className="text-xs leading-relaxed text-muted">{copy.hint}</p>
       <p className="text-xs leading-relaxed text-muted">{copy.overLimitHint}</p>
+      <p className="text-xs leading-relaxed text-muted">{copy.subscriptionOverLimitHint}</p>
 
       <section className="card overflow-x-auto">
         <table className="data-table">
