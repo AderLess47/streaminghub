@@ -15,7 +15,9 @@
  * Erwartete Umgebung: GH_TOKEN, GH_REPO, RUN_ID, WORKFLOW_NAME, COMMIT,
  * RUN_URL, BRANCH, EVENT, CONCLUSION. Optional DISCORD_WEBHOOK_URL: dann geht
  * bei einem roten Lauf zusätzlich eine Discord-Nachricht raus (wie beim
- * Staging-Canary). Fehlt das Secret, wird nur gewarnt.
+ * Staging-Canary). Fehlt das Secret, wird nur gewarnt. Ob eine Nachricht rausging
+ * oder das Secret fehlt, steht zusätzlich im Lauf-Summary (GITHUB_STEP_SUMMARY),
+ * damit man dafür nicht ins Job-Log muss.
  *
  * Formatierung und Discord-Payload sind bewusst reine Funktionen, damit sie
  * ohne GitHub und ohne Netz testbar bleiben (siehe scripts/red-run-issue.test.mjs).
@@ -128,6 +130,19 @@ function emitWarning(message) {
   console.warn(`::warning::${message}`);
 }
 
+/**
+ * Zeile für das Lauf-Summary. Der Discord-Teil ist optional, sein Zustand aber
+ * nicht: wer einen roten Lauf ansieht, soll dort erkennen, ob eine Nachricht
+ * rausging oder das Secret fehlt – ohne das Job-Log zu öffnen.
+ */
+export function discordSummary(result) {
+  if (result.sent) return `- Discord: Nachricht gesendet (HTTP ${result.status})`;
+  if (result.reason === "unconfigured") {
+    return "- Discord: nicht gesendet – Repository-Secret `DISCORD_WEBHOOK_URL` fehlt";
+  }
+  return `- Discord: nicht gesendet (${result.reason})`;
+}
+
 export function recoveryBody({ workflowName, runUrl, commit, event }) {
   return [
     `Der Workflow **${workflowName}** läuft wieder erfolgreich.`,
@@ -215,6 +230,7 @@ async function main() {
       console.log(`Kein offenes Issue „${title}“; nichts zu schließen.`);
       return;
     }
+    summarize(`### Grüner Lauf: ${workflowName}`);
     const body = recoveryBody({
       workflowName,
       runUrl,
@@ -239,10 +255,13 @@ async function main() {
     failedJobs,
   });
 
+  summarize(`### Roter Lauf: ${workflowName}`);
+
   if (existing) {
     if (alreadyReported(commentsOf(existing), commit)) {
       console.log(`Commit ${shortSha(commit)} ist auf Issue #${existing} bereits gemeldet; nichts zu tun.`);
       summarize(`- Issue: #${existing} bereits gemeldet`);
+      summarize("- Discord: nicht gesendet – dieser Commit ist bereits gemeldet");
       return;
     }
     gh(["issue", "comment", String(existing), "--body", "-"], body);
@@ -265,7 +284,14 @@ async function main() {
 }
 
 async function notifyDiscord(fields) {
-  await postDiscord(discordPayload(fields), { webhookUrl: process.env.DISCORD_WEBHOOK_URL });
+  try {
+    const result = await postDiscord(discordPayload(fields), { webhookUrl: process.env.DISCORD_WEBHOOK_URL });
+    summarize(discordSummary(result));
+    return result;
+  } catch (error) {
+    summarize(`- Discord: Senden fehlgeschlagen – ${error instanceof Error ? error.message : error}`);
+    throw error;
+  }
 }
 
 const invokedDirectly =

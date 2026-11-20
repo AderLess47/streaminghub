@@ -162,6 +162,14 @@ geloggt, und `allowed_mentions` ist leer, damit die Nachricht niemanden pings.
 Nur Fehlschläge melden sich; ein grüner Lauf schließt still das Issue – so wie
 beim Staging-Canary.
 
+Der Zustand des optionalen Teils steht im Lauf-Summary, nicht nur im Log: dort
+steht `Discord: Nachricht gesendet (HTTP 204)`, `Discord: nicht gesendet –
+Repository-Secret \`DISCORD_WEBHOOK_URL\` fehlt` oder – bei einer abgelehnten URL
+– `Discord: Senden fehlgeschlagen – …`. Wer einen roten Lauf im Actions-Tab
+öffnet, sieht damit sofort, ob der Issue-Weg der einzige Alarm war. Ein grüner
+Lauf schreibt nur `Issue #… geschlossen`; ohne offenes Issue bleibt das Summary
+leer.
+
 ### Anonymous public HTML cache
 
 Staging can enable a small cache in front of the Next server with
