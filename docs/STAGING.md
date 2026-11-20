@@ -140,6 +140,20 @@ Gerätezahl und die Markierung „wird abgemeldet“ je überzähligem Gerät
 erscheinen. Schlägt der Lauf fehl, weicht die gerenderte Seite von den Texten in
 `dashboard.devices.preNotice*` bzw. vom Gratis-Limit aus den Einstellungen ab.
 
+### Rote Deploy- und Smoke-Läufe
+
+`Red run issue` öffnet bei einem fehlgeschlagenen (`failure` oder `timed_out`)
+Lauf von `Deploy`, `Deploy staging` oder `Device notice smoke` das Issue
+„Roter Lauf: <Workflow>“ mit Lauf-Link, Commit, Branch, Auslöser und den
+fehlgeschlagenen Jobs. Ein weiterer roter Lauf für denselben Commit kommentiert
+nicht doppelt; der nächste grüne Lauf desselben Workflows kommentiert und
+schließt das Issue.
+
+Abgebrochene Läufe (`cancelled`) erzeugen kein Issue – das ist meist ein
+abgelöster Lauf, kein Fehler. Die Meldung nutzt bewusst das Skript vom
+Default-Branch, nicht Code aus dem roten Lauf. Formatierung und Dedupe sind mit
+`npm run test:red-run-issue` abgedeckt.
+
 ### Anonymous public HTML cache
 
 Staging can enable a small cache in front of the Next server with

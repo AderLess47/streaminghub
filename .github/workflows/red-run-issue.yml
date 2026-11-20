@@ -1,0 +1,73 @@
+name: Red run issue
+
+# Meldet fehlgeschlagene Deploy- und Smoke-Läufe als Issue, damit ein rotes
+# Ergebnis nicht nur im Actions-Tab steht. Ein grüner Lauf desselben Workflows
+# schließt das Issue wieder; ein weiterer roter Lauf für denselben Commit
+# kommentiert nicht doppelt.
+#
+# Abgebrochene Läufe (`cancelled`) erzeugen bewusst kein Issue: das ist meist
+# ein abgelöster Lauf, kein Fehler.
+
+on:
+  workflow_run:
+    workflows: ["Deploy", "Deploy staging", "Device notice smoke"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: red-run-issue
+  cancel-in-progress: false
+
+jobs:
+  failure:
+    name: Issue für roten Lauf öffnen
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' ||
+      github.event.workflow_run.conclusion == 'timed_out'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Bewusst der Default-Branch: gemeldet wird mit dem geprüften Skript,
+      # nicht mit Code aus dem roten Lauf.
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Issue öffnen oder kommentieren
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: node scripts/red-run-issue.mjs --failure
+
+  recovery:
+    name: Issue nach grünem Lauf schließen
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Issue kommentieren und schließen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT: ${{ github.event.workflow_run.event }}
+        run: node scripts/red-run-issue.mjs --success
