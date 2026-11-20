@@ -512,6 +512,11 @@ export const en: Dictionary = {
       revokedNoticeBodyMany:
         "Because your premium access ended, {n} devices above the free limit were unlinked. The most recently used ones stay active; the free plan allows {limit} devices. You can pair an unlinked device again once you remove another one above.",
       revokedNoticeLink: "Activate Premium again",
+      preNoticeTitle: "{limit} devices stay active when it ends",
+      preNoticeBody:
+        "You have {count} active devices. When your trial or subscription ends, the {limit} most recently used ones stay active – the rest are unlinked, exactly as the closing email says. The badges below show which is which. To keep them all, remove one of the devices or extend Premium.",
+      keepsBadge: "stays",
+      willUnlinkBadge: "will be unlinked",
       title: "Devices",
       subtitle: "Linked devices and activation status.",
       empty: "No devices linked yet.",

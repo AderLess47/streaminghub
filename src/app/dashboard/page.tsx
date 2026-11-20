@@ -6,7 +6,7 @@ import { ResendVerification } from "@/components/resend-verification";
 import { Alert, Badge, EmptyState, InfoRow } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { removeDeviceAction } from "@/lib/actions/dashboard";
-import { devicesRevokedByEnding } from "@/lib/device-access";
+import { devicesOverLimit, devicesRevokedByEnding, freeDeviceLimit } from "@/lib/device-access";
 import { getEntitlements } from "@/lib/entitlements";
 import { all, get } from "@/lib/db";
 import { effectiveStatus, ensureSubscription } from "@/lib/payments";
@@ -35,6 +35,15 @@ export default async function DashboardPage() {
   // Ein abgemeldetes Gerät soll im Konto erklärt werden, nicht nur in der Mail.
   const entitlements = getEntitlements(user.id);
   const revokedByEnding = entitlements.premium ? [] : devicesRevokedByEnding(user.id);
+
+  // Was beim Ende des Zugangs passieren würde – mit derselben Funktion, die
+  // später tatsächlich abmeldet, damit die Vorschau nicht abweicht.
+  const freeLimit = freeDeviceLimit();
+  const activeDevices = devices.filter((device) => device.status === "active");
+  const willUnlink =
+    entitlements.premium && activeDevices.length > freeLimit
+      ? new Set(devicesOverLimit(user.id, freeLimit).map((device) => device.id))
+      : null;
 
   const openTickets =
     get<{ c: number }>(
@@ -118,6 +127,19 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {willUnlink ? (
+        <section className="card grid gap-2 p-4">
+          <h2 className="text-sm font-semibold">
+            {t.dashboard.devices.preNoticeTitle.replace("{limit}", String(freeLimit))}
+          </h2>
+          <p className="text-xs leading-relaxed text-muted">
+            {t.dashboard.devices.preNoticeBody
+              .replace("{count}", String(activeDevices.length))
+              .replace("{limit}", String(freeLimit))}
+          </p>
+        </section>
+      ) : null}
+
       {revokedByEnding.length > 0 ? (
         <section className="card grid gap-2 border-amber-400/30 p-4">
           <h2 className="text-sm font-semibold text-amber-300">
@@ -184,6 +206,13 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {willUnlink && device.status === "active" ? (
+                    <Badge tone={willUnlink.has(device.id) ? "warn" : "ok"}>
+                      {willUnlink.has(device.id)
+                        ? t.dashboard.devices.willUnlinkBadge
+                        : t.dashboard.devices.keepsBadge}
+                    </Badge>
+                  ) : null}
                   <Badge tone={device.status === "active" ? "ok" : "neutral"}>
                     {device.status === "active" ? t.dashboard.devices.statusActive : t.dashboard.devices.statusRevoked}
                   </Badge>
