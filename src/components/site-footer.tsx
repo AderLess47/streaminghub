@@ -32,7 +32,7 @@ export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | nu
             <li>
               <a
                 href="mailto:service@streaminghub.org"
-                className="inline-flex min-h-9 items-center transition hover:text-fg"
+                className="inline-flex min-h-11 items-center transition hover:text-fg"
               >
                 service@streaminghub.org
               </a>
@@ -59,7 +59,7 @@ export function SiteFooter({ t, role, locale }: { t: Dictionary; role: Role | nu
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <Link
               href={role ? "/dashboard" : "/login"}
-              className="inline-flex min-h-9 items-center transition hover:text-fg"
+              className="inline-flex min-h-11 items-center transition hover:text-fg"
             >
               {role ? t.footer.account : t.nav.login}
             </Link>
@@ -92,7 +92,7 @@ function FooterColumn({
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <li>
-      <Link href={href} className="inline-flex min-h-9 items-center transition hover:text-fg">
+      <Link href={href} className="inline-flex min-h-11 items-center transition hover:text-fg">
         {children}
       </Link>
     </li>
