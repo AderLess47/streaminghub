@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Daily pull sync for Amazon IAP subscriptions.
+ * Täglicher Pull-Abgleich für Amazon-IAP-Abos.
  *
- * The work happens in `/api/internal/amazon-sync` (RVS re-verification, receipt
- * and subscription updates); this script only triggers it and reports counts.
- * Run it from a scheduler: `APP_URL=… AMAZON_SYNC_TOKEN=… npm run amazon:sync`.
+ * Die Arbeit passiert in `/api/internal/amazon-sync` (RVS-Nachprüfung, Beleg-
+ * und Abo-Aktualisierungen); dieses Skript stößt sie nur an und meldet Zähler.
+ * Aus einem Scheduler aufrufen: `APP_URL=… AMAZON_SYNC_TOKEN=… npm run amazon:sync`.
  */
 const baseUrl = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const token = process.env.AMAZON_SYNC_TOKEN ?? "";

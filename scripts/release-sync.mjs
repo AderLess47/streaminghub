@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Keep `src/content/release.ts` in step with the release that production serves.
+ * Hält `src/content/release.ts` mit dem Release synchron, den Produktion ausliefert.
  *
- * Usage:
- *   npm run release:sync                 # refresh the local fallback
- *   npm run release:sync -- --check      # exit 1 when the fallback lags behind
- *   npm run release:sync -- --best-effort  # never fail a build (used by predev/prebuild)
+ * Aufruf:
+ *   npm run release:sync                 # den lokalen Fallback aktualisieren
+ *   npm run release:sync -- --check      # Exit 1, wenn der Fallback hinterherhängt
+ *   npm run release:sync -- --best-effort  # einen Build nie scheitern lassen (predev/prebuild)
  *   npm run release:sync -- --url http://localhost:3000/api/release
  *
- * The fallback only matters when the APK_* variables are missing (local builds,
- * a fresh deployment). Refreshing it here keeps checkouts and images from
- * carrying metadata older than what was live when they were built, without
- * writing to Git: branch protection rejects automated commits to main, and a
- * bot pull request cannot satisfy the required check.
+ * Der Fallback zählt nur, wenn die APK_*-Variablen fehlen (lokale Builds, ein
+ * frisches Deployment). Ihn hier zu aktualisieren verhindert, dass Checkouts und
+ * Images Metadaten tragen, die älter sind als das, was beim Bauen live war –
+ * ohne in Git zu schreiben: Die Branch-Protection lehnt automatische Commits auf
+ * main ab, und ein Bot-Pull-Request erfüllt den erforderlichen Check nicht.
  */
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";

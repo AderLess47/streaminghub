@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * Post-deploy smoke test.
+ * Smoke-Test nach dem Deploy.
  *
- * `/api/release`, `/download` and `/app.apk` must describe the same release:
- * same version/build, same size and the same SHA-256. A mismatch means the
- * deployment, the Fly secrets and the uploaded object drifted apart.
+ * `/api/release`, `/download` und `/app.apk` müssen denselben Release
+ * beschreiben: gleiche Version/Build, gleiche Größe und dieselbe SHA-256. Eine
+ * Abweichung heißt, dass Deployment, Fly-Secrets und das hochgeladene Objekt
+ * auseinandergelaufen sind.
  *
- * Usage:
+ * Aufruf:
  *   npm run smoke:deploy
  *   npm run smoke:deploy -- --base https://streaminghub.org
- *   npm run smoke:deploy -- --wait 300     # retry for up to 5 minutes
- *   npm run smoke:deploy -- --skip-apk     # skip the 14 MB download
+ *   npm run smoke:deploy -- --wait 300     # bis zu 5 Minuten wiederholen
+ *   npm run smoke:deploy -- --skip-apk     # den 14-MB-Download überspringen
  */
 import { createHash } from "node:crypto";
 import { validateRelease } from "./lib/release-file.mjs";

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Build, verify and publish the Android release APK to Cloudflare R2.
+ * Baut die Android-Release-APK, prüft sie und veröffentlicht sie auf Cloudflare R2.
  *
- * Usage:
+ * Aufruf:
  *   npm run release:apk
  *   npm run release:apk -- --apk android/app/build/outputs/apk/direct/release/app-direct-release.apk
  *   npm run release:apk -- --dry-run
  *
- * Upload credentials (one of):
- *   CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID, or `npx wrangler login`.
- * Keep tokens in the shell or in the git-ignored .env.release file.
+ * Upload-Zugangsdaten (eines von):
+ *   CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID oder `npx wrangler login`.
+ * Tokens in der Shell oder in der git-ignorierten Datei .env.release halten.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, statSync } from "node:fs";
@@ -285,7 +285,7 @@ async function verifyPublicObject(url, sizeBytes, sha256) {
   console.log(`Prüfe ${url} …`);
   const cacheBusted = new URL(url);
   cacheBusted.searchParams.set("v", sha256);
-  // Cloudflare's bot challenge rejects Node's default user agent from GitHub runners.
+  // Cloudflares Bot-Challenge lehnt den Standard-User-Agent von Node auf GitHub-Runnern ab.
   const response = await fetchPublic(cacheBusted.toString(), {
     cache: "no-store",
     headers: {
@@ -385,9 +385,9 @@ async function main() {
   );
   console.log("\nAktualisiert: src/content/release.ts");
 
-  // The release workflow forwards these values to the next step through
-  // GITHUB_ENV and stores them as Fly secrets, so production never needs a
-  // commit to the protected branch.
+  // Der Release-Workflow reicht diese Werte über GITHUB_ENV an den nächsten
+  // Schritt weiter und legt sie als Fly-Secrets ab; Produktion braucht dadurch
+  // nie einen Commit auf den geschützten Branch.
   const workflowEnv = process.env.GITHUB_ENV;
   if (workflowEnv) {
     const exported = {
