@@ -24,15 +24,15 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Node einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Check decision date
+      - name: Entscheidungsdatum prüfen
         id: check
         continue-on-error: true
         run: |
@@ -43,7 +43,7 @@ jobs:
             node scripts/bfsg-review.mjs
           fi
 
-      - name: Open a review issue
+      - name: Prüf-Issue öffnen
         if: steps.check.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +70,7 @@ jobs:
 
       # Ohne diesen Schritt bliebe der Lauf durch `continue-on-error` grün und
       # GitHub würde keine fehlgeschlagene Ausführung melden.
-      - name: Fail so the overdue check is visible
+      - name: Fehlschlagen, damit die überfällige Prüfung sichtbar wird
         if: steps.check.outcome == 'failure'
         run: |
           echo "::error::BFSG-Prüfung überfällig – siehe docs/BFSG-ANWENDUNGSBEREICH.md"

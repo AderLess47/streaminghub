@@ -565,7 +565,7 @@ test("a commit mismatch is reported as deploy drift with its own exit code", asy
     });
 
     assert.equal(result.status, 3, "drift must exit with its own code: " + result.stderr);
-    assert.match(result.stderr, /::error title=Staging deploy drift::/);
+    assert.match(result.stderr, /::error title=Staging-Deploy-Abweichung::/);
     assert.match(
       result.stderr,
       new RegExp(`staging deploy drift: served=${servedCommit} expected=commit-test`),

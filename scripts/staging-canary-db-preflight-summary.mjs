@@ -37,7 +37,7 @@ export function renderDatabaseSweepSummary(plan) {
   return {
     markdown: `${lines.join("\n")}\n`,
     warning: plan.users.length
-      ? `::warning::${plan.users.length} old canary database account(s) found; dry run only, nothing deleted.`
+      ? `::warning::Gefundene alte Canary-Datenbankkonten: ${plan.users.length}; nur Testlauf, nichts gelöscht.`
       : null,
   };
 }

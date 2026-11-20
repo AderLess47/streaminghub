@@ -98,7 +98,7 @@ function failDrift(served, expected) {
   driftDetected = true;
   ok(false, `deployed commit is ${expected} (${served})`);
   console.error(
-    `::error title=Staging deploy drift::Staging serves ${served} instead of ${expected}; the billing checks did not run.`,
+    `::error title=Staging-Deploy-Abweichung::Staging liefert ${served} statt ${expected}; die Billing-Prüfungen liefen nicht.`,
   );
   throw new Error(`staging deploy drift: served=${served} expected=${expected}`);
 }
