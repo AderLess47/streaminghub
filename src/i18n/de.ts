@@ -508,6 +508,13 @@ export const de = {
       verifyEmailNow: "Jetzt bestätigen",
     },
     devices: {
+      revokedNoticeTitleOne: "Ein Gerät wurde abgemeldet",
+      revokedNoticeTitleMany: "{n} Geräte wurden abgemeldet",
+      revokedNoticeBodyOne:
+        "Weil dein Premium-Zugang geendet hat, wurde ein Gerät über dem kostenlosen Limit abgemeldet. Aktiv geblieben sind die zuletzt genutzten; im kostenlosen Tarif sind {limit} Geräte erlaubt. Du kannst es wieder koppeln, sobald du oben ein anderes entfernst.",
+      revokedNoticeBodyMany:
+        "Weil dein Premium-Zugang geendet hat, wurden {n} Geräte über dem kostenlosen Limit abgemeldet. Aktiv geblieben sind die zuletzt genutzten; im kostenlosen Tarif sind {limit} Geräte erlaubt. Ein abgemeldetes Gerät kannst du wieder koppeln, sobald du oben ein anderes entfernst.",
+      revokedNoticeLink: "Premium wieder aktivieren",
       title: "Geräte",
       subtitle: "Verknüpfte Geräte und Aktivierungsstatus.",
       empty: "Noch keine Geräte verknüpft.",

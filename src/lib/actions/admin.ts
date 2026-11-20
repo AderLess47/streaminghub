@@ -291,7 +291,11 @@ export async function revokeDeviceAction(formData: FormData) {
   );
   if (!device) return;
 
-  run(`UPDATE devices SET status = 'revoked', revoked_at = ? WHERE id = ?`, nowIso(), deviceId);
+  run(
+    `UPDATE devices SET status = 'revoked', revoked_at = ?, revoked_reason = 'admin' WHERE id = ?`,
+    nowIso(),
+    deviceId,
+  );
   run(`UPDATE device_tokens SET revoked_at = ? WHERE device_id = ?`, nowIso(), deviceId);
   logAudit({
     action: "admin.device_revoked",

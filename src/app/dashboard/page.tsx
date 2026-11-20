@@ -6,6 +6,8 @@ import { ResendVerification } from "@/components/resend-verification";
 import { Alert, Badge, EmptyState, InfoRow } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { removeDeviceAction } from "@/lib/actions/dashboard";
+import { devicesRevokedByEnding } from "@/lib/device-access";
+import { getEntitlements } from "@/lib/entitlements";
 import { all, get } from "@/lib/db";
 import { effectiveStatus, ensureSubscription } from "@/lib/payments";
 import { requireUser } from "@/lib/session";
@@ -30,6 +32,10 @@ export default async function DashboardPage() {
      FROM devices WHERE user_id = ? ORDER BY activated_at DESC`,
     user.id,
   );
+  // Ein abgemeldetes Gerät soll im Konto erklärt werden, nicht nur in der Mail.
+  const entitlements = getEntitlements(user.id);
+  const revokedByEnding = entitlements.premium ? [] : devicesRevokedByEnding(user.id);
+
   const openTickets =
     get<{ c: number }>(
       `SELECT COUNT(*) AS c FROM support_tickets WHERE user_id = ? AND status != 'closed'`,
@@ -111,6 +117,33 @@ export default async function DashboardPage() {
           <p className="text-xs text-muted">{t.dashboard.overview.supportOpen}</p>
         </div>
       </div>
+
+      {revokedByEnding.length > 0 ? (
+        <section className="card grid gap-2 border-amber-400/30 p-4">
+          <h2 className="text-sm font-semibold text-amber-300">
+            {(revokedByEnding.length === 1
+              ? t.dashboard.devices.revokedNoticeTitleOne
+              : t.dashboard.devices.revokedNoticeTitleMany
+            ).replace("{n}", String(revokedByEnding.length))}
+          </h2>
+          <p className="text-xs leading-relaxed text-muted">
+            {(revokedByEnding.length === 1
+              ? t.dashboard.devices.revokedNoticeBodyOne
+              : t.dashboard.devices.revokedNoticeBodyMany
+            )
+              .replace("{n}", String(revokedByEnding.length))
+              .replace("{limit}", String(entitlements.deviceLimit))}
+          </p>
+          <p className="text-[0.7rem] text-muted">
+            {revokedByEnding
+              .map((device) => `${device.name} · ${dateFormat.format(new Date(device.revokedAt))}`)
+              .join(" · ")}
+          </p>
+          <Link href="/premium" className="link text-xs">
+            {t.dashboard.devices.revokedNoticeLink}
+          </Link>
+        </section>
+      ) : null}
 
       <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">

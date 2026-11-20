@@ -505,6 +505,13 @@ export const en: Dictionary = {
       verifyEmailNow: "Confirm now",
     },
     devices: {
+      revokedNoticeTitleOne: "One device was unlinked",
+      revokedNoticeTitleMany: "{n} devices were unlinked",
+      revokedNoticeBodyOne:
+        "Because your premium access ended, one device above the free limit was unlinked. The most recently used ones stay active; the free plan allows {limit} devices. You can pair it again once you remove another one above.",
+      revokedNoticeBodyMany:
+        "Because your premium access ended, {n} devices above the free limit were unlinked. The most recently used ones stay active; the free plan allows {limit} devices. You can pair an unlinked device again once you remove another one above.",
+      revokedNoticeLink: "Activate Premium again",
       title: "Devices",
       subtitle: "Linked devices and activation status.",
       empty: "No devices linked yet.",

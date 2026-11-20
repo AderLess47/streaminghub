@@ -607,7 +607,7 @@ export async function notifyStoreSubscriptionEnded(input: {
   // zuletzt genutzten Geräte bleiben. Der Marker oben fängt Doppelläufe ab,
   // deshalb passiert die Abmeldung je Ablauf nur einmal.
   const deviceLimit = freeDeviceLimit();
-  const devicesRevoked = revokeDevicesOverLimit(input.userId, nowIso(), deviceLimit);
+  const devicesRevoked = revokeDevicesOverLimit(input.userId, nowIso(), deviceLimit, "subscription_ended");
   const template =
     reason === "refunded"
       ? storeSubscriptionRefundedMail({
@@ -675,7 +675,7 @@ async function mailSubscriptionEnded(
   const key = `mail:subscription-ended:${subscriptionId ?? userId}:${periodEnd ?? "unknown"}`;
   if (!claimMailMarker(userId, key)) return;
   const deviceLimit = freeDeviceLimit();
-  const devicesRevoked = revokeDevicesOverLimit(userId, nowIso(), deviceLimit);
+  const devicesRevoked = revokeDevicesOverLimit(userId, nowIso(), deviceLimit, "subscription_ended");
   await sendMail({
     to: user.email,
     ...subscriptionEndedMail({
