@@ -527,11 +527,11 @@ export function trialEndedMail(input: {
   const deviceNote = {
     de:
       revoked > 0
-        ? `Davon bleiben die zuletzt genutzten aktiv; ${revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`} deshalb abgemeldet. Deine Playlist bleibt gespeichert. Im Konto kannst du Geräte entfernen und in der App neu koppeln – ein abgemeldetes Gerät also, sobald wieder Platz ist.`
+        ? `Davon bleiben die ${limit} zuletzt genutzten aktiv; ${revoked === 1 ? "ein weiteres Gerät wurde" : `${revoked} weitere Geräte wurden`} deshalb abgemeldet. Deine Playlist bleibt gespeichert. Brauchst du später wieder mehr Geräte, kannst du im Konto Platz schaffen oder Premium dazunehmen.`
         : "Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert – du kannst jederzeit weiterschauen.",
     en:
       revoked > 0
-        ? `The most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored. You can remove devices in your account and pair them again in the app – so an unlinked device can come back once there is room.`
+        ? `The ${limit} most recently used ones stay active; ${revoked === 1 ? "one other device was" : `${revoked} other devices were`} unlinked for that reason. Your playlist stays stored. If you need more devices again later, you can free up a slot in your account or add Premium.`
         : "Your devices stay linked and your playlist stays stored, so you can keep watching at any time.",
   };
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {

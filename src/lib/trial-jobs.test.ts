@@ -309,7 +309,8 @@ test("the closing mail reads correctly with and without device revisions", async
   assert.match(one.text, /ein weiteres Gerät wurde deshalb abgemeldet/);
 
   const many = trialEndedMail({ name: "Max", locale: "de", priceEur: 3.49, deviceLimit: 2, devicesRevoked: 3 });
-  assert.match(many.text, /3 weitere Geräte wurden deshalb abgemeldet/);
+  assert.match(many.text, /die 2 zuletzt genutzten aktiv; 3 weitere Geräte wurden deshalb abgemeldet/);
+  assert.doesNotMatch(many.text, /Im Konto kannst du Geräte entfernen/);
 
   const none = trialEndedMail({ name: "Max", locale: "de", priceEur: 3.49, deviceLimit: 2, devicesRevoked: 0 });
   assert.match(none.text, /Deine Geräte bleiben gekoppelt, und deine Playlist bleibt gespeichert/);
