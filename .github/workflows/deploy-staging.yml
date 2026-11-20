@@ -1,8 +1,14 @@
 name: Deploy staging
 
-# Manual only for the first staging rollout. The workflow never deploys the
-# production app and never receives production Stripe or email credentials.
+# Runs after a green CI run on `main`, so staging always mirrors what passed the
+# checks. The workflow never deploys the production app and never receives
+# production Stripe or email credentials. `workflow_dispatch` stays as the way
+# to roll back a staging-only problem or to re-deploy a specific commit.
 on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
@@ -23,12 +29,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: staging
+    # `workflow_run` fires for failed, cancelled and pull-request runs too;
+    # only a green push on `main` deploys.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || 'main' }}
+          # On `workflow_run` GITHUB_SHA is the default-branch head, not the
+          # commit CI passed; deploy the run that triggered this deploy.
+          ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'main' }}
 
       - name: Validate staging target
         env:
@@ -188,7 +202,7 @@ jobs:
           {
             echo "### Staging deploy"
             echo
-            echo "- ref: \`${{ inputs.ref || 'main' }}\`"
+            echo "- trigger: \`${{ github.event_name }}\`"
             echo "- commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
             echo "- result: ${{ job.status }}"
             echo "- target: \`https://streaminghub-staging.fly.dev\`"
