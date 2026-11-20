@@ -70,7 +70,16 @@ GitHub environment `staging` needs:
 
 ## 4. Deploy
 
-Start **Actions → Deploy staging → Run workflow**. The workflow:
+Staging deploys itself: once CI on `main` is green, the **Deploy staging**
+workflow starts through `workflow_run` and deploys exactly the commit that
+passed, not the current default-branch head. A red, cancelled or
+pull-request run deploys nothing, so staging keeps its previous commit instead
+of moving to an untested state.
+
+Manual runs stay available for staging-only rollbacks: **Actions → Deploy
+staging → Run workflow** with a `ref`.
+
+The workflow:
 
 1. validates that `fly.staging.toml` names `streaminghub-staging`, uses the
    staging URL and does not contain a live Stripe key;
@@ -92,9 +101,9 @@ the last step prints `Staging serves <old> instead of <new>` into the run summar
 and as an error annotation — the drift is named at the deploy, not discovered by
 a canary failure days later.
 
-The workflow is deliberately manual for the first rollout. Once staging secrets
-and the canary are stable, a `push` trigger on `main` can be added without
-changing the isolation rules.
+The isolation rules are unchanged by the automatic trigger: the workflow still
+deploys only `streaminghub-staging` with the staging-scoped token and never
+receives production Stripe or email credentials.
 
 ### Anonymous public HTML cache
 
