@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     to: record.email,
     ...cancellationMail({
       reference: record.reference,
+      name: record.name,
       contract,
       receivedAt,
       effectiveAt,
