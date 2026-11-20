@@ -69,7 +69,7 @@ export function cleanupOverLimitDevices(
   for (const account of accounts) {
     devices += dryRun
       ? devicesOverLimit(account.userId, limit).length
-      : revokeDevicesOverLimit(account.userId, at, limit);
+      : revokeDevicesOverLimit(account.userId, at, limit, "legacy_cleanup");
   }
   return { dryRun, limit, accounts: accounts.length, devices };
 }

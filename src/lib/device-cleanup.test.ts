@@ -131,3 +131,23 @@ test("the cleanup sends no email", () => {
   const mails = all<{ c: number }>(`SELECT COUNT(*) AS c FROM outbox_emails`)[0].c;
   assert.equal(mails, 0);
 });
+
+test("the cleanup marks its own reason and keeps the account notice clean", async () => {
+  const { devicesRevokedByEnding } = await import("./device-access.ts");
+
+  const reasons = all<{ revoked_reason: string | null }>(
+    `SELECT revoked_reason FROM devices WHERE status = 'revoked'`,
+  ).map((row) => row.revoked_reason);
+  assert.ok(reasons.length > 0);
+  assert.ok(reasons.every((reason) => reason === "legacy_cleanup"));
+
+  // Aufräumen ist keine Erklärung im Konto: nur Trial- und Abo-Ende zählen.
+  assert.deepEqual(devicesRevokedByEnding("legacy"), []);
+
+  run(
+    `UPDATE devices SET revoked_reason = 'subscription_ended' WHERE id = 'legacy-d2'`,
+  );
+  const notice = devicesRevokedByEnding("legacy");
+  assert.equal(notice.length, 1);
+  assert.match(notice[0].name, /Gerät 2/);
+});

@@ -114,7 +114,7 @@ export async function runTrialJobs(input: TrialJobInput = {}): Promise<TrialJobS
     const surplus = devicesOverLimit(row.user_id, freeLimit);
     summary.devicesRevoked += surplus.length;
     if (!dryRun && surplus.length > 0) {
-      revokeDevicesOverLimit(row.user_id, nowDate, freeLimit);
+      revokeDevicesOverLimit(row.user_id, nowDate, freeLimit, "trial_ended");
     }
 
     if (!dryRun) {

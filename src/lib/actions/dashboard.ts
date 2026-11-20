@@ -57,7 +57,8 @@ export async function removeDeviceAction(formData: FormData): Promise<void> {
   if (!device) return;
 
   run(
-    `UPDATE devices SET status = 'revoked', revoked_at = ?, user_id = NULL WHERE id = ?`,
+    `UPDATE devices SET status = 'revoked', revoked_at = ?, revoked_reason = 'customer', user_id = NULL
+      WHERE id = ?`,
     nowIso(),
     deviceId,
   );

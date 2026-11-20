@@ -317,3 +317,12 @@ test("the closing mail reads correctly with and without device revisions", async
   assert.doesNotMatch(none.text, /gekoppelt Deine/);
   assert.doesNotMatch(none.text, /abgemeldet/);
 });
+
+test("revoked devices remember that the trial end caused it", async () => {
+  const { all } = await import("./db.ts");
+  const reasons = all<{ revoked_reason: string | null }>(
+    `SELECT revoked_reason FROM devices WHERE status = 'revoked' AND revoked_reason IS NOT NULL`,
+  ).map((row) => row.revoked_reason);
+  assert.ok(reasons.length > 0, "mindestens eine Abmeldung im Testlauf erwartet");
+  assert.ok(reasons.every((reason) => reason === "trial_ended"));
+});

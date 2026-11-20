@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS devices (
   activated_at TEXT,
   last_seen_at TEXT,
   revoked_at TEXT,
+  revoked_reason TEXT,  -- 'trial_ended' | 'subscription_ended' | 'legacy_cleanup' | 'admin' | 'customer'
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);

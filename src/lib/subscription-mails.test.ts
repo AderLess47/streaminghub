@@ -292,6 +292,13 @@ test("an ended web subscription unlinks devices over the free limit", async () =
 
   assert.deepEqual(activeDeviceIds("devices-web"), ["web-0", "web-1"]);
   assert.match(lastMailText(), /2 weitere Geräte wurden deshalb abgemeldet/);
+
+  // Der Grund steht an den Geräten, damit das Konto ihn erklären kann.
+  const reasons = all<{ revoked_reason: string | null }>(
+    `SELECT revoked_reason FROM devices WHERE user_id = ? AND status = 'revoked'`,
+    "devices-web",
+  ).map((row) => row.revoked_reason);
+  assert.deepEqual(reasons, ["subscription_ended", "subscription_ended"]);
   assert.doesNotMatch(lastMailText(), /Deine Geräte bleiben gekoppelt/);
 
   // Zweite Meldung für denselben Zeitraum: keine weitere Mail, keine weitere Abmeldung.

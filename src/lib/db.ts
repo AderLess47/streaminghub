@@ -69,6 +69,10 @@ function migrate(db: DatabaseSync) {
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_outbox_provider ON outbox_emails(provider_id)");
 
+  // Geräte: warum ein Gerät abgemeldet wurde (Trial-Ende, Abo-Ende, Aufräumen,
+  // Admin oder Kunde selbst). Alte Zeilen haben keinen Grund und bleiben NULL.
+  addColumn(db, "devices", "revoked_reason", "TEXT");
+
   addColumn(db, "customer_playlists", "customer_requested", "INTEGER NOT NULL DEFAULT 0");
   addColumn(
     db,
