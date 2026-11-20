@@ -1047,6 +1047,13 @@ export const en: Dictionary = {
       overLimitHint:
         "“Above free limit” counts expired trials with more active devices than allowed – for example because the trial ended before this rule or the limit was lowered. On expiry, surplus devices are unlinked automatically; the most recently used ones stay.",
       overLimitRow: "More active devices than the free plan allows",
+      cleanupTitle: "Clean up legacy accounts",
+      cleanupBody:
+        "Accounts without premium access whose subscription lapsed before the automatic unlinking still keep their devices. This run unlinks the surplus ones – the most recently used stay – and deliberately sends no email, because the closing emails went out long ago. Repeatable: it only changes what is still above the limit.",
+      cleanupCount: "{n} accounts affected",
+      cleanupButton: "Clean up legacy accounts",
+      cleanupDone: "Cleaned up: {devices} devices unlinked across {accounts} accounts.",
+      cleanupEmpty: "Nothing to clean up: every account without premium access is within the limit.",
       subscriptionOverLimit: "Subscription ended, above limit",
       subscriptionOverLimitHint:
         "“Subscription ended, above limit” counts accounts without premium access – lapsed subscription, failed payment or never subscribed – that still have more active devices than the free plan allows. These accounts predate the automatic unlinking; they are not cleaned up retroactively, only when that subscription ends again.",

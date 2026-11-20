@@ -16,6 +16,7 @@ import { FEATURE_FLAGS } from "@/lib/flags";
 import { DEFAULT_TRIAL_DAYS } from "@/lib/trial";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
+import { cleanupOverLimitDevices } from "@/lib/device-cleanup";
 import { requireAdmin, requireStaff, getSessionUser } from "@/lib/session";
 import { m3uPlaylistSchema } from "@/lib/validation";
 
@@ -302,6 +303,30 @@ export async function revokeDeviceAction(formData: FormData) {
   });
   revalidatePath("/admin/devices");
   redirect(`${adminPath(formData, "/admin/devices")}?ok=revoked`);
+}
+
+/**
+ * Einmaliger Lauf für den Altbestand: meldet Geräte über dem kostenlosen Limit
+ * bei Konten ab, deren Abo schon vor der automatischen Abmeldung ausgelaufen
+ * ist. Ohne Mail, mit Audit-Eintrag und der Zahl als Rückmeldung.
+ */
+export async function cleanupOverLimitDevicesAction(formData: FormData) {
+  const staff = await requireAdmin();
+  if (String(formData.get("confirm") ?? "") !== "revoke") return;
+
+  const result = cleanupOverLimitDevices();
+  logAudit({
+    action: "admin.devices_cleanup_over_limit",
+    actorId: staff.id,
+    actorEmail: staff.email,
+    targetType: "devices",
+    targetId: "over-limit",
+    meta: { accounts: result.accounts, devices: result.devices, limit: result.limit },
+  });
+  revalidatePath("/admin/trial");
+  redirect(
+    `/admin/trial?ok=cleanup&accounts=${result.accounts}&devices=${result.devices}`,
+  );
 }
 
 export async function setSubscriptionStatusAction(formData: FormData) {
