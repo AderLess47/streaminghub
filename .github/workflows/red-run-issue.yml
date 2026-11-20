@@ -48,6 +48,8 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           EVENT: ${{ github.event.workflow_run.event }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          # Optional: ohne dieses Secret wird nur gewarnt, das Issue entsteht trotzdem.
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node scripts/red-run-issue.mjs --failure
 
   recovery:

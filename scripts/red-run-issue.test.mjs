@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import {
   alreadyReported,
+  discordContent,
+  discordPayload,
   failureBody,
+  isDiscordWebhook,
   issueTitle,
+  postDiscord,
   recoveryBody,
   shortSha,
 } from "./red-run-issue.mjs";
@@ -74,7 +78,7 @@ test("a commit counts as reported only when a comment names it", () => {
  * jeden Aufruf samt stdin und antwortet aus vorgegebenen Werten – so bleibt der
  * Melde-Pfad testbar, ohne ein echtes Issue anzulegen.
  */
-function runWithGhStub({ mode, issueList = [], comments = "", jobs = [] }) {
+function runWithGhStub({ mode, issueList = [], comments = "", jobs = [], extraEnv = {} }) {
   const dir = mkdtempSync(path.join(tmpdir(), "red-run-issue-"));
   const log = path.join(dir, "gh.jsonl");
   const shim = path.join(dir, "gh");
@@ -95,9 +99,10 @@ else if (call === "issue create") process.stdout.write("https://github.com/o/r/i
   );
   chmodSync(shim, 0o755);
 
-  execFileSync(process.execPath, ["scripts/red-run-issue.mjs", mode], {
+  const result = spawnSync(process.execPath, ["scripts/red-run-issue.mjs", mode], {
     encoding: "utf8",
     env: {
+      ...extraEnv,
       ...process.env,
       PATH: `${dir}:${process.env.PATH}`,
       GH_LOG: log,
@@ -123,11 +128,11 @@ else if (call === "issue create") process.stdout.write("https://github.com/o/r/i
     .filter(Boolean)
     .map((line) => JSON.parse(line))
     .map((entry) => ({ call: `${entry.args[0]} ${entry.args[1]}`, args: entry.args, input: entry.input }));
-  return calls;
+  return { calls, stdout: result.stdout ?? "", stderr: result.stderr ?? "", status: result.status };
 }
 
 test("a new failure opens exactly one issue with the failing job named", () => {
-  const calls = runWithGhStub({ mode: "--failure", jobs: ["Deploy to Fly staging"] });
+  const { calls } = runWithGhStub({ mode: "--failure", jobs: ["Deploy to Fly staging"] });
   const creates = calls.filter((entry) => entry.call === "issue create");
 
   assert.equal(creates.length, 1);
@@ -138,7 +143,7 @@ test("a new failure opens exactly one issue with the failing job named", () => {
 });
 
 test("a repeated failure for the same commit writes nothing", () => {
-  const calls = runWithGhStub({
+  const { calls } = runWithGhStub({
     mode: "--failure",
     issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
     comments: `- Commit: \`${commit}\`\n`,
@@ -151,7 +156,7 @@ test("a repeated failure for the same commit writes nothing", () => {
 });
 
 test("a new commit comments on the open issue instead of opening another", () => {
-  const calls = runWithGhStub({
+  const { calls } = runWithGhStub({
     mode: "--failure",
     issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
     comments: "- Commit: `deadbeefdeadbeefdeadbeefdeadbeefdeadbeef`\n",
@@ -165,7 +170,7 @@ test("a new commit comments on the open issue instead of opening another", () =>
 });
 
 test("a green run closes the open issue", () => {
-  const calls = runWithGhStub({
+  const { calls } = runWithGhStub({
     mode: "--success",
     issueList: [{ number: 12, title: "Roter Lauf: Deploy staging" }],
   });
@@ -177,11 +182,109 @@ test("a green run closes the open issue", () => {
 });
 
 test("a green run without an open issue writes nothing", () => {
-  const calls = runWithGhStub({ mode: "--success" });
+  const { calls } = runWithGhStub({ mode: "--success" });
 
   assert.equal(calls.some((entry) => entry.call.startsWith("issue create")), false);
   assert.equal(calls.some((entry) => entry.call === "issue comment"), false);
   assert.equal(calls.some((entry) => entry.call === "issue close"), false);
+});
+
+test("discord content names workflow, result, commit, run and issue", () => {
+  const fields = {
+    workflowName: "Deploy staging",
+    conclusion: "failure",
+    commit,
+    runUrl: "https://github.com/o/r/actions/runs/1",
+    issueUrl: "https://github.com/o/r/issues/12",
+  };
+  const content = discordContent(fields);
+
+  assert.match(content, /Roter Lauf: Deploy staging/);
+  assert.match(content, /Ergebnis: `failure`/);
+  assert.match(content, new RegExp(`Commit: \`${commit}\``));
+  assert.match(content, /Lauf: https:\/\/github\.com\/o\/r\/actions\/runs\/1/);
+  assert.match(content, /Issue: https:\/\/github\.com\/o\/r\/issues\/12/);
+
+  const payload = discordPayload(fields);
+  assert.equal(payload.content, content);
+  assert.deepEqual(payload.allowed_mentions, { parse: [] });
+});
+
+test("only Discord webhook URLs are accepted", () => {
+  assert.equal(isDiscordWebhook("https://discord.com/api/webhooks/123/abc"), true);
+  assert.equal(isDiscordWebhook("https://discordapp.com/api/webhooks/123/abc"), true);
+  assert.equal(isDiscordWebhook("https://example.com/api/webhooks/123/abc"), false);
+  assert.equal(isDiscordWebhook(""), false);
+});
+
+test("postDiscord sends the payload as JSON without mentions", async () => {
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push({ url, init });
+    return { ok: true, status: 204 };
+  };
+  const payload = discordPayload({
+    workflowName: "Deploy",
+    conclusion: "failure",
+    commit,
+    runUrl: "https://github.com/o/r/actions/runs/3",
+  });
+
+  const result = await postDiscord(payload, {
+    webhookUrl: "https://discord.com/api/webhooks/1/x",
+    fetchImpl,
+  });
+
+  assert.deepEqual(result, { sent: true, status: 204 });
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].init.method, "POST");
+  assert.deepEqual(JSON.parse(seen[0].init.body), payload);
+});
+
+test("postDiscord reports a rejected webhook and an invalid URL", async () => {
+  const fetchImpl = async () => ({ ok: false, status: 429 });
+  await assert.rejects(
+    () => postDiscord({ content: "x" }, { webhookUrl: "https://discord.com/api/webhooks/1/x", fetchImpl }),
+    /HTTP 429/,
+  );
+  await assert.rejects(
+    () => postDiscord({ content: "x" }, { webhookUrl: "https://example.com/hook", fetchImpl }),
+    /Discord-Channel-Webhook-URL/,
+  );
+});
+
+test("postDiscord skips with a warning when no webhook is configured", async () => {
+  const warnings = [];
+  const original = console.warn;
+  console.warn = (message) => warnings.push(message);
+  try {
+    const result = await postDiscord({ content: "x" }, { webhookUrl: "", fetchImpl: async () => ({ ok: true, status: 204 }) });
+    assert.deepEqual(result, { sent: false, reason: "unconfigured" });
+  } finally {
+    console.warn = original;
+  }
+  assert.match(warnings.join("\n"), /::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt/);
+});
+
+test("a red run without a Discord secret still creates the issue and only warns", () => {
+  const { calls, stderr, status } = runWithGhStub({ mode: "--failure", jobs: ["Deploy to Fly staging"] });
+
+  assert.equal(status, 0);
+  assert.equal(calls.some((entry) => entry.call === "issue create"), true);
+  assert.match(stderr, /::warning::DISCORD_WEBHOOK_URL ist nicht gesetzt/);
+});
+
+test("a red run with a non-Discord URL keeps the issue but fails loudly", () => {
+  const { calls, stderr, status } = runWithGhStub({
+    mode: "--failure",
+    jobs: ["Deploy to Fly staging"],
+    extraEnv: { DISCORD_WEBHOOK_URL: "https://example.com/hook" },
+  });
+
+  // Das Issue entsteht vor der Discord-Meldung und darf nicht verloren gehen.
+  assert.equal(calls.some((entry) => entry.call === "issue create"), true);
+  assert.equal(status, 1);
+  assert.match(stderr, /Discord-Channel-Webhook-URL/);
 });
 
 test("recovery body names run, commit and trigger", () => {
