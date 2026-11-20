@@ -427,14 +427,26 @@ jobs:
           RESULT: ${{ needs.canary.result }}
         run: |
           set -euo pipefail
+          # The Discord alert is optional, its state is not: the run summary says
+          # whether a message went out or why it did not, so nobody has to open
+          # the job log to learn that GitHub issues were the only alarm.
+          summary() {
+            {
+              echo "### Staging billing canary failed"
+              echo
+              echo "$1"
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
           if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
             echo "::warning::DISCORD_WEBHOOK_URL is not configured; skipping the Discord notification."
+            summary '- Discord: skipped - repository secret `DISCORD_WEBHOOK_URL` is not set'
             exit 0
           fi
           case "$DISCORD_WEBHOOK_URL" in
             https://discord.com/api/webhooks/* | https://discordapp.com/api/webhooks/*) ;;
             *)
               echo "::error::DISCORD_WEBHOOK_URL must be a Discord channel webhook URL."
+              summary '- Discord: not sent - `DISCORD_WEBHOOK_URL` is not a Discord channel webhook URL'
               exit 1
               ;;
           esac
@@ -446,10 +458,22 @@ jobs:
             "Lauf: $RUN_URL")
           payload=$(jq -c -n --arg content "$content" '{content: $content, allowed_mentions: {parse: []}}')
           # The webhook URL is a bearer credential for one channel; it is never echoed.
-          curl --fail-with-body --silent --show-error --max-time 10 \
+          status=$(curl --silent --show-error --max-time 10 --output /dev/null \
+            --write-out '%{http_code}' \
             -H 'Content-Type: application/json' \
             --data "$payload" \
-            "$DISCORD_WEBHOOK_URL"
+            "$DISCORD_WEBHOOK_URL" || true)
+          case "$status" in
+            200 | 204)
+              echo "Discord notified (HTTP $status)."
+              summary "- Discord: notification sent (HTTP $status)"
+              ;;
+            *)
+              echo "::error::Discord answered HTTP ${status:-000}."
+              summary "- Discord: sending failed (HTTP ${status:-000})"
+              exit 1
+              ;;
+          esac
 
       - name: Close the failure issue after recovery
         if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
