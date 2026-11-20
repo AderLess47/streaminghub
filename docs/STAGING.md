@@ -356,7 +356,12 @@ posts to the channel it was created in; the step rejects anything that is not a
 `https://discord.com/api/webhooks/…` (or legacy `discordapp.com`) URL. It only
 posts for failed scheduled and deploy-triggered runs; if the secret is missing it
 logs a warning and skips, and the GitHub issue is still created. The URL is never
-printed or committed.
+printed or committed. The step also writes its state to the run summary, so the
+optional part is visible without the job log: `- Discord: notification sent (HTTP
+204)`, `- Discord: skipped - repository secret \`DISCORD_WEBHOOK_URL\` is not set`,
+`- Discord: not sent - \`DISCORD_WEBHOOK_URL\` is not a Discord channel webhook
+URL` or `- Discord: sending failed (HTTP …)`. Only the Discord step runs for a
+failed run, so a green canary writes no Discord line.
 
 To check the webhook and the channel without waiting for a failed scheduled
 run, send the same payload once from a local shell where the URL is exported
