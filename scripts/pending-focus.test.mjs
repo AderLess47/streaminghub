@@ -228,6 +228,35 @@ test("Cookie-Banner: reserviert seine Höhe, damit Fokus nicht darunter liegt", 
   );
 });
 
+test("Cookie-Banner: merkt sich das Schließen per Escape für den Reload", () => {
+  // Ohne Notiz erscheint der Banner nach jedem Reload neu und nimmt wieder den
+  // Fokus; Escape setzt aber bewusst keinen Cookie.
+  const tree = parse("cookie-consent.tsx");
+  let stores = false;
+  let reads = false;
+  let blocksTimer = false;
+
+  walk(tree, (node) => {
+    if (ts.isCallExpression(node)) {
+      const call = node.expression.getText(tree);
+      const key = node.arguments[0]?.getText(tree);
+      if (call.endsWith(".setItem") && key === "DISMISSED") stores = true;
+      if (call.endsWith(".getItem") && key === "DISMISSED") reads = true;
+    }
+    if (
+      ts.isConditionalExpression(node) &&
+      node.condition.getText(tree).includes("dismissed") &&
+      node.whenFalse.getText(tree).includes("setVisible(true)")
+    ) {
+      blocksTimer = true;
+    }
+  });
+
+  assert.ok(stores, "Escape muss die Ablehnung in `sessionStorage` festhalten");
+  assert.ok(reads, "der Mount-Effekt muss die Ablehnung lesen");
+  assert.ok(blocksTimer, "nach einer Ablehnung darf der Banner nicht von selbst öffnen");
+});
+
 test("Cookie-Banner: meldet den Laufzustand als aria-busy und in der Live-Region", () => {
   // Ohne beides passiert beim Speichern für Screenreader sichtbar nichts: der
   // Dialog bleibt still und die Region leer.

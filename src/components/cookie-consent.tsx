@@ -7,6 +7,9 @@ import { Icon } from "./icons";
 import { LiveRegion } from "./live-region";
 
 const COOKIE = "sh_consent";
+// Escape setzt keinen Cookie; ohne diese Notiz käme der Banner bei jedem Reload
+// zurück und nähme erneut den Fokus.
+const DISMISSED = "sh_consent_dismissed";
 
 export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
   const [visible, setVisible] = useState(false);
@@ -19,16 +22,19 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
 
   useEffect(() => {
     const hasChoice = document.cookie.split("; ").some((entry) => entry.startsWith(`${COOKIE}=`));
-    if (!hasChoice) {
-      const timer = window.setTimeout(() => setVisible(true), 900);
-      return () => window.clearTimeout(timer);
-    }
+    const dismissed = window.sessionStorage.getItem(DISMISSED) === "1";
     const reopen = () => {
       openedByTriggerRef.current = true;
       setVisible(true);
     };
+    // Auch nach einer Ablehnung bleibt der Banner über den Footer erreichbar.
     window.addEventListener("sh:open-consent", reopen);
-    return () => window.removeEventListener("sh:open-consent", reopen);
+    const timer =
+      hasChoice || dismissed ? undefined : window.setTimeout(() => setVisible(true), 900);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("sh:open-consent", reopen);
+    };
   }, []);
 
   // The banner opens on its own, so it only takes focus when nobody is working
@@ -69,6 +75,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.stopPropagation();
+      window.sessionStorage.setItem(DISMISSED, "1");
       close(t.dismissed);
     };
     document.addEventListener("keydown", onKeyDown);
