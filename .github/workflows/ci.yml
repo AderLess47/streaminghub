@@ -65,6 +65,10 @@ jobs:
       - name: Test der Datenbankmigration
         run: npm run test:db-migration
 
+      # Cloud-Backup: Verschlüsselung, Rechte, Aufbewahrung, Restore, SigV4.
+      - name: Tests der Cloud-Backups
+        run: npm run test:backup
+
       - name: Amazon-IAP-Belegtests
         run: npm run test:amazon-iap
 
@@ -83,20 +87,16 @@ jobs:
       - name: Tests des Retention-Angebots
         run: npm run test:retention
 
-      # Trial: Migration der Alt-Datenbank, Missbrauchsschutz, Startmail, Rechte.
-      - name: Tests der Trial-Anmeldung
+      # Trial-Start: Migration der Alt-Datenbank, Missbrauchsschutz, Startmail, Rechte.
+      - name: Tests des Trial-Starts
         run: npm run test:trial
 
-      # Trial-Jobs: Erinnerung, Ablaufmarkierung, Idempotenz (läuft täglich in Produktion).
+      # Trial-Jobs: Erinnerung vor Ablauf, Ablaufmarkierung, Idempotenz.
       - name: Tests der Trial-Jobs
         run: npm run test:trial-jobs
 
       - name: Tests der Gerätebereinigung
         run: npm run test:device-cleanup
-
-      # Cloud-Backup: Verschlüsselung, Rechte, Aufbewahrung, Restore, SigV4.
-      - name: Tests der Cloud-Backups
-        run: npm run test:backup
 
       - name: Tests der geräteübergreifenden Resume-Regeln
         run: npm run test:progress
@@ -169,7 +169,7 @@ jobs:
       - name: Tests für Widerruf und Kündigung
         run: npm run test:withdrawal-cancellation
 
-      # Vertragserklärungen: Zeile, Referenz, Status und Kontozuordnung in SQLite.
+      # Widerruf und Kündigung als Datensatz: Zeile, Referenz, Status, Kontozuordnung.
       - name: Tests der Vertragserklärungen
         run: npm run test:contracts
 
