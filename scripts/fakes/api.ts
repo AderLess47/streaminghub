@@ -29,6 +29,11 @@ export async function requireUser(): Promise<SessionUser> {
   return sessionUser;
 }
 
+/** Wie im Original `null` statt eines Fehlers – für Routen ohne Anmeldepflicht. */
+export async function getSessionUser(): Promise<SessionUser | null> {
+  return sessionUser;
+}
+
 /* -------------------------------- Premium -------------------------------- */
 
 const premiumUsers = new Set<string>();

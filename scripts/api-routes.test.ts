@@ -13,7 +13,7 @@
 
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { all, nowIso, run } from "@/lib/db";
+import { all, get, nowIso, run } from "@/lib/db";
 import {
   normalizePairingCode,
   randomToken,
@@ -25,6 +25,7 @@ import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as activateDevice } from "@/app/api/devices/activate/route";
 import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
 import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
+import { POST as postLocale } from "@/app/api/locale/route";
 import { __setPremium, __setSessionUser, __setTrial } from "./fakes/api";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -869,6 +870,45 @@ await check("/me: gesperrtes Gerät bekommt 403", async () => {
     call("GET", "/api/v1/me", { token: tokenFor("user-a", "dev-revoked") }),
   );
   assert.equal(response.status, 403);
+});
+
+/**
+ * Zwei Konten, beide Sprachen explizit gesetzt (die Zeilen überleben
+ * `resetDb`); `user-other` deckt ein Update ohne `WHERE` auf.
+ */
+function seedLocaleUsers(): void {
+  resetDb();
+  seedUser("user-locale");
+  seedUser("user-other");
+  run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
+  run(`UPDATE users SET locale = 'tr' WHERE id = ?`, "user-other");
+}
+
+function localeOf(id: string): string | undefined {
+  return get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", id)?.locale;
+}
+
+await check("/api/locale: mit Sitzung schreibt die Sprache ins Konto", async () => {
+  seedLocaleUsers();
+  __setSessionUser({ id: "user-locale", email: "user-locale@example.test" });
+
+  const response = await postLocale(call("POST", "/api/locale", { body: { locale: "en" } }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await bodyOf(response), { ok: true, locale: "en" });
+  // Mails und andere Geräte lesen die Sprache aus dem Konto, nicht aus dem Cookie.
+  assert.equal(localeOf("user-locale"), "en");
+  assert.equal(localeOf("user-other"), "tr", "andere Konten bleiben unberührt");
+});
+
+await check("/api/locale: ohne Sitzung bleibt users.locale unverändert", async () => {
+  seedLocaleUsers();
+
+  const response = await postLocale(call("POST", "/api/locale", { body: { locale: "fr" } }));
+
+  assert.equal(response.status, 200);
+  assert.equal(localeOf("user-locale"), "de", "ohne Sitzung darf kein Konto umgestellt werden");
+  assert.equal(localeOf("user-other"), "tr");
 });
 
 /* -------------------------------- Ergebnis ------------------------------- */
