@@ -476,6 +476,7 @@ export const de = {
     emailExists: "Für diese E-Mail-Adresse besteht bereits ein Konto.",
     devLinkHint: "Entwicklungsmodus: E-Mail-Versand ist nicht konfiguriert. Link:",
     loggedOut: "Du wurdest abgemeldet.",
+    sessionExpired: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     accountDisabled: "Dieses Konto ist deaktiviert. Bitte kontaktiere den Support.",
   },
   dashboard: {

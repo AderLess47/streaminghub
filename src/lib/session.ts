@@ -141,9 +141,22 @@ export function invalidateUserSessions(userId: string, exceptTokenHash?: string)
   }
 }
 
+/**
+ * Ein fehlender Sitzungszustand hat zwei Ursachen: Es hat sich niemand
+ * angemeldet, oder die Sitzung ist abgelaufen bzw. wurde beendet. Der
+ * Unterschied gehört in die Adresse – sonst landet die Person ohne Erklärung
+ * auf der Anmeldeseite und hält den Rauswurf für einen Fehler.
+ */
+async function loginUrl(nextPath: string) {
+  const store = await cookies();
+  const params = new URLSearchParams({ next: nextPath });
+  if (store.get(SESSION_COOKIE)?.value) params.set("expired", "1");
+  return `/login?${params.toString()}`;
+}
+
 export async function requireUser(nextPath = "/dashboard"): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  if (!user) redirect(await loginUrl(nextPath));
   return user;
 }
 
@@ -155,7 +168,7 @@ export function isStaff(role: Role) {
 
 export async function requireStaff(nextPath = "/admin"): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  if (!user) redirect(await loginUrl(nextPath));
   if (!isStaff(user.role)) redirect("/dashboard?error=forbidden");
   if (!user.mfaOk) redirect("/admin/login?step=mfa");
   if (!user.mfaEnrolled) redirect("/admin/mfa");

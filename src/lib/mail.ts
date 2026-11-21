@@ -252,7 +252,9 @@ const signature = (de: boolean) =>
     : `\n\nIf you have questions, reply to this email or contact ${env.supportEmail}.`;
 
 export function verificationMail(link: string, locale: string): MailTemplate {
-  const de = locale !== "en";
+  // Mails gibt es in Deutsch und Englisch. Jede andere Sprache der Oberfläche
+  // fällt auf Englisch zurück – nicht auf Deutsch.
+  const de = locale === "de";
   return {
     subject: de ? "Bestätige deine E-Mail-Adresse – StreamingHub" : "Confirm your email – StreamingHub",
     text: de
@@ -262,7 +264,9 @@ export function verificationMail(link: string, locale: string): MailTemplate {
 }
 
 export function resetMail(link: string, locale: string): MailTemplate {
-  const de = locale !== "en";
+  // Mails gibt es in Deutsch und Englisch. Jede andere Sprache der Oberfläche
+  // fällt auf Englisch zurück – nicht auf Deutsch.
+  const de = locale === "de";
   return {
     subject: de ? "Passwort zurücksetzen – StreamingHub" : "Reset your password – StreamingHub",
     text: de
@@ -296,7 +300,7 @@ export function withdrawalMail(input: {
   receivedAt: string;
   locale: string;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   return {
     subject: de
       ? `Bestätigung deines Widerrufs – ${input.reference}`
@@ -322,7 +326,7 @@ export function cancellationMail(input: {
   channel: string | null;
   locale: string;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const ends = input.effectiveAt
     ? de
       ? `Das Abo endet zum ${input.effectiveAt}.`
@@ -370,7 +374,7 @@ export function contractRequestNotice(input: {
  * Premium ruht also; die Mail nennt Zahlungsmethode und den Weg zum Konto.
  */
 export function paymentFailedMail(input: { name: string; locale: string }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const link = `${env.appUrl}/dashboard/subscription`;
   return {
     subject: de
@@ -412,7 +416,7 @@ export function purchaseConfirmationMail(input: {
   interval?: "month" | "year";
   periodEnd?: string | null;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const unit = input.interval === "year" ? (de ? "Jahr" : "year") : de ? "Monat" : "month";
   const link = `${env.appUrl}/dashboard/subscription`;
   const price = new Intl.NumberFormat(de ? "de-DE" : "en-GB", {
@@ -459,7 +463,7 @@ export function trialStartedMail(input: {
   trialEndsAt: string;
   priceEur: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const link = `${env.appUrl}/premium`;
   const end = new Date(input.trialEndsAt);
   const endDate = Number.isFinite(end.getTime())
@@ -497,7 +501,7 @@ export function trialReminderMail(input: {
   /** Limit des kostenlosen Tarifs; steht so auch im Fließtext. */
   deviceLimit?: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const link = `${env.appUrl}/premium`;
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const end = new Date(input.trialEndsAt);
@@ -535,7 +539,7 @@ export function trialEndedMail(input: {
   /** Geräte, die beim Ablauf abgemeldet wurden. */
   devicesRevoked?: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const link = `${env.appUrl}/premium`;
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const revoked = input.devicesRevoked ?? 0;
@@ -576,7 +580,7 @@ export function subscriptionEndedMail(input: {
   /** Geräte, die beim Abo-Ende abgemeldet wurden. */
   devicesRevoked?: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const devices =
     surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
@@ -607,7 +611,7 @@ export function storeSubscriptionEndedMail(input: {
   /** Geräte, die beim Ende abgemeldet wurden. */
   devicesRevoked?: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const devices =
     surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
@@ -643,7 +647,7 @@ export function storeSubscriptionRefundedMail(input: {
   /** Geräte, die beim Ende abgemeldet wurden. */
   devicesRevoked?: number;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const limit = input.deviceLimit ?? DEFAULT_FREE_DEVICE_LIMIT;
   const devices =
     surplusDevicesNote(de, limit, input.devicesRevoked ?? 0) ??
@@ -668,7 +672,7 @@ export function storeSubscriptionRefundedMail(input: {
 
 /** Bestätigung nach einer Nachzahlung: Premium ist wieder freigeschaltet. */
 export function paymentRecoveredMail(input: { name: string; locale: string }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   const link = `${env.appUrl}/dashboard/subscription`;
   return {
     subject: de
@@ -699,7 +703,7 @@ export function ticketReceivedMail(input: {
   subject: string;
   locale: string;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   return {
     subject: de
       ? `Wir haben deine Anfrage erhalten – ${input.subject}`.slice(0, 160)
@@ -716,7 +720,7 @@ export function ticketReplyMail(input: {
   body: string;
   locale: string;
 }): MailTemplate {
-  const de = input.locale !== "en";
+  const de = input.locale === "de";
   return {
     subject: de
       ? `Antwort auf deine Anfrage – ${input.subject}`.slice(0, 160)

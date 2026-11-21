@@ -254,7 +254,9 @@ export async function recordCancellation(input: {
 
 /** Vertragsbezeichnung für Bestätigung und Mail. */
 export function contractLabel(contract: string, locale: string): string {
-  const de = locale !== "en";
+  // Nur Deutsch bekommt deutsche Bezeichnungen; jede andere Sprache fällt wie
+  // die Oberfläche auf Englisch zurück.
+  const de = locale === "de";
   switch (contract) {
     case "web":
       return de ? "Premium-Abo über die Website" : "Premium subscription via the website";

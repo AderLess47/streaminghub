@@ -12,7 +12,13 @@ export const metadata: Metadata = { title: "Anmelden" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; loggedOut?: string; verified?: string; reset?: string }>;
+  searchParams: Promise<{
+    next?: string;
+    loggedOut?: string;
+    expired?: string;
+    verified?: string;
+    reset?: string;
+  }>;
 }) {
   const { t } = await getI18n();
   const user = await getSessionUser();
@@ -31,7 +37,11 @@ export default async function LoginPage({
         </div>
 
         <div className="card p-6">
-          {params.loggedOut ? (
+          {params.expired ? (
+            <div className="mb-4">
+              <Alert tone="info">{t.auth.sessionExpired}</Alert>
+            </div>
+          ) : params.loggedOut ? (
             <div className="mb-4">
               <Alert tone="info">{t.auth.loggedOut}</Alert>
             </div>
