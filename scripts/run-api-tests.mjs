@@ -39,6 +39,7 @@ try {
       `--alias:@/lib/payments=${fakes}`,
       `--alias:@/lib/entitlements=${fakes}`,
       `--alias:@/lib/session=${fakes}`,
+      `--alias:next/headers=${path.join(repoRoot, "scripts", "fakes", "next-headers.ts")}`,
       `--alias:@=${path.join(repoRoot, "src")}`,
       `--outfile=${bundle}`,
       "--log-level=warning",

@@ -1,10 +1,32 @@
-/** `next/headers` für Server-Action-Tests: ein Session-Token aus dem Test. */
+/** `next/headers` für Server-Action- und Routen-Tests. */
+
+/** Session-Token aus dem Test; `sh_session` liest weiterhin hier. */
 export const sessionToken = { value: null as string | null };
+
 /** Letztes von einer Route gesetztes Session-Cookie (Token und Optionen). */
 export const lastSetSession = {
   value: null as string | null,
   options: null as Record<string, unknown> | null,
 };
+
+/**
+ * Alle übrigen Cookies (etwa `sh_locale`). Der Speicher liegt auf `globalThis`,
+ * damit Route und Test dieselbe Kopie sehen, auch wenn sie dieses Modul über
+ * verschiedene Pfade laden.
+ */
+const store = ((globalThis as { __shFakeCookies?: Map<string, string> }).__shFakeCookies ??= new Map());
+
+export function __resetCookies(): void {
+  store.clear();
+  sessionToken.value = null;
+  lastSetSession.value = null;
+  lastSetSession.options = null;
+}
+
+export function __getCookie(name: string): string | undefined {
+  if (name === "sh_session" && sessionToken.value) return sessionToken.value;
+  return store.get(name);
+}
 
 export async function cookies() {
   return {
@@ -12,15 +34,19 @@ export async function cookies() {
       if (name === "sh_session" && sessionToken.value) {
         return { name, value: sessionToken.value };
       }
-      return undefined;
+      const value = store.get(name);
+      return value === undefined ? undefined : { name, value };
     },
     set(name: string, value: string, options?: Record<string, unknown>) {
+      store.set(name, value);
       if (name === "sh_session") {
         lastSetSession.value = value;
         lastSetSession.options = options ?? null;
       }
     },
-    delete() {},
+    delete(name: string) {
+      store.delete(name);
+    },
   };
 }
 

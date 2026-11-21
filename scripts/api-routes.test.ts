@@ -13,7 +13,7 @@
 
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { all, nowIso, run } from "@/lib/db";
+import { all, get, nowIso, run } from "@/lib/db";
 import {
   normalizePairingCode,
   randomToken,
@@ -25,7 +25,9 @@ import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as activateDevice } from "@/app/api/devices/activate/route";
 import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
 import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
+import { POST as postLocale } from "@/app/api/locale/route";
 import { __setPremium, __setSessionUser, __setTrial } from "./fakes/api";
+import { __getCookie, __resetCookies } from "./fakes/next-headers.ts";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -50,6 +52,7 @@ function resetDb(): void {
   run("DELETE FROM pairing_requests");
   run("DELETE FROM customer_playlists");
   run("DELETE FROM device_tokens");
+  __resetCookies();
   __setSessionUser(null);
   __setPremium("user-a", false);
   __setPremium("user-b", false);
@@ -869,6 +872,53 @@ await check("/me: gesperrtes Gerät bekommt 403", async () => {
     call("GET", "/api/v1/me", { token: tokenFor("user-a", "dev-revoked") }),
   );
   assert.equal(response.status, 403);
+});
+
+await check("/api/locale: angemeldete Sitzung schreibt die Sprache ins Konto", async () => {
+  resetDb();
+  seedUser("user-locale");
+  run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
+  __setSessionUser({ id: "user-locale", email: "user-locale@example.test" });
+
+  const response = await postLocale(
+    new Request("http://localhost/api/locale", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: "en" }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true, locale: "en" });
+  // Mails und andere Geräte lesen die Sprache aus dem Konto, nicht aus dem Cookie.
+  assert.equal(
+    get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
+    "en",
+  );
+  assert.equal(__getCookie("sh_locale"), "en");
+});
+
+await check("/api/locale: ohne Sitzung nur das Cookie", async () => {
+  resetDb();
+  seedUser("user-locale");
+  run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
+  __setSessionUser(null);
+
+  const response = await postLocale(
+    new Request("http://localhost/api/locale", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locale: "fr" }),
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(__getCookie("sh_locale"), "fr");
+  assert.equal(
+    get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
+    "de",
+    "ohne Sitzung darf kein Konto umgestellt werden",
+  );
 });
 
 /* -------------------------------- Ergebnis ------------------------------- */
