@@ -52,9 +52,8 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     const dialog = dialogRef.current;
     if (!visible || !dialog) return;
     const root = document.documentElement;
-    // Höhe plus Luft für den Fokusring, der unter dem Banner sonst abgeschnitten wäre.
     const observer = new ResizeObserver(() => {
-      root.style.setProperty("--consent-banner-space", `${dialog.offsetHeight + 8}px`);
+      root.style.setProperty("--consent-banner-space", `${dialog.offsetHeight}px`);
     });
     observer.observe(dialog);
     return () => {
