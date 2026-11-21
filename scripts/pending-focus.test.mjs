@@ -35,8 +35,11 @@ const COMPONENTS = [
   "withdrawal-form.tsx",
 ];
 
-const BUTTON = /<button\b[\s\S]*?<\/button>/g;
-const DISABLED = /\sdisabled=\{([^}]+)\}/g;
+// Jedes `disabled` im Markup, auch an `<input>` und `<select>` und auch ohne
+// Wert. Nicht getroffen werden `aria-disabled` (davor steht ein „-“),
+// `disabledLabel` (Wortzeichen) und Tailwinds `disabled:` (Doppelpunkt).
+const DISABLED = /\sdisabled(?![\w:-])(=\{([^}]+)\})?/g;
+const UNBOUND = "(ohne Wert)";
 const ARIA_DISABLED = /aria-disabled=\{\s*[\w.]+(?:\s*!==\s*null)?\s*\|\|\s*undefined\s*\}/g;
 
 /**
@@ -51,17 +54,17 @@ function sourceOf(file) {
   return readFileSync(target, "utf8");
 }
 
-test("kein Knopf sperrt sich am Laufzustand", () => {
+test("kein Element sperrt sich am Laufzustand", () => {
   for (const file of COMPONENTS) {
     const allowed = ALLOWED_DISABLED[file] ?? [];
-    const found = [...sourceOf(file).matchAll(BUTTON)]
-      .flatMap(([button]) => [...button.matchAll(DISABLED)].map(([, expression]) => expression.trim()))
+    const found = [...sourceOf(file).matchAll(DISABLED)]
+      .map(([, , expression]) => expression?.trim() ?? UNBOUND)
       .filter((expression) => !allowed.includes(expression));
 
     assert.deepEqual(
       found,
       [],
-      `${file}: disabled nimmt den Knopf aus dem Tastaturfluss; Laufzustand über aria-disabled`,
+      `${file}: disabled nimmt das Element aus dem Tastaturfluss und ignoriert es für Screenreader; Laufzustand über aria-disabled`,
     );
   }
 });
