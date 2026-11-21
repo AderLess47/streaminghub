@@ -38,6 +38,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test der Checkout-Zustimmung
+        run: npm run test:checkout-consent
+
       # Die Vega-App ist ein eigenes Paket mit eigenen Abhaengigkeiten; die
       # Website-Pruefung blendet sie aus, damit beide Staende getrennt geprueft werden.
       - name: Typecheck der Vega-App
