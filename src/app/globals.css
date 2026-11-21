@@ -32,6 +32,10 @@
     /* Der Kopf bleibt beim Scrollen stehen; ohne diesen Abstand landet ein
        Sprungziel oder ein per Fokus angesteuertes Feld darunter. */
     scroll-padding-top: 5rem;
+    /* Der Cookie-Banner liegt fest über dem Seitenende; seinen Platzbedarf
+       setzt cookie-consent.tsx. Der Scrollbereich endet darüber, damit ein
+       fokussiertes Element nicht unter ihm landet (2.4.11). */
+    scroll-padding-bottom: var(--consent-banner-space, 0px);
     -webkit-text-size-adjust: 100%;
   }
 
@@ -47,6 +51,9 @@
       radial-gradient(55rem 32rem at 92% 4%, rgba(6, 182, 212, 0.11), transparent 60%);
     background-repeat: no-repeat;
     min-height: 100dvh;
+    /* Dieselbe Lücke am Dokumentende schafft den Scrollweg, um ein fokussiertes
+       Element über den Banner zu holen – ohne sie gäbe es dorthin keinen. */
+    padding-bottom: var(--consent-banner-space, 0px);
   }
 
   h1,

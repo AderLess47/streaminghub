@@ -198,6 +198,36 @@ test("Cookie-Banner: schließt erst nach bestätigter Antwort und meldet den Feh
   assert.ok(showsError, "eine abgelehnte Antwort muss den Fehler setzen statt zu schließen");
 });
 
+test("Cookie-Banner: reserviert seine Höhe, damit Fokus nicht darunter liegt", () => {
+  // 2.4.11: Am Seitenende deckt der Banner den Footer-Auslöser sonst zu; der
+  // Scrollbereich muss über ihm enden und dafür Platz am Dokumentende haben.
+  const tree = parse("cookie-consent.tsx");
+  let setsHeight = false;
+  walk(tree, (node) => {
+    if (setsHeight) return false;
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(tree).endsWith(".setProperty") &&
+      node.arguments[0]?.getText(tree) === '"--consent-banner-space"'
+    ) {
+      setsHeight = true;
+    }
+  });
+
+  const css = readFileSync(path.join(root, "src/app/globals.css"), "utf8");
+  assert.ok(setsHeight, "cookie-consent.tsx muss --consent-banner-space setzen");
+  assert.match(
+    css,
+    /scroll-padding-bottom:\s*var\(--consent-banner-space/,
+    "globals.css: der Scrollbereich muss über dem Banner enden",
+  );
+  assert.match(
+    css,
+    /padding-bottom:\s*var\(--consent-banner-space/,
+    "globals.css: am Dokumentende fehlt der Scrollweg in Bannerhöhe",
+  );
+});
+
 test("Cookie-Banner: zeigt den Fehler sichtbar mit role=alert", () => {
   const tree = parse("cookie-consent.tsx");
   let showsError = false;
