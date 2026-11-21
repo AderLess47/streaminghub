@@ -90,6 +90,9 @@ next_pid="$(docker exec "$CONTAINER" node -e '
 const fs = require("fs");
 for (const name of fs.readdirSync("/proc")) {
   if (!/^\d+$/.test(name)) continue;
+  // Der eigene Prozess traegt die Suchbegriffe in seiner Kommandozeile und
+  // wuerde sich selbst finden; der Kill danach endet als ESRCH.
+  if (Number(name) === process.pid) continue;
   try {
     const cmd = fs.readFileSync(`/proc/${name}/cmdline`, "utf8").split("\0").join(" ");
     if (cmd.includes("next-server") || cmd.includes("node server.js")) {
