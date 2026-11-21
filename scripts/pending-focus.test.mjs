@@ -8,7 +8,8 @@ import ts from "typescript";
 // Seit #366/#367 hält `aria-disabled` den Fokus auf dem auslösenden Knopf,
 // während eine Aktion läuft; ein `disabled` nimmt ihn aus dem Tastaturfluss.
 // Geprüft wird die Quelle, weil das Projekt keinen DOM-Teststack hat: Ein
-// Laufzustand im Browser lässt sich hier nicht auslösen.
+// Laufzustand im Browser lässt sich hier nicht auslösen. Alle Regeln lesen
+// den TSX-Baum, nicht den Rohtext.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const componentsDir = path.join(root, "src/components");
 
@@ -42,44 +43,58 @@ const ALLOWED_DISABLED = { "activate-form.tsx": ["code.length < 8 || undefined"]
 /** Leerraum in Bedingungen ist Formatierung, nicht Verhalten. */
 const normalize = (expression) => expression.replace(/\s+/g, " ").trim();
 
-function componentSource(file) {
+/** Datei als TSX-Baum: Ein `disabled={…}` im Fließtext eines Strings ist kein Knoten. */
+function parse(file) {
   const target = path.join(componentsDir, file);
   assert.ok(existsSync(target), `${file}: Datei fehlt oder wurde umbenannt`);
-  // Kommentare zählen nicht mit: Ein Satz über `disabled` sperrt nichts.
-  return readFileSync(target, "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/[^\n]*$/gm, "");
-}
-
-/**
- * Die JSX-Attribute der Datei, vom Parser gelesen statt gesucht: Ein
- * `disabled={…}` als Fließtext in einem String-Literal ist damit kein Treffer,
- * ebenso wenig `disabledLabel` oder Tailwinds `disabled:`.
- */
-function attributesOf(file) {
-  const source = ts.createSourceFile(
+  return ts.createSourceFile(
     file,
-    componentSource(file),
+    readFileSync(target, "utf8"),
     ts.ScriptTarget.Latest,
     false,
     ts.ScriptKind.TSX,
   );
+}
+
+function walk(node, visit) {
+  if (visit(node) === false) return;
+  node.forEachChild((child) => walk(child, visit));
+}
+
+/** Die JSX-Attribute der Datei; `disabledLabel` und Tailwinds `disabled:` sind keine. */
+function attributesOf(file) {
+  const tree = parse(file);
   const attributes = [];
-  const walk = (node) => {
+  walk(tree, (node) => {
     if (ts.isJsxAttribute(node)) {
       attributes.push({
-        name: node.name.getText(source),
+        name: node.name.getText(tree),
         value: node.initializer
           ? ts.isStringLiteral(node.initializer)
             ? node.initializer.text
-            : node.initializer.getText(source).slice(1, -1)
+            : node.initializer.getText(tree).slice(1, -1)
           : null,
       });
     }
-    node.forEachChild(walk);
-  };
-  walk(source);
+  });
   return attributes;
+}
+
+/** Erstes Funktionsobjekt mit diesem Namen – Deklaration oder Zuweisung. */
+function functionNamed(tree, name) {
+  let found = null;
+  walk(tree, (node) => {
+    if (found) return false;
+    if (ts.isFunctionDeclaration(node) && node.name?.getText(tree) === name) found = node;
+    else if (
+      ts.isVariableDeclaration(node) &&
+      node.name.getText(tree) === name &&
+      node.initializer &&
+      (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
+    )
+      found = node.initializer;
+  });
+  return found;
 }
 
 test("kein Element sperrt sich am Laufzustand", () => {
@@ -125,9 +140,30 @@ test("keine Komponente mit aria-disabled fehlt in der Liste", () => {
 test("Cookie-Banner: choose() verwirft einen zweiten Klick während des Speicherns", () => {
   // `aria-disabled` allein blockiert nichts: Ohne Guard würde ein zweiter
   // Klick eine weitere Anfrage auslösen und die Auswahl doppelt schreiben.
-  assert.match(
-    componentSource("cookie-consent.tsx"),
-    /async function choose\([\s\S]*?if \(saving\)\s+return;[\s\S]*?setSaving\(true\);/,
-    "Guard vor dem Laufzustand in choose()",
-  );
+  const tree = parse("cookie-consent.tsx");
+  const choose = functionNamed(tree, "choose");
+  assert.ok(choose, "cookie-consent.tsx: choose() fehlt oder wurde umbenannt");
+
+  const positions = { guard: null, setter: null };
+  walk(choose, (node) => {
+    const start = node.getStart(tree);
+    if (
+      ts.isIfStatement(node) &&
+      node.expression.getText(tree) === "saving" &&
+      ts.isReturnStatement(node.thenStatement) &&
+      !node.thenStatement.expression
+    ) {
+      positions.guard ??= start;
+    } else if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(tree) === "setSaving" &&
+      node.arguments.some((argument) => argument.getText(tree) === "true")
+    ) {
+      positions.setter ??= start;
+    }
+  });
+
+  assert.notEqual(positions.guard, null, "`if (saving) return;` fehlt in choose()");
+  assert.notEqual(positions.setter, null, "`setSaving(true)` fehlt in choose()");
+  assert.ok(positions.guard < positions.setter, "Guard muss vor setSaving(true) stehen");
 });
