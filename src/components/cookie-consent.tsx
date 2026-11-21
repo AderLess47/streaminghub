@@ -11,6 +11,7 @@ const COOKIE = "sh_consent";
 export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
   const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -63,6 +64,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     const focusInBanner =
       !active || active === document.body || (dialogRef.current?.contains(active) ?? false);
     setVisible(false);
+    setError("");
     if (message) setAnnouncement(message);
     const target = returnFocusRef.current;
     returnFocusRef.current = null;
@@ -83,11 +85,17 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     if (saving) return;
     setSaving(true);
     try {
-      await fetch("/api/consent", {
+      const response = await fetch("/api/consent", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ choice }),
-      });
+      }).catch(() => null);
+      // Nur eine bestätigte Antwort hat den Cookie gesetzt: Eine 403-Antwort
+      // oder ein Netzwerkfehler darf nicht als gespeichert gelten.
+      if (!response?.ok) {
+        setError(t.error);
+        return;
+      }
       close(t.saved);
     } finally {
       setSaving(false);
@@ -122,6 +130,14 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
               <Link href="/privacy#cookies" className="link mt-2 inline-block text-xs">
                 {t.details}
               </Link>
+              {error ? (
+                <p
+                  role="alert"
+                  className="mt-2 rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs leading-relaxed text-rose-200"
+                >
+                  {error}
+                </p>
+              ) : null}
             </div>
             <div className="flex shrink-0 flex-col gap-2 sm:w-44">
               <button

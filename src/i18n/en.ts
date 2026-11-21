@@ -1185,6 +1185,7 @@ export const en: Dictionary = {
     statusOptional: "Optional",
     saved: "Your choice has been saved.",
     dismissed: "Settings closed – nothing has been saved.",
+    error: "Your choice was not saved. Please try again.",
     settingsTitle: "Cookie settings",
     reopen: "Open settings",
   },

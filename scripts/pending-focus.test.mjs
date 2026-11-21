@@ -167,3 +167,61 @@ test("Cookie-Banner: choose() verwirft einen zweiten Klick während des Speicher
   assert.notEqual(positions.setter, null, "`setSaving(true)` fehlt in choose()");
   assert.ok(positions.guard < positions.setter, "Guard muss vor setSaving(true) stehen");
 });
+
+test("Cookie-Banner: schließt erst nach bestätigter Antwort und meldet den Fehler", () => {
+  // Eine 403-Antwort oder ein Netzwerkfehler hat keinen Cookie gesetzt; ein
+  // `close(t.saved)` danach wäre eine falsche Bestätigung.
+  const tree = parse("cookie-consent.tsx");
+  const choose = functionNamed(tree, "choose");
+  assert.ok(choose, "cookie-consent.tsx: choose() fehlt oder wurde umbenannt");
+
+  const positions = { check: null, close: null };
+  let showsError = false;
+
+  walk(choose, (node) => {
+    if (ts.isIfStatement(node) && node.expression.getText(tree).includes(".ok")) {
+      positions.check ??= node.getStart(tree);
+      walk(node.thenStatement, (inner) => {
+        if (ts.isCallExpression(inner) && inner.expression.getText(tree) === "setError") {
+          showsError = true;
+        }
+      });
+    }
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === "close") {
+      positions.close ??= node.getStart(tree);
+    }
+  });
+
+  assert.notEqual(positions.check, null, "choose() muss die Antwort prüfen (`response?.ok`)");
+  assert.notEqual(positions.close, null, "choose() muss den Erfolg schließen (`close(t.saved)`)");
+  assert.ok(positions.check < positions.close, "close() darf erst nach der ok-Prüfung stehen");
+  assert.ok(showsError, "eine abgelehnte Antwort muss den Fehler setzen statt zu schließen");
+});
+
+test("Cookie-Banner: zeigt den Fehler sichtbar mit role=alert", () => {
+  const tree = parse("cookie-consent.tsx");
+  let showsError = false;
+
+  walk(tree, (node) => {
+    if (showsError) return false;
+    if (!ts.isJsxElement(node)) return;
+    const isAlert = node.openingElement.attributes.properties.some(
+      (attribute) =>
+        ts.isJsxAttribute(attribute) &&
+        attribute.name.getText(tree) === "role" &&
+        attribute.initializer &&
+        ts.isStringLiteral(attribute.initializer) &&
+        attribute.initializer.text === "alert",
+    );
+    if (isAlert) {
+      showsError = node.children.some(
+        (child) => ts.isJsxExpression(child) && child.expression?.getText(tree) === "error",
+      );
+    }
+  });
+
+  assert.ok(
+    showsError,
+    'die Fehlermeldung braucht `role="alert"` und muss den Fehlerzustand ausgeben',
+  );
+});

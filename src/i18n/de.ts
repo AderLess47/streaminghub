@@ -1189,6 +1189,7 @@ export const de = {
     statusOptional: "Optional",
     saved: "Deine Auswahl wurde gespeichert.",
     dismissed: "Einstellungen geschlossen – es wurde nichts gespeichert.",
+    error: "Deine Auswahl wurde nicht gespeichert. Bitte versuche es erneut.",
     settingsTitle: "Cookie-Einstellungen",
     reopen: "Einstellungen öffnen",
   },
