@@ -71,11 +71,14 @@ function seedUser(id: string, email: string, role: "customer" | "admin" = "custo
 }
 
 let sequence = 0;
+// Relativ zu jetzt: ein festes Datum lief frueher oder spaeter in die
+// 7-Tage-Frist aus "Eigene Frist wird beachtet" hinein.
+const seedBase = Date.now() - 60 * 60 * 1000;
 function seedMessage(
   subject: string,
   status: "new" | "read" | "handled",
   email = "kunde@example.test",
-  createdAt = new Date(Date.UTC(2026, 10, 14, 10, sequence)).toISOString(),
+  createdAt = new Date(seedBase + sequence * 60 * 1000).toISOString(),
 ) {
   sequence += 1;
   const id = `contact-${sequence}`;
