@@ -666,9 +666,10 @@ await check("Kopplung: ungültige Anfrage 400, gültige 201 mit Code und Poll-To
   );
   assert.equal(rows.length, 1);
   assert.equal(data.expiresAt, rows[0].expires_at, "Antwort meldet den gespeicherten Ablauf");
+  // Millisekunden zwischen Ablaufberechnung und Insert schwanken; die Zusage gilt in Sekunden.
   assert.equal(
-    Date.parse(rows[0].expires_at) - Date.parse(rows[0].created_at),
-    600_000,
+    Math.round((Date.parse(rows[0].expires_at) - Date.parse(rows[0].created_at)) / 1_000),
+    600,
     "gespeicherter Ablauf liegt 600 Sekunden nach dem Anlegen",
   );
   assert.equal(rows[0].device_name, "Wohnzimmer");
