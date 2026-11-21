@@ -153,9 +153,9 @@ jobs:
       - name: Tests des Kontaktformulars
         run: npm run test:contact-form
 
-      # Cookie-Banner: kein `disabled` an den Wahlknöpfen, Fokus bleibt beim Speichern.
-      - name: Fokus-Regeln im Cookie-Banner
-        run: npm run test:cookie-consent
+      # Kein `disabled` an den Knöpfen, solange eine Aktion läuft (#366/#367).
+      - name: Fokus-Regeln der Formulare
+        run: npm run test:pending-focus
 
       # Admin-Posteingang fuer Kontaktanfragen.
       - name: Tests des Admin-Kontaktpostfachs
