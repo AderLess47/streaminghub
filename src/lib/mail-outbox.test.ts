@@ -19,9 +19,12 @@ type Mode = "ok" | "error500" | "error400" | "ratelimit" | "reset";
 let mode: Mode = "ok";
 let requests = 0;
 let lastHeaders: Record<string, string | string[] | undefined> = {};
+/** Ankunftszeiten der Zustellversuche, um Wartezeiten zu messen. */
+const arrivals: number[] = [];
 
 const server = createServer((request, response) => {
   requests += 1;
+  arrivals.push(performance.now());
   lastHeaders = request.headers;
   if (mode === "reset") {
     request.socket.destroy();
@@ -62,6 +65,7 @@ function resetProvider(next: Mode) {
   mode = next;
   requests = 0;
   lastHeaders = {};
+  arrivals.length = 0;
 }
 
 function outboxRow(id: string) {
@@ -119,6 +123,35 @@ test("a 500 is retried once and recorded as failed", async () => {
   assert.equal(row?.attempts, 2);
   assert.match(row?.error ?? "", /HTTP 500/);
   assert.equal(requests, 2);
+});
+
+test("a retry waits 350 ms before the second attempt", async () => {
+  resetDb();
+  resetProvider("error500");
+
+  // Die angeforderte Verzoegerung direkt mitschreiben: unabhaengig von der
+  // Auslastung des Rechners, aber genau der Wert aus dem Produktionscode.
+  const originalSetTimeout = globalThis.setTimeout;
+  const delays: number[] = [];
+  globalThis.setTimeout = ((...params: Parameters<typeof originalSetTimeout>) => {
+    delays.push(Number(params[1] ?? 0));
+    return originalSetTimeout(...params);
+  }) as typeof originalSetTimeout;
+  try {
+    const result = await sendMail(mail);
+    assert.equal(result.delivered, false);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+
+  // Fetch und Test-Runner setzen eigene, laengere Timer; der Wiederholversuch
+  // ist die einzige 350-ms-Verzoegerung in diesem Fenster.
+  assert.equal(delays.filter((ms) => ms === 350).length, 1, "genau eine Wiederholung nach 350 ms");
+
+  // Grenzfall: der Wert wird nicht nur angefordert, sondern abgewartet.
+  assert.equal(arrivals.length, 2);
+  const gap = arrivals[1] - arrivals[0];
+  assert.ok(gap >= 340, `die Wiederholung muss warten, Abstand war ${gap.toFixed(1)} ms`);
 });
 
 test("a 4xx is not retried", async () => {
