@@ -39,7 +39,7 @@ const COMPONENTS = [
 // Wert. Nicht getroffen werden `aria-disabled` (davor steht ein „-“),
 // `disabledLabel` (Wortzeichen) und Tailwinds `disabled:` (Doppelpunkt).
 const DISABLED = /\sdisabled(?![\w:-])(=\{([^}]+)\})?/g;
-const ARIA_DISABLED = /aria-disabled=\{\s*[\w.]+(?:\s*!==\s*null)?\s*\|\|\s*undefined\s*\}/g;
+const ARIA_DISABLED = /aria-disabled=\{[^}]*\|\|\s*undefined\s*\}/g;
 
 /** Ausnahme: hängt an der Eingabe, nicht am Laufzustand – der Fokus liegt im Feld. */
 const ALLOWED_DISABLED = { "activate-form.tsx": ["code.length < 8 || undefined"] };
