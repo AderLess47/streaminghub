@@ -47,7 +47,7 @@ test("Widerruf wird mit Referenz gespeichert und ist auffindbar", () => {
     ip: "203.0.113.7",
   });
 
-  assert.match(record.reference, /^W-/);
+  assert.match(record.reference, /^W-[A-Za-z0-9_-]{6}$/, "W- plus sechs Zeichen");
   assert.equal(record.status, "received");
   assert.equal(record.email, "ada@example.org");
   assert.equal(record.contract, "web");
@@ -65,7 +65,7 @@ test("Unbekannte Referenz liefert nichts", () => {
 test("Kündigung ohne Konto wird belegt und als no_account geführt", async () => {
   const record = await recordCancellation({ email: "niemand@example.org", ip: "203.0.113.8" });
 
-  assert.match(record.reference, /^K-/);
+  assert.match(record.reference, /^K-[A-Za-z0-9_-]{6}$/, "K- plus sechs Zeichen");
   assert.equal(record.status, "no_account");
   assert.equal(record.effectiveAt, null);
 });

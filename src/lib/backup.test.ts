@@ -27,6 +27,7 @@ delete process.env.RESEND_API_KEY;
 const { nowIso, run } = await import("./db.ts");
 const {
   BackupError,
+  DEFAULT_MAX_SNAPSHOT_BYTES,
   backupAvailability,
   createBackup,
   decryptSnapshot,
@@ -227,6 +228,28 @@ test("creating a backup stores only ciphertext and lists it", async () => {
   const restoredSnapshot = decryptSnapshot(stored, "bk-create", KEY);
   assert.equal(restoredSnapshot.progress.length, 1);
   assert.equal(restoredSnapshot.progress[0].positionMs, 5000);
+});
+
+test("a snapshot keeps at most 500 progress entries", async () => {
+  seedUser("bk-cap");
+  const base = Date.parse(nowIso());
+  // Ein Eintrag ueber der Grenze genuegt, um das Abschneiden zu belegen.
+  for (let i = 0; i <= 500; i++) {
+    seedProgress("bk-cap", `https://example.test/cap-${i}.mkv`, i, new Date(base + i * 1_000).toISOString());
+  }
+
+  const { objects, store } = memoryStore();
+  await createBackup("bk-cap", { storage: store });
+
+  const [stored] = [...objects.values()];
+  const snapshot = decryptSnapshot(stored, "bk-cap", KEY);
+  assert.equal(snapshot.progress.length, 500, "hoechstens 500 Fortschritte je Snapshot");
+  assert.equal(snapshot.progress[0].mediaUrl, "https://example.test/cap-500.mkv", "der neueste bleibt");
+  assert.equal(snapshot.progress.at(-1)?.mediaUrl, "https://example.test/cap-1.mkv", "der aelteste faellt heraus");
+});
+
+test("the default snapshot limit is 1 MiB", () => {
+  assert.equal(DEFAULT_MAX_SNAPSHOT_BYTES, 1024 * 1024);
 });
 
 test("an oversized snapshot is refused", async () => {
