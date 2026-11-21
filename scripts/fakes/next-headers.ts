@@ -38,13 +38,22 @@ export async function cookies() {
       return value === undefined ? undefined : { name, value };
     },
     set(name: string, value: string, options?: Record<string, unknown>) {
-      store.set(name, value);
+      // Das Session-Cookie bleibt bewusst aus dem allgemeinen Speicher: Ob ein
+      // Test angemeldet ist, entscheidet allein `sessionToken`. Sonst würde
+      // eine Registrierung im selben Test als offene Sitzung weiterwirken.
       if (name === "sh_session") {
         lastSetSession.value = value;
         lastSetSession.options = options ?? null;
+        return;
       }
+      store.set(name, value);
     },
     delete(name: string) {
+      if (name === "sh_session") {
+        sessionToken.value = null;
+        lastSetSession.value = null;
+        return;
+      }
       store.delete(name);
     },
   };
