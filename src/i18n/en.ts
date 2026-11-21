@@ -1183,6 +1183,7 @@ export const en: Dictionary = {
     details: "Learn more",
     statusNecessary: "Technically necessary",
     statusOptional: "Optional",
+    saving: "Saving your choice …",
     saved: "Your choice has been saved.",
     dismissed: "Settings closed – nothing has been saved.",
     error: "Your choice was not saved. Please try again.",

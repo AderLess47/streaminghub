@@ -228,6 +228,39 @@ test("Cookie-Banner: reserviert seine Höhe, damit Fokus nicht darunter liegt", 
   );
 });
 
+test("Cookie-Banner: meldet den Laufzustand als aria-busy und in der Live-Region", () => {
+  // Ohne beides passiert beim Speichern für Screenreader sichtbar nichts: der
+  // Dialog bleibt still und die Region leer.
+  const tree = parse("cookie-consent.tsx");
+  let busyBound = false;
+  let liveBound = false;
+
+  walk(tree, (node) => {
+    const element = ts.isJsxElement(node)
+      ? node.openingElement
+      : ts.isJsxSelfClosingElement(node)
+        ? node
+        : null;
+    if (!element) return;
+    const attributes = element.attributes.properties;
+    const attribute = (name) =>
+      attributes.find((entry) => ts.isJsxAttribute(entry) && entry.name.getText(tree) === name);
+    const expression = (entry) =>
+      entry && ts.isJsxExpression(entry.initializer) ? entry.initializer.expression : undefined;
+
+    const busy = expression(attribute("aria-busy"));
+    if (busy?.getText(tree).includes("saving")) busyBound = true;
+
+    if (element.tagName.getText(tree) === "LiveRegion") {
+      const message = expression(attribute("message"));
+      if (message?.getText(tree).includes("t.saving")) liveBound = true;
+    }
+  });
+
+  assert.ok(busyBound, "der Dialog braucht `aria-busy`, solange gespeichert wird");
+  assert.ok(liveBound, "die Live-Region muss den Laufzustand ansagen (`t.saving`)");
+});
+
 test("Cookie-Banner: zeigt den Fehler sichtbar mit role=alert", () => {
   const tree = parse("cookie-consent.tsx");
   let showsError = false;
