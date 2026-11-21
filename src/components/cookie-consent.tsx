@@ -11,6 +11,24 @@ const COOKIE = "sh_consent";
 // zurück und nähme erneut den Fokus.
 const DISMISSED = "sh_consent_dismissed";
 
+/** Blockierter Speicher (privater Modus) zählt wie „nicht abgelehnt“. */
+function dismissalRemembered(): boolean {
+  try {
+    return window.sessionStorage.getItem(DISMISSED) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Das Merken ist eine Zugabe: ohne Speicher muss Escape trotzdem schließen. */
+function rememberDismissal() {
+  try {
+    window.sessionStorage.setItem(DISMISSED, "1");
+  } catch {
+    // Der Banner erscheint beim nächsten Aufruf erneut; das ist der Preis.
+  }
+}
+
 export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
   const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -22,7 +40,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
 
   useEffect(() => {
     const hasChoice = document.cookie.split("; ").some((entry) => entry.startsWith(`${COOKIE}=`));
-    const dismissed = window.sessionStorage.getItem(DISMISSED) === "1";
+    const dismissed = dismissalRemembered();
     const reopen = () => {
       openedByTriggerRef.current = true;
       setVisible(true);
@@ -75,7 +93,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.stopPropagation();
-      window.sessionStorage.setItem(DISMISSED, "1");
+      rememberDismissal();
       close(t.dismissed);
     };
     document.addEventListener("keydown", onKeyDown);

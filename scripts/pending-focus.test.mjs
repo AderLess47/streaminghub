@@ -228,20 +228,24 @@ test("Cookie-Banner: reserviert seine Höhe, damit Fokus nicht darunter liegt", 
   );
 });
 
-test("Cookie-Banner: merkt sich das Schließen per Escape für den Reload", () => {
+test("Cookie-Banner: merkt sich das Schließen per Escape und verträgt blockierten Speicher", () => {
   // Ohne Notiz erscheint der Banner nach jedem Reload neu und nimmt wieder den
-  // Fokus; Escape setzt aber bewusst keinen Cookie.
+  // Fokus; Escape setzt aber bewusst keinen Cookie. Der Speicher kann werfen
+  // (privater Modus) – dann darf weder der Banner ausbleiben noch Escape hängen.
   const tree = parse("cookie-consent.tsx");
   let stores = false;
   let reads = false;
   let blocksTimer = false;
 
   walk(tree, (node) => {
-    if (ts.isCallExpression(node)) {
-      const call = node.expression.getText(tree);
-      const key = node.arguments[0]?.getText(tree);
-      if (call.endsWith(".setItem") && key === "DISMISSED") stores = true;
-      if (call.endsWith(".getItem") && key === "DISMISSED") reads = true;
+    if (ts.isTryStatement(node)) {
+      walk(node.tryBlock, (inner) => {
+        if (!ts.isCallExpression(inner)) return;
+        const call = inner.expression.getText(tree);
+        if (inner.arguments[0]?.getText(tree) !== "DISMISSED") return;
+        if (call.endsWith(".setItem")) stores = true;
+        if (call.endsWith(".getItem")) reads = true;
+      });
     }
     if (
       ts.isConditionalExpression(node) &&
@@ -252,8 +256,8 @@ test("Cookie-Banner: merkt sich das Schließen per Escape für den Reload", () =
     }
   });
 
-  assert.ok(stores, "Escape muss die Ablehnung in `sessionStorage` festhalten");
-  assert.ok(reads, "der Mount-Effekt muss die Ablehnung lesen");
+  assert.ok(stores, "Escape muss die Ablehnung in `sessionStorage` festhalten – abgesichert");
+  assert.ok(reads, "der Mount-Effekt muss die Ablehnung lesen – abgesichert, sonst bleibt der Banner still aus");
   assert.ok(blocksTimer, "nach einer Ablehnung darf der Banner nicht von selbst öffnen");
 });
 
