@@ -75,6 +75,14 @@ jobs:
       - name: Tests der Abo-Mails
         run: npm run test:subscription-mails
 
+      # Ansprüche, Preise und Flags: Gerätegrenzen, Jahresabo, stabile Schlüssel.
+      - name: Tests der Ansprüche und Preise
+        run: npm run test:entitlements
+
+      # Kündigungs-Rettung und Coupons: Angebot, doppelte Annahme, Conversion-Coupon.
+      - name: Tests des Retention-Angebots
+        run: npm run test:retention
+
       - name: Tests der Gerätebereinigung
         run: npm run test:device-cleanup
 
