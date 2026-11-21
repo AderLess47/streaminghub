@@ -238,13 +238,20 @@ await check("Neun Fehlversuche werden begrenzt", async () => {
   assert.ok(limited.headers.get("retry-after"));
 });
 
-await check("TOTP toleriert einen Schritt Taktversatz, aber keinen zweiten", () => {
+await check("TOTP toleriert einen Schritt Taktversatz, aber keinen zweiten", async () => {
+  // Ein Schrittwechsel mitten in der Pruefung wuerde die Erwartung kippen:
+  // knapp vor der Grenze auf den naechsten Schritt warten.
+  const intoStep = Date.now() % 30_000;
+  if (intoStep > 29_000) {
+    await new Promise((resolve) => setTimeout(resolve, 30_000 - intoStep + 50));
+  }
   const step = Math.floor(Date.now() / 30_000);
   assert.equal(verifyTotp(SECRET, totpCode(SECRET, step)), true, "aktueller Schritt");
   assert.equal(verifyTotp(SECRET, totpCode(SECRET, step - 1)), true, "ein Schritt zurueck");
   assert.equal(verifyTotp(SECRET, totpCode(SECRET, step + 1)), true, "ein Schritt voraus");
   assert.equal(verifyTotp(SECRET, totpCode(SECRET, step - 2)), false, "zwei Schritte zurueck");
   assert.equal(verifyTotp(SECRET, totpCode(SECRET, step + 2)), false, "zwei Schritte voraus");
+  assert.equal(Math.floor(Date.now() / 30_000), step, "kein Schrittwechsel waehrend der Pruefung");
 });
 
 const failed = results.filter((result) => !result.ok);
