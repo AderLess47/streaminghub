@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import type { Dictionary } from "@/i18n/de";
+import { consentFeedback } from "@/lib/checkout-consent";
 import { CheckoutButton } from "./checkout-button";
 
 /**
@@ -44,18 +45,19 @@ export function CheckoutActions({
   const withdrawalRef = useRef<HTMLInputElement>(null);
   const [terms, setTerms] = useState(false);
   const [withdrawal, setWithdrawal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  // Die Meldung wird aus dem aktuellen Zustand abgeleitet, damit sie nach dem
+  // Setzen des ersten Häkchens sofort den nächsten Schritt nennt und nicht
+  // veraltet stehen bleibt.
+  const feedback = consentFeedback({ terms, withdrawal }, attempted, {
+    termsRequired: t.termsRequired,
+    withdrawalRequired: t.withdrawalRequired,
+  });
 
   function block() {
-    if (!terms) {
-      setError(t.termsRequired);
-      termsRef.current?.focus();
-      return;
-    }
-    if (!withdrawal) {
-      setError(t.withdrawalRequired);
-      withdrawalRef.current?.focus();
-    }
+    setAttempted(true);
+    if (!terms) termsRef.current?.focus();
+    else if (!withdrawal) withdrawalRef.current?.focus();
   }
 
   const consent = signedIn ? { terms, withdrawal } : undefined;
@@ -76,12 +78,9 @@ export function CheckoutActions({
               ref={termsRef}
               type="checkbox"
               checked={terms}
-              onChange={(event) => {
-                setTerms(event.target.checked);
-                if (event.target.checked && withdrawal) setError(null);
-              }}
-              aria-invalid={Boolean(error) || undefined}
-              aria-describedby={error ? errorId : undefined}
+              onChange={(event) => setTerms(event.target.checked)}
+              aria-invalid={feedback?.field === "terms" || undefined}
+              aria-describedby={feedback?.field === "terms" ? errorId : undefined}
               className="mt-0.5 size-4 shrink-0 rounded border-line bg-ink accent-brand"
             />
             <span>
@@ -110,20 +109,17 @@ export function CheckoutActions({
               ref={withdrawalRef}
               type="checkbox"
               checked={withdrawal}
-              onChange={(event) => {
-                setWithdrawal(event.target.checked);
-                if (event.target.checked && terms) setError(null);
-              }}
-              aria-invalid={Boolean(error) || undefined}
-              aria-describedby={error ? errorId : undefined}
+              onChange={(event) => setWithdrawal(event.target.checked)}
+              aria-invalid={feedback?.field === "withdrawal" || undefined}
+              aria-describedby={feedback?.field === "withdrawal" ? errorId : undefined}
               className="mt-0.5 size-4 shrink-0 rounded border-line bg-ink accent-brand"
             />
             <span>{t.withdrawalConsent}</span>
           </label>
 
-          {error ? (
+          {feedback ? (
             <p id={errorId} role="alert" className="mt-2 text-xs leading-relaxed text-rose-300">
-              {error}
+              {feedback.message}
             </p>
           ) : null}
         </div>

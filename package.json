@@ -26,6 +26,7 @@
     "test:device-cleanup": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/device-cleanup.test.ts",
     "test:backup": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/backup.test.ts",
     "test:retention": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/retention.test.ts",
+    "test:checkout-consent": "node --experimental-strip-types --test src/lib/checkout-consent.test.ts",
     "test:contracts": "node --experimental-strip-types --import ./scripts/register-ts-extensions.mjs --test src/lib/contract-requests.test.ts",
     "amazon:sync": "node --env-file-if-exists=.env.local scripts/amazon-sync.mjs",
     "trial:jobs": "node --env-file-if-exists=.env.local scripts/trial-jobs.mjs",
