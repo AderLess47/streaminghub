@@ -2,25 +2,30 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
-import { useSubmitFocus } from "./use-submit-focus";
 
 export function RetentionOffer({
   label,
   acceptedMessage,
   failedMessage,
+  busyLabel,
 }: {
   label: string;
   acceptedMessage: string;
   failedMessage: string;
+  /** Ansage während der Anfrage; der Knopf behält den Fokus. */
+  busyLabel: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const buttonRef = useSubmitFocus(pending);
 
   async function accept() {
+    // `aria-disabled` hält den Knopf bedienbar; den Doppelklick fängt der
+    // Zustand ab, nicht das Attribut.
+    if (pending) return;
     setMessage(null);
     setPending(true);
     try {
@@ -49,15 +54,15 @@ export function RetentionOffer({
   return (
     <div>
       <button
-        ref={buttonRef}
         type="button"
         onClick={() => void accept()}
         className="btn btn-primary btn-sm"
-        disabled={pending}
+        aria-disabled={pending || undefined}
       >
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="check" size={14} />}
-        {pending ? "…" : label}
+        {label}
       </button>
+      <FormStatus pending={pending} label={busyLabel} />
       <LiveMessage
         ok={message?.ok ?? false}
         message={message?.text ?? null}

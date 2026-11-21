@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
-import { useSubmitFocus } from "./use-submit-focus";
 
 type ActionResult = { message: string; ok: boolean } | null;
 
@@ -17,13 +16,21 @@ export function CancelSubscriptionForm({
   busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   const message = state?.message;
 
   return (
-    <form aria-busy={pending} action={formAction} className="mt-4">
+    <form
+      aria-busy={pending}
+      action={formAction}
+      className="mt-4"
+      // Ein zweiter Absende-Versuch während der Übermittlung wird hier
+      // verworfen; `aria-disabled` allein verhindert die Formular-Aktion nicht.
+      onSubmit={(event) => {
+        if (pending) event.preventDefault();
+      }}
+    >
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" ref={submitRef} className="btn btn-danger btn-sm" disabled={pending}>
+      <button type="submit" className="btn btn-danger btn-sm" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="close" size={14} />}
         {label}
       </button>

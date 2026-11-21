@@ -106,6 +106,7 @@ export default async function PremiumPage() {
               disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
               configured={configured}
               signedIn={Boolean(user)}
+              busyLabel={t.ui.sending}
             />
             {annualAvailable ? (
               <>
@@ -115,6 +116,7 @@ export default async function PremiumPage() {
                   configured={configured}
                   signedIn={Boolean(user)}
                   interval="year"
+                  busyLabel={t.ui.sending}
                 />
                 <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
               </>

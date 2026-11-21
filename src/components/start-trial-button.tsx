@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
-import { useSubmitFocus } from "./use-submit-focus";
 
 /**
  * Startet den Testzeitraum über die vorhandene API. Die Entscheidung fällt
@@ -16,17 +16,20 @@ export function StartTrialButton({
   label,
   startedLabel,
   failedLabel,
+  busyLabel,
 }: {
   label: string;
   startedLabel: string;
   failedLabel: string;
+  /** Ansage während der Anfrage; der Knopf behält den Fokus. */
+  busyLabel: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const buttonRef = useSubmitFocus(pending);
 
   async function start() {
+    if (pending) return;
     setMessage(null);
     setPending(true);
     try {
@@ -56,15 +59,15 @@ export function StartTrialButton({
   return (
     <div>
       <button
-        ref={buttonRef}
         type="button"
         onClick={() => void start()}
         className="btn btn-outline btn-sm btn-block"
-        disabled={pending}
+        aria-disabled={pending || undefined}
       >
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="sparkles" size={14} />}
-        {pending ? "…" : label}
+        {label}
       </button>
+      <FormStatus pending={pending} label={busyLabel} />
       <LiveMessage
         ok={message?.ok ?? false}
         message={message?.text ?? null}
