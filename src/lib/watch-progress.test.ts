@@ -62,18 +62,19 @@ test("accepts numeric strings from older builds", () => {
 });
 
 test("a finished title is not resumable", () => {
-  assert.equal(FINISH_MARGIN_MS, 10_000, "die Toleranz bleibt bei 10 Sekunden");
-  assert.equal(isFinished(2_700_000, 2_700_000), true);
-  assert.equal(isFinished(2_690_000, 2_700_000), true, "genau 10 Sekunden vor Ende gilt als fertig");
-  assert.equal(isFinished(2_689_999, 2_700_000), false, "eine Millisekunde davor noch nicht");
+  const duration = 2_700_000;
+  assert.equal(FINISH_MARGIN_MS, 10_000, "the grace window stays at 10 seconds");
+  assert.equal(isFinished(duration, duration), true);
+  assert.equal(isFinished(duration - 10_000, duration), true, "exactly 10 seconds before the end");
+  assert.equal(isFinished(duration - 10_000 - 1, duration), false, "one millisecond earlier");
   assert.equal(isFinished(5_000, 0), false);
 });
 
 test("remembers only positions worth resuming", () => {
   const value = (positionMs: number, durationMs = 2_700_000) => ({ url: URL, positionMs, durationMs });
-  assert.equal(MIN_RESUME_MS, 5_000, "die Mindestposition bleibt bei 5 Sekunden");
-  assert.equal(shouldRemember(value(5_000)), true, "genau 5 Sekunden werden gemerkt");
-  assert.equal(shouldRemember(value(4_999)), false, "darunter nicht");
+  assert.equal(MIN_RESUME_MS, 5_000, "the minimum stays at 5 seconds");
+  assert.equal(shouldRemember(value(5_000)), true, "exactly 5 seconds");
+  assert.equal(shouldRemember(value(4_999)), false, "one millisecond below");
   assert.equal(shouldRemember(value(2_700_000)), false);
 });
 
