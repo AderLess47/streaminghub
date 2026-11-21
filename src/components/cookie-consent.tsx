@@ -43,6 +43,19 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     if (takeFocus) dialogRef.current?.focus();
   }, [visible]);
 
+  // Escape schließt den Banner, egal wo der Fokus gerade liegt; am Dialog
+  // allein verfehlt es jeden, der zwischendurch woanders hintabbt.
+  useEffect(() => {
+    if (!visible || saving) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      close(t.dismissed);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [visible, saving, t.dismissed]);
+
   function close(message?: string) {
     // Nur wenn der Fokus im Banner lag, darf er danach woanders hinspringen;
     // wer währenddessen im Formular arbeitet, behält seinen Fokus.
@@ -94,12 +107,6 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
           aria-modal="false"
           aria-labelledby="consent-title"
           aria-describedby="consent-text"
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && !saving) {
-              event.stopPropagation();
-              close(t.dismissed);
-            }
-          }}
         >
           <div className="glass-card mx-auto flex max-w-3xl flex-col gap-4 p-4 shadow-2xl sm:flex-row sm:items-start sm:p-5">
             <span className="hidden size-10 shrink-0 place-items-center rounded-full border border-cyan/30 bg-cyan/10 text-cyan sm:grid">
