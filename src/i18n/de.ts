@@ -1187,6 +1187,7 @@ export const de = {
     details: "Mehr erfahren",
     statusNecessary: "Technisch notwendig",
     statusOptional: "Optional",
+    saving: "Deine Auswahl wird gespeichert …",
     saved: "Deine Auswahl wurde gespeichert.",
     dismissed: "Einstellungen geschlossen – es wurde nichts gespeichert.",
     error: "Deine Auswahl wurde nicht gespeichert. Bitte versuche es erneut.",
