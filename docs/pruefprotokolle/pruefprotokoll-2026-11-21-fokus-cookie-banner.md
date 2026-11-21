@@ -163,3 +163,41 @@ Ablage im Repository unter `docs/pruefprotokolle/`, Aufbewahrung nach
 [BFSG-Pflichten-Checkliste](../BFSG-PFLICHTEN-CHECKLISTE.md) beschrieben. Das
 Protokoll wird nicht überschrieben; eine spätere Korrektur ist ein neues
 Protokoll mit Verweis auf dieses.
+
+## 10. Nachtrag vom 21.11.2026: 320 px
+
+Anlass ist die offene Grenze aus Abschnitt 8 („andere Breiten als 390 px").
+Gemessen wurde derselbe Stand (`f96df5b`) unter denselben Bedingungen, nur mit
+320 × 844 px. Die übrigen Abschnitte bleiben unverändert; dieser Nachtrag
+erweitert sie.
+
+| Messung | 390 px (Abschnitt 2) | 320 px (Nachtrag) |
+| --- | --- | --- |
+| Bannerhöhe | 305 px | 348 px |
+| Banneroberkante | 539 px | 496 px |
+| `--consent-banner-space` auf `<html>` | `305px` | `348px` |
+| `scroll-padding-bottom` auf `<html>` | `305px` | `348px` |
+| `padding-bottom` auf `<body>` | `305px` | `348px` |
+| maximaler Scrollweg mit Banner | 8863 px | 9714 px |
+| Fokusrechteck des Auslösers | 407–451 px | 364–408 px |
+| Bannerkante über dem Fokus | 539 px | 496 px |
+| Fokus vollständig über dem Banner | ja | ja (`408 ≤ 496`) |
+| Fokusring | `solid 1.6px rgb(6, 182, 212)` | `solid 1.6px rgb(6, 182, 212)` |
+| horizontaler Überlauf | keiner | keiner (`scrollWidth` 305 px bei 320 px Fenster) |
+| Klemmsprung beim Schließen | 305 px (8863 → 8558) | 348 px (9714 → 9366) |
+
+Der Banner wird bei 320 px um 43 px höher, weil die Schaltflächen untereinander
+stehen. Die Reserve folgt automatisch: `--consent-banner-space`,
+`scroll-padding-bottom` und das `body`-Padding stehen alle drei auf `348px`,
+gemessen am gerenderten Banner (der `ResizeObserver` aus Abschnitt 4).
+
+Der Auslöser „Cookie-Einstellungen" war nach 39 `Tab`-Schritten erreicht, lag
+bei 364–408 px (Breite 93–205 px) und damit vollständig über der Bannerkante
+bei 496 px; der Fokusring war sichtbar. `Escape` schloss den Banner auch hier
+bei Fokus außerhalb des Dialogs: Ansage „Einstellungen geschlossen – es wurde
+nichts gespeichert.", Fokus blieb auf dem Auslöser, kein Cookie, die
+`sessionStorage`-Notiz wurde gesetzt.
+
+Damit ist die Grenze „andere Breiten als 390 px" für 320 px aufgehoben. Offen
+bleiben Zoom 200 %, Textabstands-Overrides, der erzwungene Kontrastmodus,
+weitere Breiten und andere Sprachen.
