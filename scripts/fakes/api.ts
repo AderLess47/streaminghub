@@ -89,6 +89,32 @@ export function hasPremiumAccess(userId: string): boolean {
   return premiumUsers.has(userId) || trialUsers.has(userId);
 }
 
+/* -------------------------------- Checkout ------------------------------- */
+
+let checkoutCalls = 0;
+
+export function __resetCheckout(): void {
+  checkoutCalls = 0;
+}
+
+export function __checkoutCalls(): number {
+  return checkoutCalls;
+}
+
+/** Ersetzt den Stripe-Aufruf; die Route prüft die Zustimmung davor selbst. */
+export async function createWebCheckout(_params: unknown): Promise<{
+  ok: true;
+  url: string;
+  sessionId: string;
+}> {
+  checkoutCalls += 1;
+  return {
+    ok: true,
+    url: "https://checkout.example.test/cs_test_consent",
+    sessionId: "cs_test_consent",
+  };
+}
+
 /* ------------------------------ API-Antworten ---------------------------- */
 
 const statusByCode: Record<string, number> = {
@@ -100,6 +126,7 @@ const statusByCode: Record<string, number> = {
   rate_limited: 429,
   conflict: 409,
   not_configured: 503,
+  consent_required: 400,
   server_error: 500,
 };
 

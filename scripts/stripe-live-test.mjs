@@ -72,7 +72,11 @@ const cookie = (register.headers.getSetCookie?.() ?? [])
   .map((raw) => raw.split(";")[0])
   .join("; ");
 
-const checkout = await post("/api/subscription/checkout", undefined, cookie);
+const checkout = await post(
+  "/api/subscription/checkout",
+  { acceptTerms: true, acceptWithdrawalLoss: true },
+  cookie,
+);
 if (checkout.status !== 200 || !checkout.json?.sessionId) {
   console.error(`Checkout failed (${checkout.status}): ${checkout.text.slice(0, 300)}`);
   process.exit(1);

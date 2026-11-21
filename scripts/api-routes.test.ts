@@ -26,7 +26,14 @@ import { POST as activateDevice } from "@/app/api/devices/activate/route";
 import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
 import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
 import { POST as postLocale } from "@/app/api/locale/route";
-import { __setPremium, __setSessionUser, __setTrial } from "./fakes/api";
+import { POST as postCheckout } from "@/app/api/subscription/checkout/route";
+import {
+  __checkoutCalls,
+  __resetCheckout,
+  __setPremium,
+  __setSessionUser,
+  __setTrial,
+} from "./fakes/api";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -909,6 +916,61 @@ await check("/api/locale: ohne Sitzung bleibt users.locale unverändert", async 
   assert.equal(response.status, 200);
   assert.equal(localeOf("user-locale"), "de", "ohne Sitzung darf kein Konto umgestellt werden");
   assert.equal(localeOf("user-other"), "tr");
+});
+
+/* -------------------------------- Checkout ------------------------------- */
+
+await check("Checkout: ohne beide Zustimmungen 400 consent_required", async () => {
+  resetDb();
+  seedUser("user-checkout");
+  __setSessionUser({ id: "user-checkout", email: "user-checkout@example.test" });
+  __resetCheckout();
+
+  const empty = await postCheckout(
+    call("POST", "/api/subscription/checkout", { body: {} }),
+  );
+  assert.equal(empty.status, 400);
+  assert.equal((await bodyOf(empty)).error.code, "consent_required");
+  assert.equal(__checkoutCalls(), 0, "ohne Zustimmung darf keine Session entstehen");
+
+  // Ein einzelnes Häkchen reicht ebenfalls nicht: AGB und Widerrufsverzicht
+  // sind zwei getrennte Erklärungen (§ 312j Abs. 3, § 356 Abs. 5 BGB).
+  const onlyTerms = await postCheckout(
+    call("POST", "/api/subscription/checkout", { body: { acceptTerms: true } }),
+  );
+  assert.equal(onlyTerms.status, 400);
+  assert.equal((await bodyOf(onlyTerms)).error.code, "consent_required");
+  assert.equal(__checkoutCalls(), 0);
+});
+
+await check("Checkout: mit beiden Zustimmungen wird die Session erstellt", async () => {
+  resetDb();
+  seedUser("user-checkout");
+  __setSessionUser({ id: "user-checkout", email: "user-checkout@example.test" });
+  __resetCheckout();
+
+  const response = await postCheckout(
+    call("POST", "/api/subscription/checkout", {
+      body: { interval: "month", acceptTerms: true, acceptWithdrawalLoss: true },
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  const data = await bodyOf(response);
+  assert.equal(data.ok, true);
+  assert.equal(data.sessionId, "cs_test_consent");
+  assert.equal(__checkoutCalls(), 1);
+
+  // Der Zustimmungsnachweis landet mit Zeitpunkt und Textversion im Audit-Log.
+  const audit = get<{ meta: string }>(
+    `SELECT meta FROM audit_log
+     WHERE action = 'subscription.checkout_attempt' AND actor_id = ?
+     ORDER BY rowid DESC LIMIT 1`,
+    "user-checkout",
+  );
+  assert.match(audit?.meta ?? "", /"terms":true/);
+  assert.match(audit?.meta ?? "", /"withdrawalLoss":true/);
+  assert.match(audit?.meta ?? "", /"version":"\d{4}-\d{2}-\d{2}"/);
 });
 
 /* -------------------------------- Ergebnis ------------------------------- */
