@@ -131,6 +131,18 @@ await check("Registrierung legt Konto, Mail und Sitzung an", async () => {
   assert.equal(audit?.action, "auth.register");
 });
 
+await check("Bestaetigungslink gilt 48 Stunden", async () => {
+  const row = get<{ created_at: string; expires_at: string }>(
+    `SELECT created_at, expires_at FROM auth_tokens WHERE kind = 'verify_email' ORDER BY rowid DESC LIMIT 1`,
+  );
+  assert.ok(row, "kein Verifikationstoken gespeichert");
+  assert.equal(
+    Math.round((new Date(row.expires_at).getTime() - new Date(row.created_at).getTime()) / 1000),
+    172_800,
+    "Bestaetigungslink muss 48 Stunden gelten",
+  );
+});
+
 await check("Login vor der Verifizierung meldet emailVerified=false", async () => {
   run("DELETE FROM rate_limits");
   const response = await login(
@@ -253,6 +265,59 @@ await check("Bereits verifiziert: kein erneuter Versand", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, alreadyVerified: true });
   assert.equal(verificationMails().length, 0);
+});
+
+await check("Bestaetigungslink gilt bis zur 48-Stunden-Grenze", async () => {
+  run("DELETE FROM rate_limits");
+  run("DELETE FROM outbox_emails");
+  const user = userRow();
+  assert.ok(user);
+  run(`UPDATE users SET email_verified = 0 WHERE id = ?`, user.id);
+  sessionToken.value = await createSession(user.id);
+
+  // Kurz vor Ablauf: der erneut gesendete Link bestaetigt noch.
+  const near = await resendVerification(
+    post("/api/auth/resend-verification", {}, { ip: "198.51.100.20" }),
+  );
+  assert.equal(near.status, 200);
+  const nearToken = latestVerifyToken();
+  const nearRow = get<{ id: string; created_at: string; expires_at: string }>(
+    `SELECT id, created_at, expires_at FROM auth_tokens WHERE kind = 'verify_email' ORDER BY rowid DESC LIMIT 1`,
+  );
+  assert.ok(nearRow);
+  assert.equal(
+    Math.round((new Date(nearRow.expires_at).getTime() - new Date(nearRow.created_at).getTime()) / 1000),
+    172_800,
+    "auch der erneut gesendete Link muss 48 Stunden gelten",
+  );
+  run(
+    `UPDATE auth_tokens SET expires_at = ? WHERE id = ?`,
+    new Date(new Date(nearRow.created_at).getTime() + 172_800_000 - 1000).toISOString(),
+    nearRow.id,
+  );
+  const confirmed = await verify(new Request(verifyUrl(nearToken)));
+  assert.match(confirmed.headers.get("location") ?? "", /verified=1/);
+
+  // Eine Sekunde nach Ablauf: der Link bestaetigt nichts mehr.
+  run(`UPDATE users SET email_verified = 0 WHERE id = ?`, user.id);
+  const late = await resendVerification(
+    post("/api/auth/resend-verification", {}, { ip: "198.51.100.21" }),
+  );
+  assert.equal(late.status, 200);
+  const lateToken = latestVerifyToken();
+  const lateRow = get<{ id: string }>(
+    `SELECT id FROM auth_tokens WHERE kind = 'verify_email' ORDER BY rowid DESC LIMIT 1`,
+  );
+  assert.ok(lateRow);
+  run(
+    `UPDATE auth_tokens SET created_at = ?, expires_at = ? WHERE id = ?`,
+    new Date(Date.now() - 172_801_000).toISOString(),
+    new Date(Date.now() - 1000).toISOString(),
+    lateRow.id,
+  );
+  const rejected = await verify(new Request(verifyUrl(lateToken)));
+  assert.match(rejected.headers.get("location") ?? "", /verified=0/);
+  assert.equal(userRow()?.email_verified, 0);
 });
 
 const failed = results.filter((result) => !result.ok);

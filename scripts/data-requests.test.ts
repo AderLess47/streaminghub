@@ -205,7 +205,11 @@ await check("Export ist pro Stunde begrenzt", async () => {
   }
   const limited = await exportData(exportRequest("203.0.113.80"));
   assert.equal(limited.status, 429);
-  assert.ok(limited.headers.get("retry-after"));
+  const retryAfter = Number(limited.headers.get("retry-after"));
+  assert.ok(
+    retryAfter >= 3500 && retryAfter <= 3600,
+    `retry-after muss im Stundenfenster liegen, war ${retryAfter}`,
+  );
 });
 
 await check("Loeschungsanfrage mit falschem Passwort wird abgelehnt", async () => {

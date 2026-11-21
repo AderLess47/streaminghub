@@ -212,6 +212,68 @@ await check("Vierte Anfrage pro Adresse wird begrenzt", async () => {
   assert.equal(resetMails().length, 3);
 });
 
+await check("Reset-Link gilt eine Stunde", async () => {
+  run("DELETE FROM rate_limits");
+  run("DELETE FROM outbox_emails");
+  await forgotPassword(forgotRequest(EMAIL, "203.0.113.50"));
+
+  const row = get<{ id: string; created_at: string; expires_at: string }>(
+    `SELECT id, created_at, expires_at FROM auth_tokens WHERE kind = 'reset_password' ORDER BY rowid DESC LIMIT 1`,
+  );
+  assert.ok(row, "kein Reset-Token gespeichert");
+  assert.equal(
+    Math.round((new Date(row.expires_at).getTime() - new Date(row.created_at).getTime()) / 1000),
+    3600,
+    "Reset-Link muss eine Stunde gelten",
+  );
+
+  // Grenzfall: eine Sekunde vor Ablauf gilt der Link noch.
+  run(
+    `UPDATE auth_tokens SET expires_at = ? WHERE id = ?`,
+    new Date(new Date(row.created_at).getTime() + 3600_000 - 1000).toISOString(),
+    row.id,
+  );
+  const justInTime = await resetPassword(
+    resetRequest(latestToken(), "GrenzfallPasswort123", "203.0.113.50"),
+  );
+  assert.equal(justInTime.status, 200, "kurz vor Ablauf muss der Link gelten");
+
+  // Eine Sekunde nach Ablauf gilt er nicht mehr; die gespeicherte Frist bleibt 3600 s.
+  await forgotPassword(forgotRequest(EMAIL, "203.0.113.51"));
+  const expiredRow = get<{ id: string }>(
+    `SELECT id FROM auth_tokens WHERE kind = 'reset_password' ORDER BY rowid DESC LIMIT 1`,
+  );
+  assert.ok(expiredRow);
+  run(
+    `UPDATE auth_tokens SET created_at = ?, expires_at = ? WHERE id = ?`,
+    new Date(Date.now() - 3601_000).toISOString(),
+    new Date(Date.now() - 1000).toISOString(),
+    expiredRow.id,
+  );
+  const tooLate = await resetPassword(
+    resetRequest(latestToken(), "GrenzfallPasswort456", "203.0.113.51"),
+  );
+  assert.equal(tooLate.status, 400, "nach Ablauf darf der Link nicht mehr gelten");
+});
+
+await check("Reset-Anfragen sind auf zehn pro Stunde begrenzt", async () => {
+  run("DELETE FROM rate_limits");
+  run("DELETE FROM outbox_emails");
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    const response = await forgotPassword(
+      forgotRequest(`unbekannt${attempt}@example.test`, "203.0.113.90"),
+    );
+    assert.equal(response.status, 200, `Anfrage ${attempt} von 10 muss durchgehen`);
+  }
+  const limited = await forgotPassword(forgotRequest("unbekannt11@example.test", "203.0.113.90"));
+  assert.equal(limited.status, 429, "die elfte Anfrage derselben Adresse wird begrenzt");
+  const retryAfter = Number(limited.headers.get("retry-after"));
+  assert.ok(
+    retryAfter >= 3500 && retryAfter <= 3600,
+    `retry-after muss im Stundenfenster liegen, war ${retryAfter}`,
+  );
+});
+
 function sessions(id: string) {
   return get<{ c: number }>(`SELECT COUNT(*) AS c FROM sessions WHERE user_id = ?`, id)?.c ?? 0;
 }
