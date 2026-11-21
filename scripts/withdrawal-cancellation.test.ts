@@ -34,6 +34,20 @@ async function check(name: string, body: () => Promise<void> | void) {
   }
 }
 
+/**
+ * Führt die Prüfung mit eingefrorener Uhr aus. Erst danach gelten wieder echte
+ * Zeitstempel; so steht die Grenze exakt, ohne Millisekunden-Jitter.
+ */
+async function withFrozenNow<T>(now: number, body: (now: number) => Promise<T>): Promise<T> {
+  const realNow = Date.now;
+  Date.now = () => now;
+  try {
+    return await body(now);
+  } finally {
+    Date.now = realNow;
+  }
+}
+
 const PASSWORD_HASH = hashPassword("SicheresPasswort123");
 
 function seedUser(id: string, email: string, role: "customer" | "admin" = "customer") {
@@ -233,11 +247,19 @@ await check("Fehlende Datenschutzbestaetigung wird abgelehnt", async () => {
   assert.ok(body.error?.fields?.some((field) => field.path === "privacyAccepted"));
 });
 
-await check("Zu schnelles Absenden wird abgelehnt", async () => {
-  const response = await withdrawal(
-    post("/api/withdrawal", withdrawalBody({ renderedAt: Date.now() })),
-  );
-  assert.equal(response.status, 400);
+await check("Widerruf verlangt 2500 ms Mindestzeit", async () => {
+  run("DELETE FROM rate_limits");
+  await withFrozenNow(Date.now(), async (now) => {
+    const tooFast = await withdrawal(
+      post("/api/withdrawal", withdrawalBody({ renderedAt: now - 2499 })),
+    );
+    assert.equal(tooFast.status, 400, "2499 ms sind zu schnell");
+
+    const justEnough = await withdrawal(
+      post("/api/withdrawal", withdrawalBody({ renderedAt: now - 2500 })),
+    );
+    assert.equal(justEnough.status, 200, "genau 2500 ms reichen");
+  });
 });
 
 await check("Fremde Herkunft wird abgelehnt", async () => {
@@ -303,11 +325,7 @@ await check("Web-Abo ohne Zahlungsanbieter endet als Fehlschlag", async () => {
 await check("Widerruf ist pro Stunde begrenzt", async () => {
   run("DELETE FROM rate_limits");
   const ip = "198.51.100.90";
-  // Eingefrorene Uhr: das Fenster steht damit sekundengenau im retry-after.
-  const frozen = Date.now();
-  const realNow = Date.now;
-  try {
-    Date.now = () => frozen;
+  await withFrozenNow(Date.now(), async () => {
     for (let attempt = 0; attempt < 5; attempt++) {
       const response = await withdrawal(
         post("/api/withdrawal", withdrawalBody({ privacyAccepted: false }), { ip }),
@@ -323,40 +341,7 @@ await check("Widerruf ist pro Stunde begrenzt", async () => {
       "3600",
       "das Fenster muss eine Stunde sein",
     );
-  } finally {
-    Date.now = realNow;
-  }
-});
-
-await check("Widerruf verlangt 2500 ms Mindestzeit", async () => {
-  run("DELETE FROM rate_limits");
-  const ip = "198.51.100.91";
-  const frozen = Date.now();
-  const realNow = Date.now;
-  try {
-    Date.now = () => frozen;
-    const tooFast = await withdrawal(
-      post(
-        "/api/withdrawal",
-        withdrawalBody({ email: "grenzfall@example.test", renderedAt: frozen - 2499 }),
-        { ip },
-      ),
-    );
-    assert.equal(tooFast.status, 400, "2499 ms sind zu schnell");
-
-    const justEnough = await withdrawal(
-      post(
-        "/api/withdrawal",
-        withdrawalBody({ email: "grenzfall@example.test", renderedAt: frozen - 2500 }),
-        { ip },
-      ),
-    );
-    assert.equal(justEnough.status, 200, "genau 2500 ms reichen");
-    const body = (await justEnough.json()) as { ok: boolean };
-    assert.equal(body.ok, true);
-  } finally {
-    Date.now = realNow;
-  }
+  });
 });
 
 await check("Admin setzt den Erledigt-Vermerk mit Audit", async () => {

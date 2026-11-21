@@ -27,6 +27,20 @@ async function check(name: string, body: () => Promise<void> | void) {
   }
 }
 
+/**
+ * Führt die Prüfung mit eingefrorener Uhr aus. Erst danach gelten wieder echte
+ * Zeitstempel; so steht die Grenze exakt, ohne Millisekunden-Jitter.
+ */
+async function withFrozenNow<T>(now: number, body: (now: number) => Promise<T>): Promise<T> {
+  const realNow = Date.now;
+  Date.now = () => now;
+  try {
+    return await body(now);
+  } finally {
+    Date.now = realNow;
+  }
+}
+
 const body = (overrides: Record<string, unknown> = {}) => ({
   name: "Erika Muster",
   email: "Kunde@Example.TEST",
@@ -137,12 +151,6 @@ await check("Gefuelltes Honeypot-Feld wird still quittiert", async () => {
   assert.equal(mails().length, 0);
 });
 
-await check("Zu schnelles Absenden wird abgelehnt", async () => {
-  const response = await contact(post(body({ renderedAt: Date.now() })));
-  assert.equal(response.status, 400);
-  assert.equal(messages().length, 0);
-});
-
 await check("Fremde Herkunft wird abgelehnt", async () => {
   const response = await contact(post(body(), { origin: "https://evil.example" }));
   assert.equal(response.status, 403);
@@ -153,11 +161,7 @@ await check("Sechste Anfrage pro Stunde wird begrenzt", async () => {
   run("DELETE FROM rate_limits");
   run("DELETE FROM contact_messages");
   const ip = "203.0.113.30";
-  // Eingefrorene Uhr: das Fenster steht damit sekundengenau im retry-after.
-  const frozen = Date.now();
-  const realNow = Date.now;
-  try {
-    Date.now = () => frozen;
+  await withFrozenNow(Date.now(), async () => {
     for (let attempt = 1; attempt <= 5; attempt++) {
       const response = await contact(post(body({ message: "kurz" }), { ip }));
       assert.equal(response.status, 400, `Versuch ${attempt}`);
@@ -169,29 +173,21 @@ await check("Sechste Anfrage pro Stunde wird begrenzt", async () => {
       "3600",
       "das Fenster muss eine Stunde sein",
     );
-  } finally {
-    Date.now = realNow;
-  }
+  });
 });
 
 await check("Kontaktformular verlangt 2500 ms Mindestzeit", async () => {
   run("DELETE FROM rate_limits");
   run("DELETE FROM contact_messages");
-  const ip = "203.0.113.31";
-  const frozen = Date.now();
-  const realNow = Date.now;
-  try {
-    Date.now = () => frozen;
-    const tooFast = await contact(post(body({ renderedAt: frozen - 2499 }), { ip }));
+  await withFrozenNow(Date.now(), async (now) => {
+    const tooFast = await contact(post(body({ renderedAt: now - 2499 })));
     assert.equal(tooFast.status, 400, "2499 ms sind zu schnell");
     assert.equal(messages().length, 0);
 
-    const justEnough = await contact(post(body({ renderedAt: frozen - 2500 }), { ip }));
+    const justEnough = await contact(post(body({ renderedAt: now - 2500 })));
     assert.equal(justEnough.status, 200, "genau 2500 ms reichen");
     assert.equal(messages().length, 1);
-  } finally {
-    Date.now = realNow;
-  }
+  });
 });
 
 const failed = results.filter((result) => !result.ok);
