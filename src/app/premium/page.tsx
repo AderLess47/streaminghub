@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckoutButton } from "@/components/checkout-button";
+import { CheckoutActions } from "@/components/checkout-actions";
 import { FaqAccordion } from "@/components/faq-accordion";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, SectionHeading } from "@/components/ui";
@@ -8,7 +8,9 @@ import { getI18n } from "@/i18n";
 import { getFaqItems } from "@/lib/content";
 import { env } from "@/lib/env";
 import { isFeatureEnabled } from "@/lib/flags";
+import { formatEur } from "@/lib/format";
 import { billingConfigured, PREMIUM_PRICE_EUR } from "@/lib/payments";
+import { ANNUAL_PRICE_EUR } from "@/lib/pricing";
 import { getSessionUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Premium" };
@@ -20,6 +22,8 @@ export default async function PremiumPage() {
   const configured = billingConfigured();
   // Jahresabo nur mit hinterlegtem Preis und gesetztem Flag anbieten.
   const annualAvailable = isFeatureEnabled("annualBilling") && Boolean(env.billing.stripeAnnualPriceId);
+  const monthlyPrice = formatEur(PREMIUM_PRICE_EUR, locale);
+  const annualPrice = annualAvailable ? formatEur(ANNUAL_PRICE_EUR, locale) : undefined;
 
   const statusTone = (status: string) =>
     status === "Verfügbar" || status === "Available"
@@ -35,6 +39,11 @@ export default async function PremiumPage() {
           <p className="eyebrow">StreamingHub Premium</p>
           <h1 className="mt-3 text-3xl font-semibold sm:text-5xl">{t.premium.title}</h1>
           <p className="mt-4 text-muted sm:text-lg">{t.premium.subtitle}</p>
+        </div>
+        <div className="mt-6 max-w-2xl">
+          <Alert tone="info" live={false} title={t.premium.playerNoticeTitle}>
+            {t.premium.playerNotice}
+          </Alert>
         </div>
       </section>
 
@@ -95,32 +104,27 @@ export default async function PremiumPage() {
         <div className="card sticky top-24 p-6">
           <p className="text-xs uppercase tracking-[0.14em] text-muted">StreamingHub Premium</p>
           <p className="mt-2 flex items-baseline gap-2">
-            <span className="text-5xl font-semibold tracking-tight">{t.premium.price}</span>
+            <span className="text-5xl font-semibold tracking-tight">{monthlyPrice}</span>
             <span className="text-sm text-muted">{t.premium.period}</span>
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted">{t.premium.vat}</p>
 
           <div className="mt-5 grid gap-2.5 border-t border-line/60 pt-5">
-            <CheckoutButton
-              label={t.premium.ctaPrimary}
-              disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+            <CheckoutActions
+              t={t.checkout}
+              legal={{
+                terms: t.footer.terms,
+                subscriptionTerms: t.footer.subscriptionTerms,
+                withdrawal: t.footer.withdrawal,
+              }}
               configured={configured}
               signedIn={Boolean(user)}
+              disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
               busyLabel={t.ui.sending}
+              monthlyPrice={monthlyPrice}
+              annualPrice={annualPrice}
+              annualNote={annualAvailable ? t.premium.annualNote : undefined}
             />
-            {annualAvailable ? (
-              <>
-                <CheckoutButton
-                  label={t.premium.annualCta}
-                  disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
-                  configured={configured}
-                  signedIn={Boolean(user)}
-                  interval="year"
-                  busyLabel={t.ui.sending}
-                />
-                <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
-              </>
-            ) : null}
             <Link
               href={user ? "/dashboard/subscription" : "/login?next=/dashboard/subscription"}
               className="btn btn-outline btn-block"
@@ -146,8 +150,8 @@ export default async function PremiumPage() {
             <li className="flex items-start gap-2">
               <Icon name="check" size={13} className="mt-0.5 text-cyan" />
               {locale === "de"
-                ? `Preis: ${PREMIUM_PRICE_EUR.toFixed(2).replace(".", ",")} € pro Monat; keine Umsatzsteuer (Kleinunternehmerregelung).`
-                : `Price: €${PREMIUM_PRICE_EUR.toFixed(2)} per month; no VAT (small business regulation).`}
+                ? `Preis: ${monthlyPrice} pro Monat; keine Umsatzsteuer (Kleinunternehmerregelung).`
+                : `Price: ${monthlyPrice} per month; no VAT (small business regulation).`}
             </li>
           </ul>
         </div>

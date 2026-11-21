@@ -253,7 +253,9 @@ async function main() {
   const exportResponse = await request("GET", "/api/account/export");
   ok(exportResponse.status === 200 && exportResponse.headers.get("content-disposition")?.includes("attachment"), `data export (${exportResponse.status})`);
 
-  const checkout = await request("POST", "/api/subscription/checkout", { body: {} });
+  const checkout = await request("POST", "/api/subscription/checkout", {
+    body: { acceptTerms: true, acceptWithdrawalLoss: true },
+  });
   ok(
     checkout.status === 503 && checkout.json?.error?.code === "not_configured",
     `checkout reports not_configured (${checkout.status})`,

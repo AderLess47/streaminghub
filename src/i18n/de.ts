@@ -242,7 +242,7 @@ export const de = {
   premium: {
     title: "StreamingHub Premium",
     subtitle:
-      "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
+      "Ein Abonnement für geräteübergreifendes Weiterschauen und die Verwaltung Ihrer Geräte.",
     price: "3,49 €",
     annualCta: "Jährlich für 34,99 € (2 Monate frei)",
     annualNote:
@@ -251,15 +251,18 @@ export const de = {
     vat: "Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
     ctaPrimary: "Premium entdecken",
     ctaSecondary: "Mein Abonnement verwalten",
-    channelTitle: "Wo du Premium abschließen kannst",
+    channelTitle: "Wo Sie Premium abschließen können",
     channels: {
       web: "Sideload-Version: Web-Checkout über Stripe",
       amazon: "Amazon-Appstore-Version: Kauf über Amazon In-App Purchasing",
     },
     billingNotice:
-      "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Dein Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",
+      "Hinweis: Es ist derzeit kein Zahlungsanbieter verbunden. Der Web-Checkout ist technisch vorbereitet, löst aber keine Zahlung aus. Ihr Abonnementstatus bleibt „nicht aktiv“, bis eine echte Zahlung serverseitig bestätigt wurde.",
     billingLiveNotice:
-      "Zahlungen werden über Stripe abgewickelt. Dein Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout siehst du den Gesamtbetrag von 3,49 €. Es wird keine Umsatzsteuer ausgewiesen.",
+      "Zahlungen werden über Stripe abgewickelt. Ihr Abonnement wird erst nach serverseitiger Bestätigung der Zahlung aktiv. Im Checkout sehen Sie den Gesamtbetrag und die Laufzeit. Es wird keine Umsatzsteuer ausgewiesen.",
+    playerNoticeTitle: "Reiner Media-Player",
+    playerNotice:
+      "StreamingHub ist ausschließlich ein technischer Media-Player. Wir stellen keine Sender, Streams, Playlists oder sonstigen Inhalte bereit und vermitteln keine Zugangsrechte. Sie sind selbst dafür verantwortlich, dass die von Ihnen eingebundenen Quellen rechtmäßig sind und Sie über die erforderlichen Nutzungsrechte verfügen.",
     featuresTitle: "Premiumfunktionen",
     features: [
       {
@@ -282,6 +285,26 @@ export const de = {
       },
     ],
     faqTitle: "Fragen zum Abonnement",
+  },
+  checkout: {
+    title: "Premium abschließen",
+    consentTitle: "Vertragsbedingungen",
+    termsIntro: "Ich akzeptiere die",
+    termsAnd: "und die",
+    withdrawalConsent:
+      "Ich verlange ausdrücklich, dass StreamingHub mit der Leistung sofort beginnt, und bestätige, dass mein Widerrufsrecht mit Beginn der Ausführung erlischt.",
+    termsRequired: "Bitte stimmen Sie den Vertragsbedingungen zu.",
+    withdrawalRequired:
+      "Bitte bestätigen Sie den sofortigen Beginn der Leistung und den damit verbundenen Verlust des Widerrufsrechts.",
+    payNow: "Zahlungspflichtig bestellen",
+    totalMonthly:
+      "Gesamtbetrag: {price} pro Monat. Das Abonnement verlängert sich automatisch monatlich, bis Sie kündigen.",
+    totalAnnual:
+      "Gesamtbetrag: {price} pro Jahr. Das Abonnement verlängert sich automatisch jährlich, bis Sie kündigen.",
+    contractNotice:
+      "Es entsteht ein kostenpflichtiges Abonnement. Der Vertrag kommt mit der Bestätigung der Zahlung zustande.",
+    errorGeneric: "Der Checkout ist derzeit nicht verfügbar.",
+    errorNetwork: "Der Checkout ist derzeit nicht erreichbar.",
   },
   download: {
     title: "StreamingHub herunterladen",
@@ -547,14 +570,14 @@ export const de = {
     subscription: {
       trialTitle: "14 Tage kostenlos testen",
       trialBody:
-        "Teste Premium zwei Wochen lang ohne Zahlungsdaten. Danach gilt automatisch wieder der kostenlose Tarif – es wird nichts abgebucht.",
+        "Testen Sie Premium zwei Wochen lang ohne Zahlungsdaten. Danach gilt automatisch wieder der kostenlose Tarif – es wird nichts abgebucht.",
       trialRunningTitle: "Testzeitraum läuft",
       trialRunningBody:
-        "Danach gilt automatisch der kostenlose Tarif. Geräte und Playlist bleiben erhalten; es wird nichts abgebucht. Abschließen kannst du jederzeit oben.",
+        "Danach gilt automatisch der kostenlose Tarif. Geräte und Playlist bleiben erhalten; es wird nichts abgebucht. Abschließen können Sie jederzeit oben.",
       trialInfo:
-        "Dein Testzeitraum läuft; danach gilt automatisch der kostenlose Tarif – es wird nichts abgebucht. Premium-Rechte gelten für die gesamte Laufzeit.",
+        "Ihr Testzeitraum läuft; danach gilt automatisch der kostenlose Tarif – es wird nichts abgebucht. Premium-Rechte gelten für die gesamte Laufzeit.",
       trialCta: "Testzeitraum starten",
-      trialStarted: "Dein Testzeitraum läuft. Ende:",
+      trialStarted: "Ihr Testzeitraum läuft. Ende:",
       trialFailed: "Der Testzeitraum konnte nicht gestartet werden.",
       statusTrial: "Testphase",
       title: "Abonnement",
@@ -565,41 +588,41 @@ export const de = {
       channelWeb: "Web / Sideload",
       channelAmazon: "Amazon Appstore",
       channelApple: "App Store",
-      appleNotice: "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Kündigen kannst du es in deinen Apple-Konto-Einstellungen.",
+      appleNotice: "Dieses Abonnement wurde über den App Store abgeschlossen und wird dort verwaltet. Kündigen können Sie es in Ihren Apple-Konto-Einstellungen.",
       renewsAt: "Läuft bis",
       cancelAtPeriodEnd: "Kündigung zum Periodenende vorgemerkt",
       statusEnded: "Beendet",
       statusPastDue: "Zahlung fehlgeschlagen",
       statusIncomplete: "Zahlung nicht abgeschlossen",
       paymentFailed:
-        "Die letzte Zahlung ist fehlgeschlagen, deshalb ruht Premium derzeit. Prüfe deine Zahlungsmethode beim Zahlungsanbieter oder schreib dem Support – nach erfolgreicher Zahlung wird Premium wieder freigeschaltet.",
+        "Die letzte Zahlung ist fehlgeschlagen, deshalb ruht Premium derzeit. Prüfen Sie Ihre Zahlungsmethode beim Zahlungsanbieter oder schreiben Sie dem Support – nach erfolgreicher Zahlung wird Premium wieder freigeschaltet.",
       subscriptionEnded:
-        "Dein Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
+        "Ihr Premium-Abo ist beendet. Geräte und Playlist bleiben erhalten; Premium lässt sich jederzeit neu abschließen.",
       startCta: "Premium im Web abschließen",
       manageCta: "Im Kundenkonto verwalten",
       cancelCta: "Abonnement kündigen",
       checkoutSuccess:
-        "Danke! Deine Zahlung wird serverseitig geprüft. Der Status aktualisiert sich nach Bestätigung durch den Zahlungsanbieter.",
+        "Vielen Dank! Ihre Zahlung wird serverseitig geprüft. Der Status aktualisiert sich nach Bestätigung durch den Zahlungsanbieter.",
       checkoutConfirming: "Zahlung wird serverseitig geprüft …",
       checkoutCanceled: "Der Checkout wurde abgebrochen. Es wurde keine Zahlung ausgelöst.",
       checkoutNotConfigured:
         "Die Zahlungsabwicklung ist noch nicht mit einem Zahlungsanbieter verbunden. Es wurde keine Zahlung ausgelöst.",
       amazonNotice:
-        "Dieses Abonnement wird über den Amazon Appstore verwaltet. Kündigung und Änderungen erfolgen in deinem Amazon-Konto.",
+        "Dieses Abonnement wird über den Amazon Appstore verwaltet. Kündigung und Änderungen erfolgen in Ihrem Amazon-Konto.",
       noSubscription:
-        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung deiner Geräte.",
+        "Es ist noch kein Premium-Abonnement hinterlegt. Premium ergänzt geräteübergreifendes Weiterschauen und die Verwaltung Ihrer Geräte.",
       priceNote: "3,49 € pro Monat. Endpreis; keine Umsatzsteuer gemäß § 19 UStG (Kleinunternehmerregelung).",
-      storePriceNote: "Preis laut Abrechnung deines Stores (App Store / Amazon Appstore).",
+      storePriceNote: "Preis laut Abrechnung Ihres Stores (App Store / Amazon Appstore).",
       conversionCouponNote:
-        "Für deinen Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – du musst keinen Code eingeben.",
+        "Für Ihren Testzeitraum ist ein Rabatt auf die ersten Abrechnungen hinterlegt. Er wird beim Abschluss automatisch abgezogen – Sie müssen keinen Code eingeben.",
       retentionTitle: "Bleib bei Premium – mit Rabatt",
       retentionBody:
-        "Bevor du kündigst: Wir können dir auf die nächsten Abrechnungen einen Rabatt hinterlegen. Dein Abo läuft zu reduziertem Preis weiter und bleibt monatlich kündbar.",
+        "Bevor Sie kündigen: Wir können Ihnen auf die nächsten Abrechnungen einen Rabatt hinterlegen. Ihr Abo läuft zu reduziertem Preis weiter und bleibt monatlich kündbar.",
       retentionCta: "Rabatt sichern",
       retentionAccepted:
-        "Der Rabatt ist hinterlegt. Dein Abo läuft zu reduziertem Preis weiter – danke, dass du bleibst!",
+        "Der Rabatt ist hinterlegt. Ihr Abo läuft zu reduziertem Preis weiter – danke, dass Sie bleiben!",
       retentionFailed:
-        "Der Rabatt konnte nicht hinterlegt werden. Du kannst es erneut versuchen oder wie gewohnt kündigen.",
+        "Der Rabatt konnte nicht hinterlegt werden. Sie können es erneut versuchen oder wie gewohnt kündigen.",
     },
     support: {
       title: "Support-Anfragen",
@@ -1172,7 +1195,7 @@ export const de = {
   legal: {
     title: "Rechtliche Informationen",
     placeholderNotice:
-      "Hinweis: Mit [ ] gekennzeichnete Angaben sind Platzhalter und müssen vor der Veröffentlichung durch bestätigte Betreiberdaten ersetzt werden.",
+      "Hinweis: Mit [BITTE_EINTRAGEN: …] gekennzeichnete Angaben sind Platzhalter und müssen vor der Veröffentlichung durch die tatsächlichen Betreiberdaten ersetzt werden.",
     lastUpdated: "Stand",
     imprint: "Impressum",
     privacy: "Datenschutzerklärung",

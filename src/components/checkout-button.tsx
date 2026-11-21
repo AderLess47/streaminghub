@@ -14,6 +14,11 @@ export function CheckoutButton({
   signedIn,
   interval = "month",
   busyLabel,
+  describedBy,
+  unavailableMessage,
+  networkMessage,
+  consent,
+  onConsentBlocked,
 }: {
   label: string;
   disabledLabel: string;
@@ -23,6 +28,16 @@ export function CheckoutButton({
   interval?: "month" | "year";
   /** Ansage während der Anfrage; der Knopf behält den Fokus. */
   busyLabel: string;
+  /** ID der direkt darüberstehenden Gesamtbetrag-/Verlängerungszeile. */
+  describedBy?: string;
+  unavailableMessage?: string;
+  networkMessage?: string;
+  /**
+   * Zustand der beiden Pflicht-Checkboxen. Fehlt der Wert (nicht angemeldet),
+   * übernimmt der Server die Prüfung nach der Anmeldung.
+   */
+  consent?: { terms: boolean; withdrawal: boolean };
+  onConsentBlocked?: () => void;
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -30,6 +45,12 @@ export function CheckoutButton({
   async function start() {
     if (pending) return;
     setMessage(null);
+    // Erst die Zustimmung, dann die Anfrage: ohne beide Häkchen entsteht keine
+    // Zahlungspflicht (§ 312j Abs. 3, § 356 Abs. 5 BGB).
+    if (consent && (!consent.terms || !consent.withdrawal)) {
+      onConsentBlocked?.();
+      return;
+    }
     if (!signedIn) {
       window.location.href = "/login?next=/dashboard/subscription";
       return;
@@ -39,29 +60,39 @@ export function CheckoutButton({
       const response = await fetch("/api/subscription/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({
+          interval,
+          acceptTerms: consent?.terms === true,
+          acceptWithdrawalLoss: consent?.withdrawal === true,
+        }),
       });
       const data = (await response.json()) as { url?: string; error?: { message?: string } };
       if (response.ok && data.url) {
         window.location.href = data.url;
         return;
       }
-      setMessage(data.error?.message ?? "Der Checkout ist derzeit nicht verfügbar.");
+      setMessage(
+        data.error?.message ?? unavailableMessage ?? "Der Checkout ist derzeit nicht verfügbar.",
+      );
     } catch {
-      setMessage("Der Checkout ist derzeit nicht erreichbar.");
+      setMessage(networkMessage ?? "Der Checkout ist derzeit nicht erreichbar.");
     } finally {
       setPending(false);
     }
   }
+
+  const descriptionIds = [configured ? null : UNAVAILABLE_HINT_ID, describedBy]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div>
       <button
         type="button"
         onClick={() => void start()}
-        className="btn btn-primary btn-block"
+        className="btn btn-primary btn-block whitespace-normal"
         aria-disabled={pending || undefined}
-        aria-describedby={configured ? undefined : UNAVAILABLE_HINT_ID}
+        aria-describedby={descriptionIds || undefined}
       >
         {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="card" size={16} />}
         {label}

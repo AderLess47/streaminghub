@@ -408,7 +408,10 @@ async function main() {
     );
     if (registration.status !== 200 || !userId) fail("could not create the staging canary account");
 
-    const checkout = await request("POST", "/api/subscription/checkout", undefined);
+    const checkout = await request("POST", "/api/subscription/checkout", {
+      acceptTerms: true,
+      acceptWithdrawalLoss: true,
+    });
     sessionId = checkout.json?.sessionId;
     ok(
       checkout.status === 200 && Boolean(sessionId),

@@ -132,27 +132,47 @@ export const isBackupConfigured = () =>
       env.backup.encryptionKey.length >= 32,
   );
 
-/** Company / operator details. Placeholders are intentional until confirmed. */
-const smallBusiness = bool(process.env.OPERATOR_SMALL_BUSINESS);
+/**
+ * Company / operator details. Missing values stay visible as placeholders: an
+ * unset *or empty* environment variable must never produce a blank legal
+ * notice without warning. `.env.example` ships empty values on purpose, so
+ * `??` alone is not enough here.
+ */
+const PLACEHOLDER_PREFIX = "[BITTE_EINTRAGEN:";
+const placeholder = (label: string) => `${PLACEHOLDER_PREFIX} ${label}]`;
+const operatorText = (value: string | undefined, label: string) => {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : placeholder(label);
+};
+
+/** § 19 UStG is the confirmed default; OPERATOR_SMALL_BUSINESS=0 switches to VAT. */
+const smallBusinessRaw = process.env.OPERATOR_SMALL_BUSINESS?.trim();
+const smallBusiness = smallBusinessRaw ? bool(smallBusinessRaw) : true;
+
 const operatorData = {
-  legalName: process.env.OPERATOR_LEGAL_NAME ?? "[Betreiberfirma – noch zu bestätigen]",
-  representative: process.env.OPERATOR_REPRESENTATIVE ?? "[Vertretungsberechtigte Person – noch zu bestätigen]",
-  street: process.env.OPERATOR_STREET ?? "[Straße und Hausnummer – noch zu bestätigen]",
-  postalCode: process.env.OPERATOR_POSTAL_CODE ?? "[PLZ]",
-  city: process.env.OPERATOR_CITY ?? "[Ort]",
-  country: process.env.OPERATOR_COUNTRY ?? "Deutschland",
-  email: process.env.OPERATOR_EMAIL ?? "service@streaminghub.org",
-  phone: process.env.OPERATOR_PHONE ?? "[Telefonnummer – noch zu bestätigen]",
-  vatId: smallBusiness ? "" : (process.env.OPERATOR_VAT_ID ?? "[USt-IdNr. – noch zu bestätigen]"),
-  registerCourt: process.env.OPERATOR_REGISTER_COURT ?? "",
-  registerNumber: process.env.OPERATOR_REGISTER_NUMBER ?? "",
+  legalName: operatorText(process.env.OPERATOR_LEGAL_NAME, "Firmenname oder Inhaber"),
+  representative: operatorText(
+    process.env.OPERATOR_REPRESENTATIVE,
+    "vertretungsberechtigte Person",
+  ),
+  street: operatorText(process.env.OPERATOR_STREET, "Straße und Hausnummer"),
+  postalCode: operatorText(process.env.OPERATOR_POSTAL_CODE, "Postleitzahl"),
+  city: operatorText(process.env.OPERATOR_CITY, "Ort"),
+  country: operatorText(process.env.OPERATOR_COUNTRY || "Deutschland", "Land"),
+  email: process.env.OPERATOR_EMAIL?.trim() || "service@streaminghub.org",
+  phone: operatorText(process.env.OPERATOR_PHONE, "Telefonnummer"),
+  vatId: smallBusiness ? "" : operatorText(process.env.OPERATOR_VAT_ID, "USt-IdNr."),
+  registerCourt: (process.env.OPERATOR_REGISTER_COURT ?? "").trim(),
+  registerNumber: (process.env.OPERATOR_REGISTER_NUMBER ?? "").trim(),
 };
 
 export const operator = {
   ...operatorData,
   smallBusiness,
   hasRegister: Boolean(operatorData.registerCourt || operatorData.registerNumber),
-  hasPlaceholders: Object.values(operatorData).some((value) => /\[[^\]]+\]/.test(value)),
+  hasPlaceholders: Object.values(operatorData).some((value) =>
+    value.includes(PLACEHOLDER_PREFIX),
+  ),
   placeholderNotice:
-    "Die mit [ ] gekennzeichneten Angaben sind Platzhalter und müssen vor der Veröffentlichung durch die tatsächlichen Betreiberdaten ersetzt werden.",
+    "Die mit [BITTE_EINTRAGEN: …] gekennzeichneten Angaben sind Platzhalter und müssen vor der Veröffentlichung durch die tatsächlichen Betreiberdaten ersetzt werden.",
 } as const;

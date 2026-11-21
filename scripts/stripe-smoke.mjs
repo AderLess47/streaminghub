@@ -270,7 +270,24 @@ const userA = await register("a");
 ok(userA.status === 200, `test customer created (${userA.status})`, userA.text.slice(0, 160));
 const userAId = userA.json?.userId;
 const cookieA = currentCookie();
-const checkoutA = await post("/api/subscription/checkout");
+
+// Beide Zustimmungen sind Pflicht; ohne sie darf keine Provider-Session entstehen.
+const checkoutWithoutConsent = await post("/api/subscription/checkout", {});
+ok(
+  checkoutWithoutConsent.status === 400 &&
+    checkoutWithoutConsent.json?.error?.code === "consent_required",
+  `checkout without consent rejected (${checkoutWithoutConsent.status})`,
+  checkoutWithoutConsent.text.slice(0, 200),
+);
+ok(
+  !calls.some((call) => call.method === "POST" && call.path === "/v1/checkout/sessions"),
+  "no provider session without consent",
+);
+
+const checkoutA = await post("/api/subscription/checkout", {
+  acceptTerms: true,
+  acceptWithdrawalLoss: true,
+});
 ok(checkoutA.status === 200, `checkout created (${checkoutA.status})`, checkoutA.text.slice(0, 200));
 ok(String(checkoutA.json?.url ?? "").startsWith(`http://127.0.0.1:${STUB_PORT}`), "provider URL returned");
 ok(String(checkoutA.json?.sessionId ?? "").startsWith("cs_test_"), "session id returned");
@@ -287,6 +304,8 @@ ok(
   String(sessionForm.get("success_url")).includes("session_id={CHECKOUT_SESSION_ID}"),
   "success URL carries the session placeholder",
 );
+ok(sessionForm.get("metadata[consentWithdrawalLoss]") === "true", "consent proof attached");
+ok(Boolean(sessionForm.get("metadata[consentAcceptedAt]")), "consent timestamp attached");
 ok(subscriptionRow(userAId)?.status === "pending", "local state is pending before payment");
 const sessionA = sessions.get(checkoutA.json?.sessionId);
 const subA = sessionA?.subscription?.id;
@@ -447,7 +466,10 @@ console.log("\nServer-side success confirmation and ownership");
 const userB = await register("b", "en");
 ok(userB.status === 200, "second test customer created");
 const userBId = userB.json?.userId;
-const checkoutB = await post("/api/subscription/checkout");
+const checkoutB = await post("/api/subscription/checkout", {
+  acceptTerms: true,
+  acceptWithdrawalLoss: true,
+});
 ok(checkoutB.status === 200, "second checkout created");
 const sessionB = sessions.get(checkoutB.json?.sessionId);
 const subB = sessionB?.subscription?.id;
@@ -507,7 +529,10 @@ console.log("\nInactive subscription");
 const userC = await register("c");
 ok(userC.status === 200, "third test customer created");
 const userCId = userC.json?.userId;
-const checkoutC = await post("/api/subscription/checkout");
+const checkoutC = await post("/api/subscription/checkout", {
+  acceptTerms: true,
+  acceptWithdrawalLoss: true,
+});
 ok(checkoutC.status === 200, "third checkout created");
 const sessionC = sessions.get(checkoutC.json?.sessionId);
 const subC = sessionC?.subscription?.id;
