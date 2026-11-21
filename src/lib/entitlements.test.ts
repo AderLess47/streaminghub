@@ -157,7 +157,7 @@ test("broken trial dates and invalid limits fall back safely", () => {
     premiumDeviceLimit: -4,
     now: NOW,
   });
-  assert.equal(limits.deviceLimit, DEFAULT_PREMIUM_DEVICE_LIMIT);
+  assert.equal(limits.deviceLimit, 5, "ungueltige Limits fallen auf 5 zurueck");
 });
 
 test("getEntitlements reads subscription and live settings from the database", () => {
@@ -187,7 +187,7 @@ test("getEntitlements reads subscription and live settings from the database", (
   const paid = getEntitlements(userId);
   assert.equal(paid.premium, true);
   assert.equal(paid.plan, "standard");
-  assert.equal(paid.deviceLimit, DEFAULT_PREMIUM_DEVICE_LIMIT);
+  assert.equal(paid.deviceLimit, 5);
   assert.equal(hasPremiumAccess(userId), true);
 
   // Die Limits kommen live aus den Einstellungen, nicht aus einer Konstante.
@@ -202,6 +202,6 @@ test("getEntitlements reads subscription and live settings from the database", (
   run(`DELETE FROM subscriptions WHERE user_id = ?`, userId);
   const free = getEntitlements(userId);
   assert.equal(free.premium, false);
-  assert.equal(free.deviceLimit, DEFAULT_FREE_DEVICE_LIMIT);
+  assert.equal(free.deviceLimit, 2);
   assert.equal(hasPremiumAccess(userId), false);
 });
