@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -11,10 +11,29 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const componentsDir = path.join(root, "src/components");
 
-const components = readdirSync(componentsDir)
-  .filter((file) => file.endsWith(".tsx"))
-  .map((file) => ({ file, source: readFileSync(path.join(componentsDir, file), "utf8") }))
-  .filter(({ source }) => source.includes("aria-disabled"));
+/**
+ * Die in #366/#367 umgestellten Komponenten – feste Liste, keine Entdeckung:
+ * Wer eine Datei vollständig auf `disabled` zurückbaut, würde sonst aus der
+ * Prüfung herausfallen und der Test bliebe grün.
+ */
+const COMPONENTS = [
+  "activate-form.tsx",
+  "admin-mfa-form.tsx",
+  "auth-forms.tsx",
+  "backup-panel.tsx",
+  "cancel-subscription-form.tsx",
+  "cancellation-form.tsx",
+  "checkout-button.tsx",
+  "contact-form.tsx",
+  "cookie-consent.tsx",
+  "dashboard-forms.tsx",
+  "language-switcher.tsx",
+  "mfa-setup-form.tsx",
+  "resend-verification.tsx",
+  "retention-offer.tsx",
+  "start-trial-button.tsx",
+  "withdrawal-form.tsx",
+];
 
 const BUTTON = /<button\b[\s\S]*?<\/button>/g;
 const DISABLED = /\sdisabled=\{([^}]+)\}/g;
@@ -26,18 +45,16 @@ const ARIA_DISABLED = /aria-disabled=\{\s*[\w.]+(?:\s*!==\s*null)?\s*\|\|\s*unde
  */
 const ALLOWED_DISABLED = { "activate-form.tsx": ["code.length < 8 || undefined"] };
 
-test("die umgestellten Komponenten werden gefunden", () => {
-  assert.ok(
-    components.some(({ file }) => file === "cookie-consent.tsx") &&
-      components.some(({ file }) => file === "dashboard-forms.tsx"),
-    `nur ${components.length} Komponenten mit aria-disabled gefunden`,
-  );
-});
+function sourceOf(file) {
+  const target = path.join(componentsDir, file);
+  assert.ok(existsSync(target), `${file}: Datei fehlt oder wurde umbenannt`);
+  return readFileSync(target, "utf8");
+}
 
 test("kein Knopf sperrt sich am Laufzustand", () => {
-  for (const { file, source } of components) {
+  for (const file of COMPONENTS) {
     const allowed = ALLOWED_DISABLED[file] ?? [];
-    const found = [...source.matchAll(BUTTON)]
+    const found = [...sourceOf(file).matchAll(BUTTON)]
       .flatMap(([button]) => [...button.matchAll(DISABLED)].map(([, expression]) => expression.trim()))
       .filter((expression) => !allowed.includes(expression));
 
@@ -50,8 +67,10 @@ test("kein Knopf sperrt sich am Laufzustand", () => {
 });
 
 test("jede Komponente meldet den Laufzustand über aria-disabled", () => {
-  for (const { file, source } of components) {
+  for (const file of COMPONENTS) {
+    const source = sourceOf(file);
     const aria = (source.match(/aria-disabled=/g) ?? []).length;
+    assert.ok(aria > 0, `${file}: kein aria-disabled mehr vorhanden`);
     assert.equal(
       (source.match(ARIA_DISABLED) ?? []).length,
       aria,
@@ -63,9 +82,8 @@ test("jede Komponente meldet den Laufzustand über aria-disabled", () => {
 test("Cookie-Banner: choose() verwirft einen zweiten Klick während des Speicherns", () => {
   // `aria-disabled` allein blockiert nichts: Ohne Guard würde ein zweiter
   // Klick eine weitere Anfrage auslösen und die Auswahl doppelt schreiben.
-  const source = components.find(({ file }) => file === "cookie-consent.tsx").source;
   assert.match(
-    source,
+    sourceOf("cookie-consent.tsx"),
     /async function choose\([\s\S]*?if \(saving\)\s+return;[\s\S]*?setSaving\(true\);/,
     "Guard vor dem Laufzustand in choose()",
   );
