@@ -872,50 +872,43 @@ await check("/me: gesperrtes Gerät bekommt 403", async () => {
   assert.equal(response.status, 403);
 });
 
-await check("/api/locale: mit Sitzung schreibt die Sprache ins Konto", async () => {
+/**
+ * Zwei Konten, beide Sprachen explizit gesetzt (die Zeilen überleben
+ * `resetDb`); `user-other` deckt ein Update ohne `WHERE` auf.
+ */
+function seedLocaleUsers(): void {
   resetDb();
   seedUser("user-locale");
+  seedUser("user-other");
   run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
+  run(`UPDATE users SET locale = 'tr' WHERE id = ?`, "user-other");
+}
+
+function localeOf(id: string): string | undefined {
+  return get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", id)?.locale;
+}
+
+await check("/api/locale: mit Sitzung schreibt die Sprache ins Konto", async () => {
+  seedLocaleUsers();
   __setSessionUser({ id: "user-locale", email: "user-locale@example.test" });
 
-  const response = await postLocale(
-    new Request("http://localhost/api/locale", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ locale: "en" }),
-    }),
-  );
+  const response = await postLocale(call("POST", "/api/locale", { body: { locale: "en" } }));
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, locale: "en" });
+  assert.deepEqual(await bodyOf(response), { ok: true, locale: "en" });
   // Mails und andere Geräte lesen die Sprache aus dem Konto, nicht aus dem Cookie.
-  assert.equal(
-    get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
-    "en",
-  );
+  assert.equal(localeOf("user-locale"), "en");
+  assert.equal(localeOf("user-other"), "tr", "andere Konten bleiben unberührt");
 });
 
 await check("/api/locale: ohne Sitzung bleibt users.locale unverändert", async () => {
-  resetDb();
-  seedUser("user-locale");
-  run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
-  __setSessionUser(null);
+  seedLocaleUsers();
 
-  const response = await postLocale(
-    new Request("http://localhost/api/locale", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ locale: "fr" }),
-    }),
-  );
+  const response = await postLocale(call("POST", "/api/locale", { body: { locale: "fr" } }));
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true, locale: "fr" });
-  assert.equal(
-    get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
-    "de",
-    "ohne Sitzung darf kein Konto umgestellt werden",
-  );
+  assert.equal(localeOf("user-locale"), "de", "ohne Sitzung darf kein Konto umgestellt werden");
+  assert.equal(localeOf("user-other"), "tr");
 });
 
 /* -------------------------------- Ergebnis ------------------------------- */
