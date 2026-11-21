@@ -16,6 +16,7 @@ export function ResendVerification({
   const [devLink, setDevLink] = useState<string | undefined>();
 
   async function resend() {
+    if (pending) return;
     setPending(true);
     setState(null);
     try {
@@ -34,7 +35,12 @@ export function ResendVerification({
 
   return (
     <div>
-      <button type="button" onClick={() => void resend()} className="btn btn-outline btn-sm" disabled={pending}>
+      <button
+        type="button"
+        onClick={() => void resend()}
+        className="btn btn-outline btn-sm"
+        aria-disabled={pending || undefined}
+      >
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {label}
       </button>

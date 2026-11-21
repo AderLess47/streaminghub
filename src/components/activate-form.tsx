@@ -38,6 +38,7 @@ export function ActivateForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setError(null);
     setResult(null);
     setPending(true);
@@ -154,7 +155,12 @@ export function ActivateForm({
           />
 
           <FormStatus pending={pending} label={labels.busy} />
-          <button type="submit" className="btn btn-primary" disabled={pending || code.length < 8}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={code.length < 8 || undefined}
+            aria-disabled={pending || undefined}
+          >
             {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="key" size={16} />}
             {labels.submit}
           </button>

@@ -31,6 +31,7 @@ export function ContactForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setState("idle");
     setErrorMessage(null);
@@ -222,7 +223,7 @@ export function ContactForm({
 
       <div className="flex flex-wrap items-center gap-3">
         <FormStatus pending={pending} label={busy} />
-        <button type="submit" className="btn btn-primary" disabled={pending}>
+        <button type="submit" className="btn btn-primary" aria-disabled={pending || undefined}>
           {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="mail" size={16} />}
           {pending ? busy : t.submit}
         </button>

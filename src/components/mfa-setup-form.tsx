@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { MfaState } from "@/lib/actions/admin";
 import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
+import { blockWhilePending } from "./pending-guard";
 
 export function MfaSetupForm({
   action,
@@ -16,7 +17,12 @@ export function MfaSetupForm({
 
   return (
     <div>
-      <form aria-busy={pending} action={formAction} className="grid gap-3">
+      <form
+        aria-busy={pending}
+        action={formAction}
+        onSubmit={blockWhilePending(pending)}
+        className="grid gap-3"
+      >
         <div>
           <label htmlFor="mfa-setup-code" className="field-label">
             {labels.code}
@@ -37,7 +43,7 @@ export function MfaSetupForm({
           </p>
         ) : null}
         <FormStatus pending={pending} label={labels.busy} />
-        <button type="submit" className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
+        <button type="submit" className="btn btn-primary btn-sm justify-self-start" aria-disabled={pending || undefined}>
           {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="shield" size={14} />}
           {labels.cta}
         </button>

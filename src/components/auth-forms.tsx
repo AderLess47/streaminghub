@@ -121,6 +121,7 @@ export function LoginForm({
         className="grid gap-4"
         onSubmit={async (event) => {
           event.preventDefault();
+          if (pending) return;
           await submit("/api/auth/mfa", { code: mfaCode });
         }}
       >
@@ -152,7 +153,7 @@ export function LoginForm({
           className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-xs text-rose-200"
         />
         <FormStatus pending={pending} label={busy} />
-        <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+        <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
           {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
           {t.mfaCta}
         </button>
@@ -175,6 +176,7 @@ export function LoginForm({
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (pending) return;
         const payload = {
           email: credentials.email,
           password: credentials.password,
@@ -237,7 +239,7 @@ export function LoginForm({
       ) : null}
 
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="lock" size={15} />}
         {t.loginCta}
       </button>
@@ -292,6 +294,7 @@ export function RegisterForm({
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (pending) return;
         const formData = new FormData(event.currentTarget);
         await submit("/api/auth/register", {
           displayName: String(formData.get("displayName") ?? ""),
@@ -412,7 +415,7 @@ export function RegisterForm({
       <DevLink url={devLink} hint={t.devLinkHint} />
 
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="user" size={15} />}
         {t.registerCta}
       </button>
@@ -442,6 +445,7 @@ export function ForgotPasswordForm({ t, busy }: { t: Dictionary["auth"]; busy: s
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (pending) return;
         await submit("/api/auth/forgot-password", { email });
       }}
     >
@@ -471,7 +475,7 @@ export function ForgotPasswordForm({ t, busy }: { t: Dictionary["auth"]; busy: s
         </p>
       ) : null}
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="mail" size={15} />}
         {t.resetCta}
       </button>
@@ -516,6 +520,7 @@ export function ResetPasswordForm({
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (pending) return;
         const formData = new FormData(event.currentTarget);
         await submit("/api/auth/reset-password", {
           token,
@@ -556,7 +561,7 @@ export function ResetPasswordForm({
         </p>
       ) : null}
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
         {t.newPasswordCta}
       </button>

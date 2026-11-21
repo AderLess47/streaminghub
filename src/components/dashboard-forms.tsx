@@ -7,7 +7,7 @@ import { localeMeta, locales, type Locale } from "@/i18n/config";
 import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
-import { useSubmitFocus } from "./use-submit-focus";
+import { blockWhilePending } from "./pending-guard";
 
 type Action = (prevState: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -48,12 +48,11 @@ export function NewTicketForm({
   busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
   const categories = Object.entries(t.categories) as [string, string][];
 
   return (
-    <form aria-busy={pending} action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="grid gap-3">
       <div>
         <label htmlFor="ticket-subject" className="field-label">
           {t.subject}
@@ -109,7 +108,7 @@ export function NewTicketForm({
       </div>
       <Feedback state={state} />
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-sm justify-self-start" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="mail" size={14} />}
         {t.submit}
       </button>
@@ -127,10 +126,9 @@ export function ReplyForm({
   labels: { title: string; cta: string; placeholder: string; busy: string };
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
 
   return (
-    <form aria-busy={pending} action={formAction} className="mt-4 grid gap-3">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="mt-4 grid gap-3">
       <input type="hidden" name="ticketId" value={ticketId} />
       <label htmlFor={`reply-${ticketId}`} className="field-label">
         {labels.title}
@@ -149,7 +147,7 @@ export function ReplyForm({
       <FieldError id={`reply-${ticketId}-error`} message={state?.fieldErrors?.body} />
       <Feedback state={state} />
       <FormStatus pending={pending} label={labels.busy} />
-      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" className="btn btn-outline btn-sm justify-self-start" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="arrow-right" size={14} />}
         {labels.cta}
       </button>
@@ -169,11 +167,10 @@ export function ProfileForm({
   busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form aria-busy={pending} action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="grid gap-3">
       <div>
         <label htmlFor="profile-name" className="field-label">
           {t.displayName}
@@ -237,7 +234,7 @@ export function ProfileForm({
       </label>
       <Feedback state={state} />
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" ref={submitRef} className="btn btn-primary btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-sm justify-self-start" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="check" size={14} />}
         {t.save}
       </button>
@@ -255,11 +252,10 @@ export function PasswordForm({
   busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form aria-busy={pending} action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="grid gap-3">
       <div>
         <label htmlFor="current-password" className="field-label">
           {t.currentPassword}
@@ -298,7 +294,7 @@ export function PasswordForm({
       </div>
       <Feedback state={state} />
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" className="btn btn-outline btn-sm justify-self-start" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : <Icon name="lock" size={14} />}
         {t.passwordTitle}
       </button>
@@ -326,11 +322,10 @@ export function DataRequestForm({
   danger?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   const fieldErrors = state?.fieldErrors ?? {};
 
   return (
-    <form aria-busy={pending} action={formAction} className="grid gap-3 rounded-xl border border-line/60 bg-white/2 p-4">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="grid gap-3 rounded-xl border border-line/60 bg-white/2 p-4">
       <input type="hidden" name="kind" value={kind} />
       <div>
         <p className="text-sm font-medium">{label}</p>
@@ -368,9 +363,8 @@ export function DataRequestForm({
       <FormStatus pending={pending} label={busy} />
       <button
         type="submit"
-        ref={submitRef}
         className={`btn btn-sm justify-self-start ${danger ? "btn-danger" : "btn-outline"}`}
-        disabled={pending}
+        aria-disabled={pending || undefined}
       >
         {pending ? <Icon name="refresh" size={14} className="animate-spin" /> : danger ? <Icon name="trash" size={14} /> : <Icon name="download" size={14} />}
         {label}
@@ -389,12 +383,11 @@ export function SessionsForm({
   busy: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, null);
-  const submitRef = useSubmitFocus(pending);
   return (
-    <form aria-busy={pending} action={formAction} className="grid gap-3">
+    <form aria-busy={pending} action={formAction} onSubmit={blockWhilePending(pending)} className="grid gap-3">
       <Feedback state={state} />
       <FormStatus pending={pending} label={busy} />
-      <button type="submit" ref={submitRef} className="btn btn-outline btn-sm justify-self-start" disabled={pending}>
+      <button type="submit" className="btn btn-outline btn-sm justify-self-start" aria-disabled={pending || undefined}>
         <Icon name={pending ? "refresh" : "logout"} size={14} className={pending ? "animate-spin" : ""} />
         {t.logoutOthers}
       </button>
