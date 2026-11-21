@@ -91,10 +91,6 @@ Monetarisierungs-Aktionen und den Cookie-Banner bei 390 px und 320 px ab.
   juristische Freigabe und keine Freigabe durch eine qualifizierte Person. Die
   BFSG-Einordnung steht in
   [BFSG-ANWENDUNGSBEREICH.md](BFSG-ANWENDUNGSBEREICH.md).
-- **Zwei Beleg-Tests laufen nicht in der CI.** `test:retention` und
-  `test:entitlements` sind nicht in `.github/workflows/ci.yml` eingebunden; die
-  Werte oben stammen aus lokalen Läufen gegen `main`. `test:support-tickets` und
-  `test:stripe-webhook` sind dagegen CI-Schritte.
 - **Die Original-Commits** aus #361 bleiben verschollen. Das ist kein offener
   Arbeitspunkt mehr, sondern eine nicht behebbare Lücke in der Überlieferung;
   die Wirkung ist durch die PRs oben belegt.
