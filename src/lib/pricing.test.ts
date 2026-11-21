@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  LEGACY_PREMIUM_PRICE_EUR,
   PREMIUM_PLAN_ID,
   PREMIUM_PRICE_EUR,
   PRICE_BOOK,
@@ -15,6 +16,8 @@ import {
 
 test("price book matches the published prices", () => {
   assert.equal(PREMIUM_PRICE_EUR, 3.49);
+  assert.equal(LEGACY_PREMIUM_PRICE_EUR, 2.49, "der Altpreis bleibt bei 2,49 EUR");
+  assert.equal(cents(LEGACY_PREMIUM_PRICE_EUR), 249);
   assert.equal(cents(PRICE_BOOK.standard_monthly.eur), 349);
   assert.equal(cents(PRICE_BOOK.standard_annual.eur), 3499);
   assert.equal(PRICE_BOOK.standard_annual.interval, "year");
