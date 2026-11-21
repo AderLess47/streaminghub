@@ -44,6 +44,25 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
     if (takeFocus) dialogRef.current?.focus();
   }, [visible]);
 
+  // Der Banner steht fest über dem Seitenende. Solange er offen ist, reserviert
+  // er sich am Dokumentende Platz in seiner Höhe; globals.css zieht denselben
+  // Betrag vom Scrollbereich ab, damit ein fokussierter Knopf im Footer über dem
+  // Banner bleibt statt vollständig darunter zu verschwinden (2.4.11).
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!visible || !dialog) return;
+    const root = document.documentElement;
+    // Höhe plus Luft für den Fokusring, der unter dem Banner sonst abgeschnitten wäre.
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty("--consent-banner-space", `${dialog.offsetHeight + 8}px`);
+    });
+    observer.observe(dialog);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--consent-banner-space");
+    };
+  }, [visible]);
+
   // Escape schließt den Banner, egal wo der Fokus gerade liegt; am Dialog
   // allein verfehlt es jeden, der zwischendurch woanders hintabbt.
   useEffect(() => {
