@@ -16,6 +16,7 @@ process.env.DATABASE_PATH = path.join(directory, "test.db");
 
 const { get, nowIso, run } = await import("./db.ts");
 const {
+  contractLabel,
   contractRequestStats,
   findContractRequest,
   listContractRequests,
@@ -153,4 +154,19 @@ test("Kündigung eines Store-Abos verweist auf den Store und nennt das Periodene
     record.reference,
   );
   assert.equal(stored?.channel, "apple");
+});
+
+test("Vertragsbezeichnung ist nur bei locale de deutsch, sonst englisch", () => {
+  // Bestätigungsseite und Mail nutzen dieselbe Funktion. Vorher bekamen alle
+  // Sprachen außer Englisch deutsche Bezeichnungen, auch wenn die Oberfläche
+  // für sie auf Englisch zurückfällt.
+  assert.equal(contractLabel("web", "de"), "Premium-Abo über die Website");
+  assert.equal(contractLabel("apple", "de"), "Abo über den App Store");
+  assert.equal(contractLabel("other", "de"), "Sonstiger Vertrag");
+
+  for (const locale of ["en", "fr", "tr"]) {
+    assert.equal(contractLabel("web", locale), "Premium subscription via the website");
+    assert.equal(contractLabel("apple", locale), "Subscription via the App Store");
+    assert.equal(contractLabel("other", locale), "Other contract");
+  }
 });

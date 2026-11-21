@@ -250,6 +250,59 @@ test("the cancellation confirmation greets by name when the account has one", as
   assert.match(cancellationMail({ ...base, name: "Max", locale: "en" }).text, /^Hello Max,/);
 });
 
+test("nur locale de bekommt deutsche Mails, andere Sprachen fallen auf Englisch zurück", async () => {
+  // Die Oberfläche fällt für unvollständige Sprachen auf Englisch zurück; die
+  // Mails müssen derselben Regel folgen. Vorher prüften die Vorlagen
+  // `locale !== "en"` und schickten fr/tr/es usw. deutschen Text.
+  const { cancellationMail, resetMail, trialStartedMail, verificationMail, withdrawalMail } = await import(
+    "./mail.ts"
+  );
+
+  assert.match(verificationMail("https://example.invalid/link", "de").subject, /Bestätige deine E-Mail-Adresse/);
+  assert.match(resetMail("https://example.invalid/link", "de").subject, /^Passwort zurücksetzen/);
+
+  const cancellation = {
+    reference: "KND-2",
+    contract: "StreamingHub Premium, monatlich",
+    receivedAt: "21.11.2026, 10:00",
+    effectiveAt: "3. Dezember 2026",
+    status: "canceled_web",
+    channel: null,
+    name: "Ana",
+  };
+  const withdrawal = {
+    reference: "WDR-2",
+    name: "Ana",
+    contract: "StreamingHub Premium, monatlich",
+    receivedAt: "21.11.2026, 10:00",
+  };
+
+  for (const locale of ["fr", "tr"]) {
+    assert.match(verificationMail("https://example.invalid/link", locale).subject, /^Confirm your email/);
+    assert.match(resetMail("https://example.invalid/link", locale).subject, /^Reset your password/);
+
+    const trial = trialStartedMail({
+      name: "Ana",
+      locale,
+      trialEndsAt: "2026-12-03T22:00:00.000Z",
+      priceEur: 3.49,
+    });
+    assert.match(trial.text, /link up to \d+ devices/);
+    assert.doesNotMatch(trial.text, /gekoppelte Geräte/);
+
+    const cancel = cancellationMail({ ...cancellation, locale });
+    assert.match(cancel.text, /^Hello Ana,/);
+    assert.doesNotMatch(cancel.text, /^Hallo/);
+
+    const withdraw = withdrawalMail({ ...withdrawal, locale });
+    assert.match(withdraw.subject, /^Confirmation of your withdrawal/);
+    assert.doesNotMatch(withdraw.text, /^Hallo/);
+  }
+
+  // Englisch bleibt englisch.
+  assert.match(verificationMail("https://example.invalid/link", "en").subject, /^Confirm your email/);
+});
+
 function seedDevice(userId: string, id: string, lastSeenAt: string) {
   run(
     `INSERT INTO devices (id, user_id, name, platform, status, activated_at, last_seen_at, created_at)
