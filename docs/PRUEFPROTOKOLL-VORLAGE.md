@@ -80,7 +80,7 @@ Version und Seitenliste.
 | Keine Tastaturfalle | 2.1.2 | Menüs, Dialoge, Player |  |  |
 | Sichtbarer Fokus | 2.4.7 | Durchtabben, Fokusring bei jedem Element |  |  |
 | Fokusreihenfolge sinnvoll | 2.4.3 |  |  |  |
-| Fokus nicht verdeckt | 2.4.11 | Sticky Header, Cookie-Banner, Toasts |  |  |
+| Fokus nicht verdeckt | 2.4.11 | Nur per Tab bis ans Seitenende, je fokussiertem Element `getBoundingClientRect()` gegen das überlagernde Element (Sticky Header, Cookie-Banner, Toast) messen: Fokusrechteck vollständig außerhalb, also `bottom ≤ Overlay.top` oder `top ≥ Overlay.bottom`, bei maximalem Scrollweg und bei 320 und 390 px; vorhandene Reserve (`scroll-padding-bottom`, `padding-bottom`) mitnotieren |  |  |
 | Sprungmarken und Landmarken | 2.4.1 |  |  |  |
 | Zielgrößen ≥ 24 × 24 px | 2.5.8 | Messen, auch bei 320 px Breite |  |  |
 | Ziehen hat eine Alternative | 2.5.7 | Slider, Sortierlisten |  |  |
