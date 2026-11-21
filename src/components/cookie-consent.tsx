@@ -44,11 +44,24 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
   }, [visible]);
 
   function close(message?: string) {
+    // Nur wenn der Fokus im Banner lag, darf er danach woanders hinspringen;
+    // wer währenddessen im Formular arbeitet, behält seinen Fokus.
+    const active = document.activeElement;
+    const focusInBanner =
+      !active || active === document.body || (dialogRef.current?.contains(active) ?? false);
     setVisible(false);
     if (message) setAnnouncement(message);
     const target = returnFocusRef.current;
     returnFocusRef.current = null;
-    if (target && document.contains(target)) target.focus();
+    if (target && document.contains(target)) {
+      target.focus();
+      return;
+    }
+    // Ohne Rückgabe-Ziel (Banner erschien von selbst) fiele der Fokus auf BODY.
+    // Stattdessen zurück auf den Auslöser im Footer, ohne die Seite zu scrollen.
+    if (focusInBanner) {
+      document.querySelector<HTMLElement>("[data-consent-trigger]")?.focus({ preventScroll: true });
+    }
   }
 
   async function choose(choice: "all" | "necessary") {
