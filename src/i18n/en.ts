@@ -257,7 +257,10 @@ export const en: Dictionary = {
     billingNotice:
       "Note: no payment provider is connected yet. The web checkout is technically prepared but does not trigger a payment. Your subscription status stays “not active” until a real payment has been confirmed server-side.",
     billingLiveNotice:
-      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount of €3.49. No VAT is charged.",
+      "Payments are processed by Stripe. Your subscription becomes active only after the payment is confirmed server-side. The checkout shows the total amount and billing period. No VAT is charged.",
+    playerNoticeTitle: "Media player only",
+    playerNotice:
+      "StreamingHub is purely a technical media player. We do not provide channels, streams, playlists or any other content and do not broker access rights. You are responsible for ensuring that the sources you add are lawful and that you hold the necessary usage rights.",
     featuresTitle: "Premium features",
     features: [
       {
@@ -280,6 +283,26 @@ export const en: Dictionary = {
       },
     ],
     faqTitle: "Subscription questions",
+  },
+  checkout: {
+    title: "Subscribe to Premium",
+    consentTitle: "Contract terms",
+    termsIntro: "I accept the",
+    termsAnd: "and the",
+    withdrawalConsent:
+      "I expressly request that StreamingHub starts providing the service immediately and confirm that my right of withdrawal expires once performance begins.",
+    termsRequired: "Please accept the contract terms.",
+    withdrawalRequired:
+      "Please confirm the immediate start of performance and the resulting loss of your right of withdrawal.",
+    payNow: "Pay and subscribe",
+    totalMonthly:
+      "Total: {price} per month. The subscription renews automatically every month until you cancel.",
+    totalAnnual:
+      "Total: {price} per year. The subscription renews automatically every year until you cancel.",
+    contractNotice:
+      "This creates a paid subscription. The contract is concluded when the payment is confirmed.",
+    errorGeneric: "Checkout is currently unavailable.",
+    errorNetwork: "Checkout is currently unreachable.",
   },
   download: {
     title: "Download StreamingHub",
@@ -1168,7 +1191,7 @@ export const en: Dictionary = {
   legal: {
     title: "Legal information",
     placeholderNotice:
-      "Note: details marked with [ ] are placeholders and must be replaced with confirmed operator data before publication.",
+      "Note: details marked with [BITTE_EINTRAGEN: …] are placeholders and must be replaced with the actual operator data before publication.",
     lastUpdated: "Last updated",
     imprint: "Legal notice",
     privacy: "Privacy policy",

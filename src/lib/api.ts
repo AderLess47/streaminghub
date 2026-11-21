@@ -10,6 +10,7 @@ export type ApiErrorCode =
   | "rate_limited"
   | "conflict"
   | "not_configured"
+  | "consent_required"
   | "server_error";
 
 const statusByCode: Record<ApiErrorCode, number> = {
@@ -21,6 +22,7 @@ const statusByCode: Record<ApiErrorCode, number> = {
   rate_limited: 429,
   conflict: 409,
   not_configured: 503,
+  consent_required: 400,
   server_error: 500,
 };
 

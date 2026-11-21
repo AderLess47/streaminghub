@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CancelSubscriptionForm } from "@/components/cancel-subscription-form";
-import { CheckoutButton } from "@/components/checkout-button";
+import { CheckoutActions } from "@/components/checkout-actions";
 import { CheckoutSync } from "@/components/checkout-sync";
 import { Icon } from "@/components/icons";
 import { RetentionOffer } from "@/components/retention-offer";
@@ -13,7 +13,9 @@ import { env } from "@/lib/env";
 import { isFeatureEnabled } from "@/lib/flags";
 import { retentionOffer } from "@/lib/retention";
 import { billingConfigured, effectiveStatus, ensureSubscription } from "@/lib/payments";
+import { formatEur } from "@/lib/format";
 import {
+  ANNUAL_PRICE_EUR,
   billingIntervalOf,
   LEGACY_PREMIUM_PRICE_EUR,
   PREMIUM_PRICE_EUR,
@@ -44,6 +46,8 @@ export default async function SubscriptionPage({
     isFeatureEnabled("trial") && user.emailVerified && !trialRunning && !subscription.trial_used_at;
   // Jahresabo nur anbieten, wenn der Preis hinterlegt und der Flag gesetzt ist.
   const annualAvailable = isFeatureEnabled("annualBilling") && Boolean(env.billing.stripeAnnualPriceId);
+  const monthlyPrice = formatEur(PREMIUM_PRICE_EUR, locale);
+  const annualPrice = annualAvailable ? formatEur(ANNUAL_PRICE_EUR, locale) : undefined;
   const trialEndLabel =
     trialEnd && Number.isFinite(trialEnd.getTime())
       ? new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "long" }).format(trialEnd)
@@ -262,34 +266,29 @@ export default async function SubscriptionPage({
 
           {status !== "active" && status !== "past_due" ? (
             <div className="card p-5">
-              <h2 className="text-sm font-semibold">{t.premium.ctaPrimary}</h2>
+              <h2 className="text-sm font-semibold">{t.checkout.title}</h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">{t.dashboard.subscription.priceNote}</p>
               {conversionCoupon ? (
                 <p className="mt-2 text-xs leading-relaxed text-emerald-300">
                   {t.dashboard.subscription.conversionCouponNote}
                 </p>
               ) : null}
-              <div className="mt-4 grid gap-2">
-                <CheckoutButton
-                  label={t.dashboard.subscription.startCta}
-                  disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
+              <div className="mt-4">
+                <CheckoutActions
+                  t={t.checkout}
+                  legal={{
+                    terms: t.footer.terms,
+                    subscriptionTerms: t.footer.subscriptionTerms,
+                    withdrawal: t.footer.withdrawal,
+                  }}
                   configured={configured}
                   signedIn
+                  disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
                   busyLabel={t.ui.sending}
+                  monthlyPrice={monthlyPrice}
+                  annualPrice={annualPrice}
+                  annualNote={annualAvailable ? t.premium.annualNote : undefined}
                 />
-                {annualAvailable ? (
-                  <div className="grid gap-1">
-                    <CheckoutButton
-                      label={t.premium.annualCta}
-                      disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
-                      configured={configured}
-                      signedIn
-                      interval="year"
-                      busyLabel={t.ui.sending}
-                    />
-                    <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
-                  </div>
-                ) : null}
               </div>
               <Link href="/premium" className="btn btn-ghost btn-sm btn-block mt-2">
                 {t.nav.premium}

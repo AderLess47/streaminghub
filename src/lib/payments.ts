@@ -245,6 +245,9 @@ export async function createWebCheckout(params: {
   couponId?: string | null;
   /** Abrechnung; ohne Angabe monatlich, damit bestehende Aufrufer gleich bleiben. */
   interval?: "month" | "year";
+  /** Zeitpunkt der AGB-/Widerrufszustimmung; wird als Nachweis an Stripe übergeben. */
+  consentAcceptedAt?: string;
+  consentVersion?: string;
 }): Promise<CheckoutOutcome> {
   const subscription = ensureSubscription(params.userId);
   const status = effectiveStatus(subscription);
@@ -293,6 +296,13 @@ export async function createWebCheckout(params: {
     // Checkout, und der Betrag wird erst nach serverseitiger Prüfung gesetzt.
     body.set("discounts[0][coupon]", params.couponId);
     body.set("metadata[coupon]", params.couponId);
+  }
+  if (params.consentAcceptedAt) {
+    // Nachweis der Zustimmung aus dem Checkout; bleibt beim Zahlungsanbieter
+    // erhalten, auch wenn das lokale Audit-Log später gelöscht wird.
+    body.set("metadata[consentAcceptedAt]", params.consentAcceptedAt);
+    body.set("metadata[consentWithdrawalLoss]", "true");
+    if (params.consentVersion) body.set("metadata[consentVersion]", params.consentVersion);
   }
 
   try {
