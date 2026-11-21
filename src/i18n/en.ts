@@ -473,6 +473,7 @@ export const en: Dictionary = {
     emailExists: "An account already exists for this email address.",
     devLinkHint: "Development mode: email delivery is not configured. Link:",
     loggedOut: "You have been signed out.",
+    sessionExpired: "Your session has expired. Please sign in again.",
     accountDisabled: "This account is disabled. Please contact support.",
   },
   dashboard: {
