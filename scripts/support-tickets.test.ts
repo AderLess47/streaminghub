@@ -331,6 +331,24 @@ await check("Leere Staff-Antwort wird still verworfen", async () => {
   assert.equal(mails().length, 0);
 });
 
+await check("Antwortlimit liegt bei 4000 Zeichen", async () => {
+  sessionToken.value = await createSession("kunde-1");
+  const ticket = latestTicket();
+  assert.ok(ticket);
+  const before = messages(ticket.id).length;
+
+  const tooLong = await customerReply(null, replyForm(ticket.id, "x".repeat(4_001)));
+  assert.equal(tooLong?.ok, false);
+  assert.match(tooLong?.message ?? "", /4000/);
+  assert.equal(messages(ticket.id).length, before, "zu lange Antwort wird nicht gespeichert");
+
+  const atLimit = await customerReply(null, replyForm(ticket.id, "x".repeat(4_000)));
+  assert.equal(atLimit?.ok, true);
+  const stored = messages(ticket.id);
+  assert.equal(stored.length, before + 1);
+  assert.equal(stored[stored.length - 1].body.length, 4_000);
+});
+
 const failed = results.filter((result) => !result.ok);
 console.log(`\n${results.length - failed.length}/${results.length} Prüfungen bestanden.`);
 if (failed.length > 0) process.exitCode = 1;

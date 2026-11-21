@@ -61,6 +61,42 @@ test("accepts numeric strings from older builds", () => {
   if (parsed.ok) assert.equal(parsed.value.positionMs, 61_000);
 });
 
+test("url, duration and the tolerated overshoot have fixed limits", () => {
+  const base = "https://example.test/";
+  const longestUrl = base + "a".repeat(2_048 - base.length);
+  assert.equal(longestUrl.length, 2_048);
+  assert.equal(
+    parseProgressInput({ url: longestUrl, positionMs: 1_000, durationMs: 2_000 }).ok,
+    true,
+    "2048 Zeichen sind erlaubt",
+  );
+  assert.equal(
+    parseProgressInput({ url: `${longestUrl}a`, positionMs: 1_000, durationMs: 2_000 }).ok,
+    false,
+    "2049 Zeichen nicht",
+  );
+
+  assert.equal(
+    parseProgressInput({ url: URL, positionMs: 0, durationMs: 86_400_000 }).ok,
+    true,
+    "24 Stunden sind erlaubt",
+  );
+  assert.equal(
+    parseProgressInput({ url: URL, positionMs: 0, durationMs: 86_400_001 }).ok,
+    false,
+    "eine Millisekunde mehr nicht",
+  );
+
+  const overshoot = parseProgressInput({ url: URL, positionMs: 1_860_000, durationMs: 1_800_000 });
+  assert.equal(overshoot.ok, true, "60 Sekunden hinter dem Ende werden geklemmt");
+  assert.equal(overshoot.ok ? overshoot.value.positionMs : null, 1_800_000);
+  assert.equal(
+    parseProgressInput({ url: URL, positionMs: 1_860_001, durationMs: 1_800_000 }).ok,
+    false,
+    "61 Sekunden nicht",
+  );
+});
+
 test("a finished title is not resumable", () => {
   assert.equal(isFinished(2_700_000, 2_700_000), true);
   assert.equal(isFinished(2_700_000 - FINISH_MARGIN_MS, 2_700_000), true);
