@@ -140,6 +140,7 @@ test("a trial ending inside the window gets exactly one reminder", async () => {
 });
 
 test("a trial that is still days away waits for the reminder window", async () => {
+  assert.equal(REMINDER_WINDOW_HOURS, 48, "das zugesagte Fenster sind 48 Stunden");
   seedUser("job-later");
   seedTrial("job-later", { endsInMs: 6 * DAY });
 
@@ -148,12 +149,25 @@ test("a trial that is still days away waits for the reminder window", async () =
   assert.equal(row("job-later")?.trial_reminder_sent_at, null);
   assert.equal(mailsTo("job-later@example.test").length, 0);
 
-  // Genau an der Fenstergrenze wird erinnert.
+  // 47 Stunden vor Ende: innerhalb des Fensters wird erinnert.
   const justInside = await runTrialJobs({
-    now: Date.now() + 6 * DAY - (REMINDER_WINDOW_HOURS - 1) * HOUR,
+    now: Date.now() + 6 * DAY - 47 * HOUR,
   });
   assert.equal(justInside.reminders, 1);
   assert.equal(mailsTo("job-later@example.test").length, 1);
+});
+
+test("a trial just outside the window gets no reminder", async () => {
+  seedUser("job-outside");
+  seedTrial("job-outside", { endsInMs: 6 * DAY });
+
+  // 49 Stunden vor Ende: eine Stunde hinter der Grenze.
+  const summary = await runTrialJobs({
+    now: Date.now() + 6 * DAY - 49 * HOUR,
+  });
+  assert.equal(summary.reminders, 0);
+  assert.equal(row("job-outside")?.trial_reminder_sent_at, null);
+  assert.equal(mailsTo("job-outside@example.test").length, 0);
 });
 
 test("an ended trial is marked once and gets one closing mail", async () => {

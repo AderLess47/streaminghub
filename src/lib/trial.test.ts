@@ -171,11 +171,12 @@ test("a verified account starts a 14 day trial, becomes premium and gets one mai
   setFlag(true);
   seedUser("trial-ok");
   const before = Date.now();
+  assert.equal(DEFAULT_TRIAL_DAYS, 14, "der zugesagte Default sind 14 Tage");
 
   const outcome = await startTrial({ userId: "trial-ok" });
   assert.equal(outcome.ok, true);
   if (!outcome.ok) return;
-  assert.equal(outcome.trialDays, DEFAULT_TRIAL_DAYS);
+  assert.equal(outcome.trialDays, 14);
 
   const row = subscriptionRow("trial-ok");
   assert.ok(row, "der Trial braucht eine Abo-Zeile");
@@ -186,10 +187,10 @@ test("a verified account starts a 14 day trial, becomes premium and gets one mai
 
   const end = Date.parse(row.trial_ends_at ?? "");
   assert.ok(Number.isFinite(end));
-  const expected = DEFAULT_TRIAL_DAYS * DAY;
+  const expected = 14 * DAY;
   assert.ok(
     Math.abs(end - before - expected) < 5_000,
-    `Trial-Ende liegt nicht ${DEFAULT_TRIAL_DAYS} Tage in der Zukunft`,
+    "Trial-Ende liegt nicht 14 Tage in der Zukunft",
   );
   assert.equal(outcome.trialEndsAt, row.trial_ends_at);
 
@@ -306,5 +307,5 @@ test("the trial length comes from settings and is clamped", async () => {
   assert.equal(trialDays(), 1);
 
   setSetting("trial_days", "keine Zahl");
-  assert.equal(trialDays(), DEFAULT_TRIAL_DAYS);
+  assert.equal(trialDays(), 14, "ohne gueltige Einstellung gelten 14 Tage");
 });
