@@ -39,26 +39,28 @@ const COMPONENTS = [
 // Wert. Nicht getroffen werden `aria-disabled` (davor steht ein „-“),
 // `disabledLabel` (Wortzeichen) und Tailwinds `disabled:` (Doppelpunkt).
 const DISABLED = /\sdisabled(?![\w:-])(=\{([^}]+)\})?/g;
-const UNBOUND = "(ohne Wert)";
 const ARIA_DISABLED = /aria-disabled=\{\s*[\w.]+(?:\s*!==\s*null)?\s*\|\|\s*undefined\s*\}/g;
 
-/**
- * Ausgenommene `disabled`-Bindungen: Sie hängen an der Eingabe, nicht am
- * Laufzustand, und der Fokus liegt dann im Eingabefeld, nicht auf dem Knopf.
- */
+/** Ausnahme: hängt an der Eingabe, nicht am Laufzustand – der Fokus liegt im Feld. */
 const ALLOWED_DISABLED = { "activate-form.tsx": ["code.length < 8 || undefined"] };
 
+/** Leerraum in Bedingungen ist Formatierung, nicht Verhalten. */
+const normalize = (expression) => expression.replace(/\s+/g, " ").trim();
+
+/** Kommentare zählen nicht mit: Ein Satz über `disabled` sperrt nichts. */
 function sourceOf(file) {
   const target = path.join(componentsDir, file);
   assert.ok(existsSync(target), `${file}: Datei fehlt oder wurde umbenannt`);
-  return readFileSync(target, "utf8");
+  return readFileSync(target, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/[^\n]*$/gm, "");
 }
 
 test("kein Element sperrt sich am Laufzustand", () => {
   for (const file of COMPONENTS) {
-    const allowed = ALLOWED_DISABLED[file] ?? [];
+    const allowed = (ALLOWED_DISABLED[file] ?? []).map(normalize);
     const found = [...sourceOf(file).matchAll(DISABLED)]
-      .map(([, , expression]) => expression?.trim() ?? UNBOUND)
+      .map(([, , expression]) => (expression ? normalize(expression) : "(ohne Wert)"))
       .filter((expression) => !allowed.includes(expression));
 
     assert.deepEqual(
@@ -89,7 +91,7 @@ test("jede Komponente meldet den Laufzustand über aria-disabled", () => {
 test("keine Komponente mit aria-disabled fehlt in der Liste", () => {
   const unlisted = readdirSync(componentsDir)
     .filter((file) => file.endsWith(".tsx") && !COMPONENTS.includes(file))
-    .filter((file) => readFileSync(path.join(componentsDir, file), "utf8").includes("aria-disabled"));
+    .filter((file) => sourceOf(file).includes("aria-disabled"));
 
   assert.deepEqual(unlisted, [], "in COMPONENTS eintragen, damit die Fokus-Regeln für sie gelten");
 });
