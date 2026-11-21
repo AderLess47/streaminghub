@@ -49,8 +49,17 @@ inhaltliche Ziel aus #361 erreichbar, ohne die Original-Commits zu benötigen:
 | CI (`Typecheck and tests`) grün auf dem neuen Head | Jeder der PRs lief mit 5/5 grünen Checks; `main` nach jedem Merge ebenfalls | erfüllt |
 | Formular-Aktionen setzen `aria-disabled` und behalten den Fokus | `aria-disabled` in 16 Komponenten (`admin-mfa-form`, `language-switcher`, `cookie-consent`, `auth-forms`, `mfa-setup-form`, `cancellation-form`, `activate-form`, `withdrawal-form`, `checkout-button`, `retention-offer`, `resend-verification`, `cancel-subscription-form`, `contact-form`, `backup-panel`, `dashboard-forms`, `start-trial-button`); `npm run test:pending-focus` prüft die Regel, Live-Beleg im Monetarisierungs-Protokoll | erfüllt |
 | `FormStatus`/`LiveRegion` werden weiterverwendet | Beide werden in Formularen, Admin-Seiten und im Cookie-Banner eingesetzt; die Zustände „wird gesendet", Erfolg und Fehler laufen darüber | erfüllt |
-| Jahresabo, Coupons, Retention-Angebot und Support-Berechtigung funktionieren unverändert | `src/lib/retention.test.ts` (Coupons, Angebot, doppelte Annahme, Ablehnung), `src/lib/flags.test.ts` (Conversion-Coupon nur für nicht zahlende Trials), `scripts/support-tickets.test.ts`, `scripts/stripe-webhook-routes.test.ts` | erfüllt |
+| Jahresabo, Coupons, Retention-Angebot und Support-Berechtigung funktionieren unverändert | Jahresabo: `src/lib/pricing.test.ts` (Jahrespreis, Ersparnis, Zuordnung der Price-ID) und `src/lib/entitlements.test.ts` (ein Jahresabo meldet sein Intervall). Coupons, Angebot, doppelte Annahme und Ablehnung: `src/lib/retention.test.ts`, dort auch der Conversion-Coupon nur für nicht zahlende Trials. `src/lib/flags.test.ts` prüft nur das Flag-Parsing und die stabilen Schlüssel, nicht das Verhalten. Support-Berechtigung: `scripts/support-tickets.test.ts` (ohne Abo kein Ticket, Anmeldung nötig, fremdes Ticket und Kundenrolle abgewiesen). Abo-Zyklus und Webhook: `scripts/stripe-webhook-routes.test.ts` | erfüllt |
 | Keine stillen Logouts oder verlorenen Sprachwahlen in den Sprach-/Mail-Flows | `/login?expired=1` erklärt das Sitzungsende (`t.auth.sessionExpired`); `src/lib/subscription-mails.test.ts` prüft `fr` und `tr`; `scripts/api-routes.test.ts` prüft die Persistenz über `/api/locale`; `scripts/session-logout.test.ts` deckt den Logout ab | erfüllt |
+
+Die Belegstellen dieser Zeile wurden am 21.11.2026 gegen `main` (`d7a15ef`)
+stichprobenartig ausgeführt: `test:retention` 11/11, `test:entitlements`
+(Flags, Preise, Ansprüche) 17/17, `test:support-tickets` 11/11 und
+`test:stripe-webhook` 5/5 plus 1/1 im nicht konfigurierten Fall. Dabei fiel auf,
+dass `src/lib/flags.test.ts` nur `isEnabledValue` und die Schlüssel aus
+`FEATURE_FLAGS` prüft; das Verhalten des Conversion-Coupons steht in
+`src/lib/retention.test.ts`. Die ursprüngliche Zuordnung war an dieser Stelle
+falsch und ist oben berichtigt.
 
 ## 4. Checkliste aus #361
 
@@ -82,6 +91,10 @@ Monetarisierungs-Aktionen und den Cookie-Banner bei 390 px und 320 px ab.
   juristische Freigabe und keine Freigabe durch eine qualifizierte Person. Die
   BFSG-Einordnung steht in
   [BFSG-ANWENDUNGSBEREICH.md](BFSG-ANWENDUNGSBEREICH.md).
+- **Zwei Beleg-Tests laufen nicht in der CI.** `test:retention` und
+  `test:entitlements` sind nicht in `.github/workflows/ci.yml` eingebunden; die
+  Werte oben stammen aus lokalen Läufen gegen `main`. `test:support-tickets` und
+  `test:stripe-webhook` sind dagegen CI-Schritte.
 - **Die Original-Commits** aus #361 bleiben verschollen. Das ist kein offener
   Arbeitspunkt mehr, sondern eine nicht behebbare Lücke in der Überlieferung;
   die Wirkung ist durch die PRs oben belegt.
