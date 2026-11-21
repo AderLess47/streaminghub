@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
 import { LiveMessage } from "./live-message";
-import { useSubmitFocus } from "./use-submit-focus";
 
 const UNAVAILABLE_HINT_ID = "checkout-unavailable-hint";
 
@@ -13,6 +13,7 @@ export function CheckoutButton({
   configured,
   signedIn,
   interval = "month",
+  busyLabel,
 }: {
   label: string;
   disabledLabel: string;
@@ -20,14 +21,14 @@ export function CheckoutButton({
   signedIn: boolean;
   /** Abrechnung des Abschlusses; Standard ist monatlich. */
   interval?: "month" | "year";
+  /** Ansage während der Anfrage; der Knopf behält den Fokus. */
+  busyLabel: string;
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  // Während der Anfrage ist der Knopf deaktiviert und verliert den Fokus; der
-  // Hook holt ihn nach der Antwort zurück (WCAG 2.4.3).
-  const buttonRef = useSubmitFocus(pending);
 
   async function start() {
+    if (pending) return;
     setMessage(null);
     if (!signedIn) {
       window.location.href = "/login?next=/dashboard/subscription";
@@ -56,16 +57,16 @@ export function CheckoutButton({
   return (
     <div>
       <button
-        ref={buttonRef}
         type="button"
         onClick={() => void start()}
         className="btn btn-primary btn-block"
-        disabled={pending}
+        aria-disabled={pending || undefined}
         aria-describedby={configured ? undefined : UNAVAILABLE_HINT_ID}
       >
         {pending ? <Icon name="refresh" size={16} className="animate-spin" /> : <Icon name="card" size={16} />}
-        {pending ? "…" : label}
+        {label}
       </button>
+      <FormStatus pending={pending} label={busyLabel} />
       {!configured ? (
         <p
           id={UNAVAILABLE_HINT_ID}

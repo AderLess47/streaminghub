@@ -188,6 +188,7 @@ export default async function SubscriptionPage({
                     label={t.dashboard.subscription.retentionCta}
                     acceptedMessage={t.dashboard.subscription.retentionAccepted}
                     failedMessage={t.dashboard.subscription.retentionFailed}
+                    busyLabel={t.ui.sending}
                   />
                 </div>
                 {/* Die Kündigung bleibt unverändert daneben stehen; das Angebot
@@ -252,6 +253,7 @@ export default async function SubscriptionPage({
                     label={t.dashboard.subscription.trialCta}
                     startedLabel={t.dashboard.subscription.trialStarted}
                     failedLabel={t.dashboard.subscription.trialFailed}
+                    busyLabel={t.ui.sending}
                   />
                 </div>
               )}
@@ -273,6 +275,7 @@ export default async function SubscriptionPage({
                   disabledLabel={t.dashboard.subscription.checkoutNotConfigured}
                   configured={configured}
                   signedIn
+                  busyLabel={t.ui.sending}
                 />
                 {annualAvailable ? (
                   <div className="grid gap-1">
@@ -282,6 +285,7 @@ export default async function SubscriptionPage({
                       configured={configured}
                       signedIn
                       interval="year"
+                      busyLabel={t.ui.sending}
                     />
                     <p className="text-[0.7rem] leading-relaxed text-muted">{t.premium.annualNote}</p>
                   </div>
