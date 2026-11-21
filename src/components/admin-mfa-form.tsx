@@ -17,6 +17,7 @@ export function AdminMfaForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setError(null);
     try {
@@ -64,7 +65,7 @@ export function AdminMfaForm({
         </p>
       ) : null}
       <FormStatus pending={pending} label={labels.busy} />
-      <button type="submit" className="btn btn-primary btn-block" disabled={pending}>
+      <button type="submit" className="btn btn-primary btn-block" aria-disabled={pending || undefined}>
         {pending ? <Icon name="refresh" size={15} className="animate-spin" /> : <Icon name="check" size={15} />}
         {labels.cta}
       </button>

@@ -28,6 +28,7 @@ export function WithdrawalForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setErrorMessage(null);
     setFieldErrors({});
@@ -178,7 +179,7 @@ export function WithdrawalForm({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="btn btn-primary" disabled={pending}>
+        <button type="submit" className="btn btn-primary" aria-disabled={pending || undefined}>
           {pending ? (
             <Icon name="refresh" size={16} className="animate-spin" />
           ) : (

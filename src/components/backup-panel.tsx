@@ -71,6 +71,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
   };
 
   const create = async () => {
+    if (busy !== null) return;
     setBusy("create");
     setMessage(null);
     try {
@@ -85,6 +86,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
   };
 
   const restore = async (id: string) => {
+    if (busy !== null) return;
     setBusy(`restore:${id}`);
     setMessage(null);
     try {
@@ -105,6 +107,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
   };
 
   const remove = async (id: string) => {
+    if (busy !== null) return;
     if (!window.confirm(labels.confirmDelete)) return;
     setBusy(`delete:${id}`);
     setMessage(null);
@@ -124,7 +127,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
         <button
           type="button"
           onClick={create}
-          disabled={busy !== null}
+          aria-disabled={busy !== null || undefined}
           className="btn btn-primary btn-sm"
         >
           <Icon name="plus" size={15} />
@@ -165,7 +168,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
                 <button
                   type="button"
                   onClick={() => restore(backup.id)}
-                  disabled={busy !== null}
+                  aria-disabled={busy !== null || undefined}
                   className="btn btn-ghost btn-sm"
                 >
                   <Icon name="refresh" size={15} />
@@ -174,7 +177,7 @@ export function BackupPanel({ labels, backups, locale }: Props) {
                 <button
                   type="button"
                   onClick={() => remove(backup.id)}
-                  disabled={busy !== null}
+                  aria-disabled={busy !== null || undefined}
                   className="btn btn-ghost btn-sm text-rose-300"
                   aria-label={labels.deleteCta}
                 >

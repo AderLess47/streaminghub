@@ -15,6 +15,7 @@ export function CancellationForm({ locale }: { locale: string }) {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setErrorMessage(null);
     setFieldError(null);
@@ -102,7 +103,7 @@ export function CancellationForm({ locale }: { locale: string }) {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="btn btn-primary" disabled={pending}>
+        <button type="submit" className="btn btn-primary" aria-disabled={pending || undefined}>
           {pending ? (
             <Icon name="refresh" size={16} className="animate-spin" />
           ) : (
