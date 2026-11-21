@@ -654,10 +654,23 @@ await check("Kopplung: ungültige Anfrage 400, gültige 201 mit Code und Poll-To
   assert.equal(data.expiresInSeconds, 600);
   assert.equal(data.pollIntervalSeconds, 3);
 
-  const rows = all<{ code_hash: string; device_name: string; platform: string; poll_token_hash: string }>(
-    "SELECT code_hash, device_name, platform, poll_token_hash FROM pairing_requests",
+  const rows = all<{
+    code_hash: string;
+    device_name: string;
+    platform: string;
+    poll_token_hash: string;
+    created_at: string;
+    expires_at: string;
+  }>(
+    "SELECT code_hash, device_name, platform, poll_token_hash, created_at, expires_at FROM pairing_requests",
   );
   assert.equal(rows.length, 1);
+  assert.equal(data.expiresAt, rows[0].expires_at, "Antwort meldet den gespeicherten Ablauf");
+  assert.equal(
+    Date.parse(rows[0].expires_at) - Date.parse(rows[0].created_at),
+    600_000,
+    "gespeicherter Ablauf liegt 600 Sekunden nach dem Anlegen",
+  );
   assert.equal(rows[0].device_name, "Wohnzimmer");
   assert.equal(rows[0].platform, "firetv");
   assert.notEqual(rows[0].code_hash, data.code, "Code darf nicht im Klartext liegen");
