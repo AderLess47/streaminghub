@@ -27,7 +27,6 @@ import { POST as requestPairingCode } from "@/app/api/v1/pairing/request/route";
 import { GET as getPairingStatus } from "@/app/api/v1/pairing/status/route";
 import { POST as postLocale } from "@/app/api/locale/route";
 import { __setPremium, __setSessionUser, __setTrial } from "./fakes/api";
-import { __getCookie, __resetCookies } from "./fakes/next-headers.ts";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -52,7 +51,6 @@ function resetDb(): void {
   run("DELETE FROM pairing_requests");
   run("DELETE FROM customer_playlists");
   run("DELETE FROM device_tokens");
-  __resetCookies();
   __setSessionUser(null);
   __setPremium("user-a", false);
   __setPremium("user-b", false);
@@ -874,7 +872,7 @@ await check("/me: gesperrtes Gerät bekommt 403", async () => {
   assert.equal(response.status, 403);
 });
 
-await check("/api/locale: angemeldete Sitzung schreibt die Sprache ins Konto", async () => {
+await check("/api/locale: mit Sitzung schreibt die Sprache ins Konto", async () => {
   resetDb();
   seedUser("user-locale");
   run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
@@ -895,10 +893,9 @@ await check("/api/locale: angemeldete Sitzung schreibt die Sprache ins Konto", a
     get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
     "en",
   );
-  assert.equal(__getCookie("sh_locale"), "en");
 });
 
-await check("/api/locale: ohne Sitzung nur das Cookie", async () => {
+await check("/api/locale: ohne Sitzung bleibt users.locale unverändert", async () => {
   resetDb();
   seedUser("user-locale");
   run(`UPDATE users SET locale = 'de' WHERE id = ?`, "user-locale");
@@ -913,7 +910,7 @@ await check("/api/locale: ohne Sitzung nur das Cookie", async () => {
   );
 
   assert.equal(response.status, 200);
-  assert.equal(__getCookie("sh_locale"), "fr");
+  assert.deepEqual(await response.json(), { ok: true, locale: "fr" });
   assert.equal(
     get<{ locale: string }>("SELECT locale FROM users WHERE id = ?", "user-locale")?.locale,
     "de",

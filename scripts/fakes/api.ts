@@ -17,23 +17,16 @@ import { ZodError, type ZodTypeAny } from "zod";
 
 type SessionUser = { id: string; email: string; display_name?: string };
 
-/**
- * Der Zustand liegt auf `globalThis`: Test und Route können das Modul über
- * verschiedene Spezifizierer laden (`./fakes/api` und `@/lib/session`), und
- * ohne gemeinsamen Ablageort hätten sie getrennte Kopien.
- */
-const sessionHolder = ((globalThis as { __shFakeSession?: { user: SessionUser | null } }).__shFakeSession ??= {
-  user: null,
-});
+let sessionUser: SessionUser | null = null;
 
 export function __setSessionUser(user: SessionUser | null): void {
-  sessionHolder.user = user;
+  sessionUser = user;
 }
 
 /** Wie im Original: ohne Anmeldung wird geworfen, die Route antwortet mit 401. */
 export async function requireUser(): Promise<SessionUser> {
-  if (!sessionHolder.user) throw new Error("Nicht angemeldet");
-  return sessionHolder.user;
+  if (!sessionUser) throw new Error("Nicht angemeldet");
+  return sessionUser;
 }
 
 /**
@@ -41,7 +34,7 @@ export async function requireUser(): Promise<SessionUser> {
  * antworten (etwa der Sprachumschalter), brauchen diese Variante.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  return sessionHolder.user;
+  return sessionUser;
 }
 
 /* -------------------------------- Premium -------------------------------- */
