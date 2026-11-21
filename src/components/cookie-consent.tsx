@@ -52,6 +52,9 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
   }
 
   async function choose(choice: "all" | "necessary") {
+    // `aria-disabled` hält den Knopf im Tastaturfluss; den zweiten Klick fängt
+    // der Laufzustand ab, nicht das Attribut.
+    if (saving) return;
     setSaving(true);
     try {
       await fetch("/api/consent", {
@@ -105,7 +108,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={() => void choose("all")}
-                disabled={saving}
+                aria-disabled={saving || undefined}
               >
                 {t.accept}
               </button>
@@ -113,7 +116,7 @@ export function CookieConsent({ t }: { t: Dictionary["consent"] }) {
                 type="button"
                 className="btn btn-outline btn-sm"
                 onClick={() => void choose("necessary")}
-                disabled={saving}
+                aria-disabled={saving || undefined}
               >
                 {t.reject}
               </button>
