@@ -233,7 +233,8 @@ test("creating a backup stores only ciphertext and lists it", async () => {
 test("a snapshot keeps at most 500 progress entries", async () => {
   seedUser("bk-cap");
   const base = Date.parse(nowIso());
-  for (let i = 0; i < 520; i++) {
+  // Ein Eintrag ueber der Grenze genuegt, um das Abschneiden zu belegen.
+  for (let i = 0; i <= 500; i++) {
     seedProgress("bk-cap", `https://example.test/cap-${i}.mkv`, i, new Date(base + i * 1_000).toISOString());
   }
 
@@ -243,17 +244,15 @@ test("a snapshot keeps at most 500 progress entries", async () => {
   const [stored] = [...objects.values()];
   const snapshot = decryptSnapshot(stored, "bk-cap", KEY);
   assert.equal(snapshot.progress.length, 500, "hoechstens 500 Fortschritte je Snapshot");
-  assert.equal(snapshot.progress[0].mediaUrl, "https://example.test/cap-519.mkv");
-  assert.equal(
-    snapshot.progress.some((entry) => entry.mediaUrl.endsWith("cap-0.mkv")),
-    false,
-    "der aelteste Fortschritt faellt heraus",
-  );
+  assert.equal(snapshot.progress[0].mediaUrl, "https://example.test/cap-500.mkv", "der neueste bleibt");
+  assert.equal(snapshot.progress.at(-1)?.mediaUrl, "https://example.test/cap-1.mkv", "der aelteste faellt heraus");
+});
+
+test("the default snapshot limit is 1 MiB", () => {
+  assert.equal(DEFAULT_MAX_SNAPSHOT_BYTES, 1024 * 1024);
 });
 
 test("an oversized snapshot is refused", async () => {
-  assert.equal(DEFAULT_MAX_SNAPSHOT_BYTES, 1024 * 1024, "die Grenze bleibt bei 1 MiB");
-
   seedUser("bk-large");
   const { store } = memoryStore();
   await assert.rejects(createBackup("bk-large", { storage: store, maxBytes: 10 }), (error: unknown) => {
