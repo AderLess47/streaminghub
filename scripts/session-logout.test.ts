@@ -14,7 +14,7 @@ process.env.EMAIL_API_KEY = "";
 
 const { get, nowIso, run } = await import("@/lib/db");
 const { hashPassword, sha256 } = await import("@/lib/auth");
-const { createSession } = await import("@/lib/session");
+const { applySessionCookie, createSession } = await import("@/lib/session");
 const { POST: logout } = await import("@/app/api/auth/logout/route");
 const { releaseEmailSuppressionAction, retryEmailAction } = await import("@/lib/actions/admin");
 
@@ -101,6 +101,51 @@ await check("Gueltige Sitzung erreicht den Adminbereich", async () => {
   sessionToken.value = await createSession("admin-1");
   const digest = await actionRedirect("retry");
   assert.match(digest, /\/admin\/emails\?ok=/);
+});
+
+await check("Sitzung gilt 30 Tage", async () => {
+  const token = await createSession("admin-1");
+  sessionToken.value = token;
+  const row = get<{ created_at: string; expires_at: string }>(
+    `SELECT created_at, expires_at FROM sessions WHERE token_hash = ?`,
+    sha256(token),
+  );
+  assert.ok(row, "keine Sitzungszeile");
+  assert.equal(
+    Math.round((new Date(row.expires_at).getTime() - new Date(row.created_at).getTime()) / 1000),
+    2_592_000,
+    "Sitzung muss 30 Tage gelten",
+  );
+
+  await applySessionCookie(token);
+  assert.equal(lastSetSession.options?.maxAge, 2_592_000, "Cookie muss 30 Tage gelten");
+});
+
+await check("Sitzung gilt bis zur Ablaufgrenze", async () => {
+  const inside = await createSession("admin-1");
+  sessionToken.value = inside;
+  run(
+    `UPDATE sessions SET expires_at = ? WHERE token_hash = ?`,
+    new Date(Date.now() + 1000).toISOString(),
+    sha256(inside),
+  );
+  const stillIn = await actionRedirect("retry");
+  assert.match(stillIn, /\/admin\/emails\?ok=/, "eine Sekunde vor Ablauf gilt die Sitzung");
+
+  const outside = await createSession("admin-1");
+  sessionToken.value = outside;
+  run(
+    `UPDATE sessions SET expires_at = ? WHERE token_hash = ?`,
+    new Date(Date.now() - 1000).toISOString(),
+    sha256(outside),
+  );
+  const lockedOut = await actionRedirect("retry");
+  assert.match(lockedOut, /\/login\?next=/, "eine Sekunde nach Ablauf ist die Sitzung gesperrt");
+  assert.equal(hasSession(outside), false, "abgelaufene Sitzung wird aufgeraeumt");
+
+  // Ausgangslage fuer die folgenden Pruefungen: genau eine gueltige Sitzung.
+  run(`DELETE FROM sessions WHERE user_id = 'admin-1'`);
+  sessionToken.value = await createSession("admin-1");
 });
 
 await check("Logout entfernt Sitzung und loescht das Cookie", async () => {

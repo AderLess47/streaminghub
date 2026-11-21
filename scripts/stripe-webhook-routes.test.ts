@@ -157,6 +157,27 @@ await check("abgelaufener Zeitstempel 400", async () => {
   assert.equal(eventCount(), 0);
 });
 
+await check("Signaturtoleranz betraegt 300 Sekunden", async () => {
+  resetDb();
+  seedSubscription();
+  const payload = eventBody("evt_tolerance", "customer.subscription.updated", {
+    ...SUBSCRIPTION,
+    status: "unpaid",
+    current_period_end: P1,
+  });
+  const now = Math.floor(Date.now() / 1000);
+
+  const before = await stripeWebhook(webhookRequest(payload, sign(payload, now - 299)));
+  assert.equal(before.status, 200, "299 Sekunden alte Signatur muss gelten");
+  const after = await stripeWebhook(webhookRequest(payload, sign(payload, now + 299)));
+  assert.equal(after.status, 200, "299 Sekunden vorausgehende Signatur muss gelten");
+
+  for (const offset of [-301, 301]) {
+    const response = await stripeWebhook(webhookRequest(payload, sign(payload, now + offset)));
+    assert.equal(response.status, 400, `${Math.abs(offset)} Sekunden Abstand muss abgelehnt werden`);
+  }
+});
+
 await check("ungueltiges JSON mit gueltiger Signatur 400", async () => {
   resetDb();
   seedSubscription();
