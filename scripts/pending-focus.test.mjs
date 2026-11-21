@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -77,6 +77,18 @@ test("jede Komponente meldet den Laufzustand über aria-disabled", () => {
       `${file}: alle ${aria} aria-disabled müssen am Laufzustand hängen`,
     );
   }
+});
+
+/**
+ * Gegenrichtung zur Liste: Eine neu umgestellte Komponente würde sonst
+ * ungeprüft bleiben. Wer `aria-disabled` einführt, trägt sie hier ein.
+ */
+test("keine Komponente mit aria-disabled fehlt in der Liste", () => {
+  const unlisted = readdirSync(componentsDir)
+    .filter((file) => file.endsWith(".tsx") && !COMPONENTS.includes(file))
+    .filter((file) => readFileSync(path.join(componentsDir, file), "utf8").includes("aria-disabled"));
+
+  assert.deepEqual(unlisted, [], "in COMPONENTS eintragen, damit die Fokus-Regeln für sie gelten");
 });
 
 test("Cookie-Banner: choose() verwirft einen zweiten Klick während des Speicherns", () => {
