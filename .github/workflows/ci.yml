@@ -270,7 +270,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v4
