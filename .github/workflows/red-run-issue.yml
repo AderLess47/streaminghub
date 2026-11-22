@@ -35,7 +35,7 @@ jobs:
       # Bewusst der Default-Branch: gemeldet wird mit dem geprüften Skript,
       # nicht mit Code aus dem roten Lauf.
       - name: Repository auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Issue öffnen oder kommentieren
         env:
@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Issue kommentieren und schließen
         env:
