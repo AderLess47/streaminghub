@@ -8,6 +8,20 @@ CONTAINER="${CONTAINER_NAME:-streaminghub-staging-smoke}"
 PORT="${PORT:-3000}"
 BASE="http://127.0.0.1:${PORT}"
 
+# Zeitdeckel fuer jede Probe. Der Container antwortet in Millisekunden; ohne
+# --max-time haengt ein einzelner Request bis zum Job-Timeout (30 min) und der
+# Smoke-Test meldet dann gar nichts. --speed-limit bricht eine Verbindung ab,
+# die Header schickt und dann stehen bleibt.
+# Bewusst ohne --retry: die Proben unten sind Zusicherungen, ein zweiter
+# Versuch wuerde einen echten Regress verdecken. Der Bereitschafts-Loop wartet
+# selbst (60 Versuche mit 2 s Pause).
+CURL_PROBE=(
+  --connect-timeout 2
+  --max-time 10
+  --speed-limit 1024
+  --speed-time 5
+)
+
 fail() {
   echo "::error::$*" >&2
   exit 1
@@ -44,7 +58,7 @@ for _attempt in $(seq 1 60); do
   if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)" != "true" ]; then
     fail "container stopped before the app became ready"
   fi
-  code="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/status" || true)"
+  code="$(curl "${CURL_PROBE[@]}" -sS -o /dev/null -w '%{http_code}' "$BASE/status" || true)"
   if [ "$code" = "200" ]; then
     ready=1
     break
@@ -60,17 +74,17 @@ grep -Eq 'next-server|node[[:space:]]+server\.js' <<<"$processes" \
 grep -q 'public-html-cache-proxy\.mjs' <<<"$processes" \
   || fail "the public HTML cache proxy is not running"
 
-headers="$(curl -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/")"
+headers="$(curl "${CURL_PROBE[@]}" -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/")"
 printf '%s\n' "$headers" | grep -Eiq '^cache-control: public' \
   || fail "anonymous public HTML is not marked public"
 printf '%s\n' "$headers" | grep -Eiq '^vary:.*cookie' \
   || fail "anonymous public HTML does not vary by cookie"
 
-body="$(curl -fsS -H 'Accept: text/html' "$BASE/")"
+body="$(curl "${CURL_PROBE[@]}" -fsS -H 'Accept: text/html' "$BASE/")"
 grep -q 'StreamingHub' <<<"$body" \
   || fail "anonymous public HTML body is missing expected content"
 
-session_headers="$(curl -sS -D - -o /dev/null \
+session_headers="$(curl "${CURL_PROBE[@]}" -sS -D - -o /dev/null \
   -H 'Accept: text/html' \
   -H 'Cookie: sh_session=staging-smoke-invalid' \
   "$BASE/")"
@@ -80,7 +94,7 @@ if printf '%s\n' "$session_headers" | grep -Eiq '^cache-control: public'; then
   fail "session request was published as public"
 fi
 
-status_headers="$(curl -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/status")"
+status_headers="$(curl "${CURL_PROBE[@]}" -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/status")"
 printf '%s\n' "$status_headers" | grep -Eiq '^cache-control: private' \
   || fail "/status is not marked private"
 
@@ -107,10 +121,10 @@ process.exit(1);
 docker exec "$CONTAINER" node -e 'process.kill(Number(process.argv[1]), "SIGTERM")' "$next_pid"
 sleep 1
 
-cached_headers="$(curl -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/")"
+cached_headers="$(curl "${CURL_PROBE[@]}" -sS -D - -o /dev/null -H 'Accept: text/html' "$BASE/")"
 printf '%s\n' "$cached_headers" | grep -Eiq '^cache-control: public' \
   || fail "cached public HTML disappeared after the upstream stopped"
-cached_body="$(curl -fsS -H 'Accept: text/html' "$BASE/")"
+cached_body="$(curl "${CURL_PROBE[@]}" -fsS -H 'Accept: text/html' "$BASE/")"
 grep -q 'StreamingHub' <<<"$cached_body" \
   || fail "cached body is not the expected public HTML"
 
