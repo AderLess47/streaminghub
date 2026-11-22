@@ -1,0 +1,31 @@
+# Dependabot haelt die Actions in .github/workflows nach. Ohne diese Datei
+# mussten Versionssprunge von Hand nachgezogen werden (#418, #419, #420).
+# Bewusst nur "github-actions": npm, Gradle, CocoaPods und SwiftPM haben eigene
+# Wege und wuerden hier nur zusaetzliche PRs erzeugen.
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    # "/" deckt alle Workflows unter .github/workflows ab, auch die nur
+    # manuell startbaren (android-release, vega-shaka).
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    # Genug Platz fuer einen Major-Sprung je Action, ohne die Liste zu fluten.
+    open-pull-requests-limit: 5
+    commit-message:
+      # Passt zur bisherigen Schreibweise der Workflow-Commits ("ci: ...").
+      prefix: "ci"
+    groups:
+      # Minor und Patch gebuendelt: kleiner Diff, den die CI-Pruefungen
+      # (Typecheck, Build, Android, Apple, Workflow-Lint) abdecken.
+      # Major-Spruenge wie v6 -> v7 bleiben absichtlich Einzel-PRs, damit sie
+      # getrennt geprueft und gemergt werden.
+      actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
