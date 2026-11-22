@@ -372,17 +372,68 @@ jobs:
       # Maven Central und lief dabei in den 429. Die Staende aus
       # ROBOLECTRIC_JARS werden vorab geladen; scheitert das, wird der Job rot,
       # statt still in den Online-Modus zu fallen.
+      #
+      # Zeitbudget: Der Job hat 25 Minuten (timeout-minutes, oben). Die Jars
+      # sind 151 MB und 199 MB gross, Maven Central drosselt geteilte
+      # CI-Adressen mit HTTP 429. Mit den alten Werten (--retry 8,
+      # --retry-delay 15, --max-time 300) konnte ein einzelnes Jar rechnerisch
+      # knapp 40 Minuten brauchen; im Lauf 45059527056 blieb der Schritt nach
+      # einem 429 stehen, bis der 25-Minuten-Job-Timeout ihn abbrach, statt
+      # sauber zu scheitern. Deshalb jetzt:
+      #   --connect-timeout 10            Verbindungsaufbau
+      #   --max-time 180                  ein Transfer, danach Retry
+      #   --speed-limit 1024 --speed-time 30
+      #                                   haengender Transfer bricht nach 30 s
+      #                                   ab, statt bis --max-time zu warten
+      #   --retry 3 --retry-delay 15 --retry-max-time 120
+      #                                   hoechstens 3 weitere Versuche, alle im
+      #                                   120-s-Fenster; danach ist Schluss
+      # Worst Case also ~3 Minuten je Jar (gemessen gegen einen 429-Server und
+      # gegen einen haengenden Transfer: 45 s bzw. 120 s), beide ~6; der
+      # Schritt bricht zusaetzlich per timeout-minutes 10 ab. Der Testschritt
+      # braucht mit seinen 3 Versuchen (~3 min + 30 s + 60 s Pause) ~10 Minuten,
+      # zusammen also ~16 von 25 Minuten - der Job scheitert damit sichtbar,
+      # statt im Timeout zu verschwinden.
+      #
+      # Der Cache nimmt beiden Jars den Download ganz ab: der 429 trifft nur
+      # noch den ersten Lauf nach einer Aenderung an ROBOLECTRIC_JARS.
+      - name: Robolectric-Jars aus dem Cache holen
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/robolectric-deps
+          # Der Jar-Stand ist die einzige Aenderungsquelle. Bewusst ohne
+          # restore-keys: ein alter Stand wuerde Offline-Laeufe mit dem
+          # falschen Jar brechen, statt sie neu zu laden.
+          key: robolectric-deps-${{ runner.os }}-${{ env.ROBOLECTRIC_JARS }}
+
       - name: Robolectric-Laufzeit vorab laden
+        timeout-minutes: 10
         run: |
+          set -euo pipefail
           deps="$RUNNER_TEMP/robolectric-deps"
           mkdir -p "$deps"
           for artifact in $ROBOLECTRIC_JARS; do
-            if ! curl -fsSL --retry 8 --retry-all-errors --retry-delay 15 --max-time 300 \
-              -o "$deps/android-all-instrumented-$artifact.jar" \
-              "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar"; then
-              echo "::error::Robolectric-Jar $artifact konnte nicht von Maven Central geladen werden."
+            target="$deps/android-all-instrumented-$artifact.jar"
+            # Cache-Treffer: ein vollstaendiges Jar ist > 100 MB. Kleinere
+            # Dateien sind Reste eines abgebrochenen Downloads und werden
+            # erneut geladen.
+            if [ -f "$target" ] && [ "$(stat -c %s "$target")" -ge 100000000 ]; then
+              echo "Robolectric-Jar $artifact: $(stat -c %s "$target") Bytes aus dem Cache."
+              continue
+            fi
+            status=0
+            curl -fsSL \
+              --connect-timeout 10 --max-time 180 --speed-limit 1024 --speed-time 30 \
+              --retry 3 --retry-delay 15 --retry-max-time 120 --retry-all-errors \
+              -o "$target" \
+              "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar" || status=$?
+            if [ "$status" -ne 0 ]; then
+              rm -f "$target"
+              # curl-Exitcodes: 22 = HTTP-Fehler (z. B. 429), 28 = Timeout.
+              echo "::error::Robolectric-Jar $artifact konnte nicht von Maven Central geladen werden (curl exit $status)."
               exit 1
             fi
+            echo "Robolectric-Jar $artifact: $(stat -c %s "$target") Bytes geladen."
           done
 
       # Compiles main code and runs JVM/Robolectric tests for every distribution
