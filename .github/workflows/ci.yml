@@ -271,6 +271,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Gradle-Caches gehoeren setup-gradle: setup-java mit "cache: gradle"
+      # legt ~/.gradle vorher an, worauf setup-gradle Restore und Save
+      # ueberspringt und jeder Lauf die Abhaengigkeiten neu laedt.
       - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v4
         with:
