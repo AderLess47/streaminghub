@@ -75,7 +75,7 @@ jobs:
           printf '%s\n' "$sha" > "$RUNNER_TEMP/deployed-commit/commit.txt"
 
       - name: Deployten Commit aufzeichnen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deployed-commit
           path: ${{ runner.temp }}/deployed-commit/commit.txt
