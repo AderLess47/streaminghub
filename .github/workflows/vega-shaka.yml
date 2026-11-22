@@ -84,7 +84,7 @@ jobs:
 
       - name: Geräte-Logs hochladen
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: vega-smoke-logs
           path: artifacts/vega-logs
