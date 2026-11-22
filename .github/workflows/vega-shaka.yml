@@ -50,6 +50,9 @@ jobs:
         with:
           node-version: "20"
 
+      # Bewusst kein "cache: gradle" und kein gradle/actions/setup-gradle:
+      # der Build delegiert an die Vega-CLI, und der selbst gehostete Runner
+      # behaelt sein Gradle-Home ohnehin zwischen den Laeufen.
       - name: Java 21 einrichten
         uses: actions/setup-java@v5
         with:
