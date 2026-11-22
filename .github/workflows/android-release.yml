@@ -66,7 +66,7 @@ jobs:
       # legt ~/.gradle vorher an, worauf setup-gradle Restore und Save
       # ueberspringt und jeder Lauf die Abhaengigkeiten neu laedt.
       - name: Gradle einrichten
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "8.11.1"
 
