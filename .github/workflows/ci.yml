@@ -260,6 +260,12 @@ jobs:
     name: Android unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      # Gehoeren zusammen: bei einem Robolectric-Update beide Werte anpassen.
+      # Die Jar-Staende stammen aus org.robolectric.plugins.DefaultSdkProvider
+      # (SDK 34 fuer die Tests, SDK 35 fuer das App-Paket).
+      ROBOLECTRIC_VERSION: "4.14.1"
+      ROBOLECTRIC_JARS: "14-robolectric-10818077-i7 15-robolectric-12650502-i7"
 
     steps:
       - name: Repository auschecken
@@ -302,20 +308,37 @@ jobs:
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
 
+      # Die Jar-Liste in ROBOLECTRIC_JARS ist auf genau diese Robolectric-
+      # Version geprueft. Ein Update im Build macht den Job hier rot, damit die
+      # Staende bewusst nachgezogen werden, statt still online zu laden.
+      - name: Robolectric-Version prüfen
+        run: |
+          declared="$(grep -oE 'org\.robolectric:robolectric:[0-9][0-9.]*' android/app/build.gradle.kts | head -1 | cut -d: -f3)"
+          if [ -z "$declared" ]; then
+            echo "::error::Robolectric-Abhaengigkeit in android/app/build.gradle.kts nicht gefunden."
+            exit 1
+          fi
+          if [ "$declared" != "$ROBOLECTRIC_VERSION" ]; then
+            echo "::error::Robolectric $declared im Build, Offline-Jars sind fuer $ROBOLECTRIC_VERSION geprueft. ROBOLECTRIC_VERSION und ROBOLECTRIC_JARS im Workflow aktualisieren."
+            exit 1
+          fi
+          echo "Robolectric $declared passt zur geprueften Jar-Liste."
+
       # Robolectric laedt android-all-instrumented zur Testlaufzeit selbst von
-      # Maven Central und lief dabei in den 429. Die beiden Staende stammen aus
-      # der Zuordnung von org.robolectric.plugins.DefaultSdkProvider in
-      # Robolectric 4.14.1: SDK 34 fuer die Tests, SDK 35 fuer das App-Paket.
-      # Bei einem Robolectric-Update sind sie mitzuziehen; fehlt ein Jar,
-      # laufen die Tests im Online-Modus mit der Retry-Schleife weiter.
+      # Maven Central und lief dabei in den 429. Die Staende aus
+      # ROBOLECTRIC_JARS werden vorab geladen; scheitert das, wird der Job rot,
+      # statt still in den Online-Modus zu fallen.
       - name: Robolectric-Laufzeit vorab laden
         run: |
           deps="$RUNNER_TEMP/robolectric-deps"
           mkdir -p "$deps"
-          for artifact in 14-robolectric-10818077-i7 15-robolectric-12650502-i7; do
-            curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 --max-time 300 \
+          for artifact in $ROBOLECTRIC_JARS; do
+            if ! curl -fsSL --retry 8 --retry-all-errors --retry-delay 15 --max-time 300 \
               -o "$deps/android-all-instrumented-$artifact.jar" \
-              "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar" || true
+              "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar"; then
+              echo "::error::Robolectric-Jar $artifact konnte nicht von Maven Central geladen werden."
+              exit 1
+            fi
           done
 
       # Compiles main code and runs JVM/Robolectric tests for every distribution
@@ -325,10 +348,7 @@ jobs:
       - name: Unit-Tests für alle Flavors ausführen
         working-directory: android
         run: |
-          deps="$RUNNER_TEMP/robolectric-deps"
-          if [ "$(ls "$deps"/android-all-instrumented-*.jar 2>/dev/null | wc -l)" -eq 2 ]; then
-            export JAVA_TOOL_OPTIONS="-Drobolectric.offline=true -Drobolectric.dependency.dir=$deps"
-          fi
+          export JAVA_TOOL_OPTIONS="-Drobolectric.offline=true -Drobolectric.dependency.dir=$RUNNER_TEMP/robolectric-deps"
           for attempt in 1 2 3; do
             echo "Gradle-Lauf $attempt von 3"
             if ./gradlew --no-daemon testDirectDebugUnitTest testAmazonDebugUnitTest testPlayDebugUnitTest; then
