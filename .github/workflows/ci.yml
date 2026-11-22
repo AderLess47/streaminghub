@@ -216,28 +216,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      ACTIONLINT_VERSION: "1.7.12"
+      # SHA-256 des Release-Archivs von actionlint 1.7.12 (linux_amd64). Der
+      # Wert steht im Repo und ist damit im Pull Request geprueft; eine
+      # mitgeladene Pruefsummendatei kaeme aus derselben Quelle wie das Archiv.
+      # Bei einem Versionswechsel URL und Hash gemeinsam anpassen.
+      ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
 
     steps:
       - name: Repository auschecken
         uses: actions/checkout@v4
 
-      - name: actionlint installieren
-        run: |
-          set -euo pipefail
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/$archive" "$base/$archive"
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/checksums.txt" "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
-          (cd "$RUNNER_TEMP" && grep " $archive$" checksums.txt | sha256sum -c -)
-          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
-
+      # Download, Pruefsumme und Lauf in einem Schritt: das Binary liegt nur in
+      # $RUNNER_TEMP und muss nicht ueber $GITHUB_PATH weitergereicht werden.
       # shellcheck aus: dessen Befunde haengen von der Runner-Version ab und
       # gehoeren nicht zu dieser Pruefung; Ausdruecke, Inputs und Labels
       # prueft actionlint selbst.
       - name: Workflows pruefen
-        run: actionlint -no-color -shellcheck=
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/actionlint.tgz" \
+            "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -no-color -shellcheck=
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
