@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Node.js einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -254,7 +254,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Node.js einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -313,7 +313,7 @@ jobs:
       # legt ~/.gradle vorher an, worauf setup-gradle Restore und Save
       # ueberspringt und jeder Lauf die Abhaengigkeiten neu laedt.
       - name: Gradle einrichten
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.11.1"
 
