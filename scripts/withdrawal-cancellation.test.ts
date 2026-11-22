@@ -34,6 +34,20 @@ async function check(name: string, body: () => Promise<void> | void) {
   }
 }
 
+/**
+ * Führt die Prüfung mit eingefrorener Uhr aus. Erst danach gelten wieder echte
+ * Zeitstempel; so steht die Grenze exakt, ohne Millisekunden-Jitter.
+ */
+async function withFrozenNow<T>(now: number, body: (now: number) => Promise<T>): Promise<T> {
+  const realNow = Date.now;
+  Date.now = () => now;
+  try {
+    return await body(now);
+  } finally {
+    Date.now = realNow;
+  }
+}
+
 const PASSWORD_HASH = hashPassword("SicheresPasswort123");
 
 function seedUser(id: string, email: string, role: "customer" | "admin" = "customer") {
@@ -233,11 +247,19 @@ await check("Fehlende Datenschutzbestaetigung wird abgelehnt", async () => {
   assert.ok(body.error?.fields?.some((field) => field.path === "privacyAccepted"));
 });
 
-await check("Zu schnelles Absenden wird abgelehnt", async () => {
-  const response = await withdrawal(
-    post("/api/withdrawal", withdrawalBody({ renderedAt: Date.now() })),
-  );
-  assert.equal(response.status, 400);
+await check("Widerruf verlangt 2500 ms Mindestzeit", async () => {
+  run("DELETE FROM rate_limits");
+  await withFrozenNow(Date.now(), async (now) => {
+    const tooFast = await withdrawal(
+      post("/api/withdrawal", withdrawalBody({ renderedAt: now - 2499 })),
+    );
+    assert.equal(tooFast.status, 400, "2499 ms sind zu schnell");
+
+    const justEnough = await withdrawal(
+      post("/api/withdrawal", withdrawalBody({ renderedAt: now - 2500 })),
+    );
+    assert.equal(justEnough.status, 200, "genau 2500 ms reichen");
+  });
 });
 
 await check("Fremde Herkunft wird abgelehnt", async () => {
@@ -303,17 +325,23 @@ await check("Web-Abo ohne Zahlungsanbieter endet als Fehlschlag", async () => {
 await check("Widerruf ist pro Stunde begrenzt", async () => {
   run("DELETE FROM rate_limits");
   const ip = "198.51.100.90";
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const response = await withdrawal(
+  await withFrozenNow(Date.now(), async () => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const response = await withdrawal(
+        post("/api/withdrawal", withdrawalBody({ privacyAccepted: false }), { ip }),
+      );
+      assert.equal(response.status, 400, `Versuch ${attempt + 1}`);
+    }
+    const limited = await withdrawal(
       post("/api/withdrawal", withdrawalBody({ privacyAccepted: false }), { ip }),
     );
-    assert.equal(response.status, 400, `Versuch ${attempt + 1}`);
-  }
-  const limited = await withdrawal(
-    post("/api/withdrawal", withdrawalBody({ privacyAccepted: false }), { ip }),
-  );
-  assert.equal(limited.status, 429);
-  assert.ok(limited.headers.get("retry-after"));
+    assert.equal(limited.status, 429);
+    assert.equal(
+      limited.headers.get("retry-after"),
+      "3600",
+      "das Fenster muss eine Stunde sein",
+    );
+  });
 });
 
 await check("Admin setzt den Erledigt-Vermerk mit Audit", async () => {
