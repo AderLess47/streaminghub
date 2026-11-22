@@ -303,33 +303,20 @@ jobs:
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
 
       # Robolectric laedt android-all-instrumented zur Testlaufzeit selbst von
-      # Maven Central und lief dabei in den 429. Gebraucht werden SDK 34 (die
-      # Tests) und SDK 35 (App-Paket); beide werden vorab mit Backoff geladen,
-      # danach laeuft Robolectric offline. Scheitert der Download, bleibt es
-      # beim Online-Modus, den die Retry-Schleife abdeckt.
+      # Maven Central und lief dabei in den 429. Die beiden Staende stammen aus
+      # der Zuordnung von org.robolectric.plugins.DefaultSdkProvider in
+      # Robolectric 4.14.1: SDK 34 fuer die Tests, SDK 35 fuer das App-Paket.
+      # Bei einem Robolectric-Update sind sie mitzuziehen; fehlt ein Jar,
+      # laufen die Tests im Online-Modus mit der Retry-Schleife weiter.
       - name: Robolectric-Laufzeit vorab laden
         run: |
           deps="$RUNNER_TEMP/robolectric-deps"
           mkdir -p "$deps"
-          complete=true
           for artifact in 14-robolectric-10818077-i7 15-robolectric-12650502-i7; do
-            url="https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar"
-            loaded=false
-            for attempt in 1 2 3 4 5; do
-              if curl -fsSL --max-time 300 -o "$deps/android-all-instrumented-$artifact.jar" "$url"; then
-                loaded=true
-                break
-              fi
-              sleep $((attempt * 10))
-            done
-            if [ "$loaded" != true ]; then
-              complete=false
-              rm -f "$deps/android-all-instrumented-$artifact.jar"
-            fi
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 --max-time 300 \
+              -o "$deps/android-all-instrumented-$artifact.jar" \
+              "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$artifact/android-all-instrumented-$artifact.jar" || true
           done
-          if [ "$complete" != true ]; then
-            echo "::warning::Robolectric-Jars nicht vollstaendig vorab geladen; Tests laufen im Online-Modus."
-          fi
 
       # Compiles main code and runs JVM/Robolectric tests for every distribution
       # flavor. No emulator is needed; device and DRM checks stay manual.
@@ -339,7 +326,7 @@ jobs:
         working-directory: android
         run: |
           deps="$RUNNER_TEMP/robolectric-deps"
-          if [ -s "$deps/android-all-instrumented-14-robolectric-10818077-i7.jar" ] && [ -s "$deps/android-all-instrumented-15-robolectric-12650502-i7.jar" ]; then
+          if [ "$(ls "$deps"/android-all-instrumented-*.jar 2>/dev/null | wc -l)" -eq 2 ]; then
             export JAVA_TOOL_OPTIONS="-Drobolectric.offline=true -Drobolectric.dependency.dir=$deps"
           fi
           for attempt in 1 2 3; do
