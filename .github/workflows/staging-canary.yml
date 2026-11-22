@@ -158,7 +158,7 @@ jobs:
           ref: ${{ steps.deployed_commit.outputs.sha || github.sha }}
 
       - name: Node.js einrichten
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
