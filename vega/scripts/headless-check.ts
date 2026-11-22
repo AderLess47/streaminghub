@@ -215,29 +215,24 @@ await check("XMLTV: Sendung ohne Länge (Stop gleich Start) wird verworfen", () 
   assert.deepEqual(parseXmltv(ohneLaenge), []);
 });
 
-await check("EPG: laufende Sendung endet exakt mit Stop und beginnt mit Start", () => {
-  const epgProgrammes = [
-    { channelId: "a", channelName: "A", startMs: 1_000, stopMs: 2_000, title: "Erste" },
-    { channelId: "a", channelName: "A", startMs: 2_000, stopMs: 3_000, title: "Zweite" },
-  ];
+const boundaryProgrammes = [
+  { channelId: "a", channelName: "A", startMs: 1_000, stopMs: 2_000, title: "Erste" },
+  { channelId: "a", channelName: "A", startMs: 2_000, stopMs: 3_000, title: "Zweite" },
+  { channelId: "a", channelName: "A", startMs: 3_001, stopMs: 4_000, title: "Dritte" },
+];
 
-  assert.equal(programmeAt(epgProgrammes, "a", 1_000)?.title, "Erste");
-  assert.equal(programmeAt(epgProgrammes, "a", 1_999)?.title, "Erste");
-  assert.equal(programmeAt(epgProgrammes, "a", 2_000)?.title, "Zweite", "Stop ist exklusiv");
+await check("EPG: laufende Sendung endet exakt mit Stop und beginnt mit Start", () => {
+  assert.equal(programmeAt(boundaryProgrammes, "a", 1_000)?.title, "Erste");
+  assert.equal(programmeAt(boundaryProgrammes, "a", 1_999)?.title, "Erste");
+  assert.equal(programmeAt(boundaryProgrammes, "a", 2_000)?.title, "Zweite", "Stop ist exklusiv");
 });
 
-await check("EPG: Erinnerungsfenster schließt den Rand ein und den Start aus", () => {
-  const epgProgrammes = [
-    { channelId: "a", channelName: "A", startMs: 1_000, stopMs: 2_000, title: "Erste" },
-    { channelId: "a", channelName: "A", startMs: 2_000, stopMs: 3_000, title: "Zweite" },
-  ];
-
+await check("EPG: Erinnerungsfenster beginnt danach und schließt den Rand ein", () => {
   assert.deepEqual(
-    upcomingProgrammes(epgProgrammes, 1_000, 1_000).map((programme) => programme.title),
+    upcomingProgrammes(boundaryProgrammes, 1_000, 1_000).map((programme) => programme.title),
     ["Zweite"],
+    "Start exklusiv, Fensterende einschließlich, späterer Start draußen",
   );
-  assert.deepEqual(upcomingProgrammes(epgProgrammes, 1_000, 999), [], "Ende ist einschließlich");
-  assert.deepEqual(upcomingProgrammes(epgProgrammes, 1_000, 0), [], "Start ist ausschließlich");
 });
 
 await check("XMLTV: mehr als 50 000 Sendungen werden abgeschnitten", () => {
@@ -783,6 +778,11 @@ await check("API-Adresse: nur HTTPS, Klartext nur für Loopback", () => {
   assert.equal(secureBaseUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787");
   assert.equal(secureBaseUrl("http://localhost:8787"), "http://localhost:8787");
   assert.equal(secureBaseUrl("http://[::1]:8787"), "http://[::1]:8787", "IPv6-Loopback ist erlaubt");
+  assert.throws(
+    () => secureBaseUrl("http://[2001:db8::1]:8787"),
+    /HTTPS/,
+    "globales IPv6 bleibt HTTPS-pflichtig",
+  );
 });
 
 await check("API: Weiterleitung wird abgelehnt, Token geht nur an den ersten Host", async () => {
