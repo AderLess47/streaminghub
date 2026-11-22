@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     id("com.android.application")
@@ -103,6 +104,14 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Jeden bestandenen Test im CI-Log nennen; sonst ist bei einem grünen
+        // Lauf nicht belegbar, welche Grenzfälle tatsächlich gelaufen sind.
+        unitTests.all { test ->
+            test.testLogging {
+                events("passed", "skipped", "failed")
+                exceptionFormat = TestExceptionFormat.FULL
+            }
+        }
     }
 
     packaging {
