@@ -46,6 +46,20 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(M3UParser.inferKind(name: "Kanal", group: "TV", url: "http://x/live/a.m3u8"), .live)
     }
 
+    func testInfersMovieFromExtensionAndKeyword() {
+        for endung in ["mkv", "avi", "webm"] {
+            XCTAssertEqual(
+                M3UParser.inferKind(name: "Kanal", group: "TV", url: "http://x/aufnahme.\(endung)"),
+                .movie,
+                "\(endung) muss als Film gelten"
+            )
+        }
+        XCTAssertEqual(
+            M3UParser.inferKind(name: "Doku über Berge", group: "TV", url: "http://x/live.m3u8"),
+            .movie
+        )
+    }
+
     func testGroupsKeepOrder() {
         let channels = M3UParser.parse(m3u)
         XCTAssertEqual(M3UParser.groups(in: channels), ["Nachrichten", "Sport", "Filme", "Serien"])
