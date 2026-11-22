@@ -302,9 +302,24 @@ jobs:
 
       # Compiles main code and runs JVM/Robolectric tests for every distribution
       # flavor. No emulator is needed; device and DRM checks stay manual.
+      # Maven Central drosselt geteilte CI-Adressen zeitweise mit HTTP 429; ein
+      # neuer Lauf nach kurzer Pause loest das, ohne den Build zu aendern.
       - name: Unit-Tests für alle Flavors ausführen
         working-directory: android
-        run: ./gradlew --no-daemon testDirectDebugUnitTest testAmazonDebugUnitTest testPlayDebugUnitTest
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            echo "Gradle-Lauf $attempt von 3"
+            if ./gradlew --no-daemon testDirectDebugUnitTest testAmazonDebugUnitTest testPlayDebugUnitTest; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              delay=$((attempt * 30))
+              echo "Gradle-Lauf fehlgeschlagen (moeglicherweise Maven-Central-429); neuer Versuch in ${delay}s."
+              sleep "$delay"
+            fi
+          done
+          exit 1
 
   # macOS-Runner werden in diesem Repository sofort abgebrochen, deshalb laufen
   # die Core-Pruefungen in einem Linux-Container mit offizieller Swift-Toolchain.
