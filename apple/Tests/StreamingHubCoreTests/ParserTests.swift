@@ -89,6 +89,61 @@ final class ParserTests: XCTestCase {
         XCTAssertEqual(channels.last?.group, "Kategorie 19")
     }
 
+    func testStopsAtFiftyThousandChannels() {
+        var content = "#EXTM3U\n"
+        for index in 0..<50_001 {
+            content += "#EXTINF:-1,Sender \(index)\nhttps://example.test/live/\(index).m3u8\n"
+        }
+
+        let channels = M3UParser.parse(content)
+        XCTAssertEqual(channels.count, 50_000)
+        XCTAssertEqual(channels.first?.name, "Sender 0")
+        XCTAssertEqual(channels.last?.name, "Sender 49999")
+    }
+
+    func testPlaylistFileAtOneHundredMegabytesIsAccepted() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("streaminghub-size-\(UUID().uuidString).m3u")
+        _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let handle = try FileHandle(forWritingTo: url)
+        var buffer = Data("#EXTM3U\n".utf8)
+        for index in 0..<50_000 {
+            buffer.append(Data("#EXTINF:-1,S\n/\(index)\n".utf8))
+            if buffer.count >= 64 * 1024 {
+                try handle.write(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
+        }
+        if !buffer.isEmpty {
+            try handle.write(contentsOf: buffer)
+        }
+        // Der Parser bricht nach 50 000 Sendern ab; die Datei selbst ist exakt 100 MB groß.
+        try handle.truncate(atOffset: UInt64(100 * 1024 * 1024))
+        try handle.close()
+
+        XCTAssertEqual(try M3UParser.parse(fileURL: url).count, 50_000)
+    }
+
+    func testPlaylistFileAboveOneHundredMegabytesIsRejected() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("streaminghub-size-\(UUID().uuidString).m3u")
+        _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(100 * 1024 * 1024 + 1))
+        try handle.close()
+
+        XCTAssertThrowsError(try M3UParser.parse(fileURL: url)) { error in
+            XCTAssertEqual(
+                (error as? LocalizedError)?.errorDescription,
+                "Die Datei ist größer als 100 MB. Bitte eine kleinere Quelle wählen."
+            )
+        }
+    }
+
     func testPlaybackURLRejectsUnknownSchemes() {
         XCTAssertNil(Channel(name: "x", url: "javascript:alert(1)").playbackURL)
         XCTAssertNotNil(Channel(name: "x", url: "https://example.test/a.m3u8").playbackURL)
@@ -133,6 +188,27 @@ final class ParserTests: XCTestCase {
         // Ohne Zone gilt die Zeit als UTC.
         XCTAssertEqual(XMLTVParser.time(from: "20261112203000"), 1_794_515_400_000)
         XCTAssertNil(XMLTVParser.time(from: "kaputt"))
+    }
+
+    func testDropsProgrammesWithZeroLength() {
+        let ohneLaenge = """
+        <tv>
+          <programme start="20261112200000 +0000" stop="20261112200000 +0000" channel="ard.de">
+            <title>Null lang</title>
+          </programme>
+        </tv>
+        """
+        XCTAssertTrue(XMLTVParser.parse(ohneLaenge).isEmpty)
+    }
+
+    func testStopsAtFiftyThousandProgrammes() {
+        var xml = "<tv>"
+        for index in 0..<50_001 {
+            xml += "<programme start=\"20261112200000 +0000\" stop=\"20261112210000 +0000\" channel=\"ard.de\"><title>Sendung \(index)</title></programme>"
+        }
+        xml += "</tv>"
+
+        XCTAssertEqual(XMLTVParser.parse(xml).count, 50_000)
     }
 
     func testRunningAndNext() {

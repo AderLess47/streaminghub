@@ -41,6 +41,15 @@ class AppUpdateTest {
     }
 
     @Test
+    fun sizeAtTwoHundredMegabytesIsTheUpperBound() {
+        val atLimit = valid.replace("\"sizeBytes\": 14347681", "\"sizeBytes\": 209715200")
+        val aboveLimit = valid.replace("\"sizeBytes\": 14347681", "\"sizeBytes\": 209715201")
+
+        assertEquals(209_715_200L, parseAppUpdate(atLimit, currentVersionCode = 12)?.sizeBytes)
+        assertNull(parseAppUpdate(aboveLimit, currentVersionCode = 12))
+    }
+
+    @Test
     fun missingSizeLabelFallsBackToMegabytes() {
         val update = parseAppUpdate(
             valid.replace("\"sizeLabel\": \"14 MB\",", ""),
