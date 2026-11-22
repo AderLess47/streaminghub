@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Node.js einrichten
         uses: actions/setup-node@v5
@@ -224,7 +224,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Download, Pruefsumme und Lauf in einem Schritt: das Binary liegt nur in
       # $RUNNER_TEMP und muss nicht ueber $GITHUB_PATH weitergereicht werden.
@@ -251,7 +251,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Node.js einrichten
         uses: actions/setup-node@v5
@@ -275,7 +275,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Staging-Image bauen
         run: |
@@ -301,7 +301,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Java 17 einrichten
         uses: actions/setup-java@v5
@@ -385,7 +385,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: StreamingHubCore testen
         run: |

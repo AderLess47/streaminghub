@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Node einrichten
         uses: actions/setup-node@v5

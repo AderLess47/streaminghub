@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           # On `workflow_run` GITHUB_SHA is the default-branch head, not the
           # commit CI passed; deploy the run that triggered this deploy.
