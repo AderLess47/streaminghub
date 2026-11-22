@@ -33,6 +33,20 @@ class M3uParserTest {
     }
 
     @Test
+    fun stopsAtFiftyThousandChannels() {
+        val playlist = StringBuilder("#EXTM3U\n")
+        repeat(50_001) { index ->
+            playlist.append("#EXTINF:-1,Sender $index\nhttps://example.com/live/$index.m3u8\n")
+        }
+
+        val channels = M3uParser.parse(playlist.toString())
+
+        assertEquals(50_000, channels.size)
+        assertEquals("Sender 0", channels.first().name)
+        assertEquals("Sender 49999", channels.last().name)
+    }
+
+    @Test
     fun parsesMetadataAndInfersCategories() {
         val playlist = """
             #EXTM3U

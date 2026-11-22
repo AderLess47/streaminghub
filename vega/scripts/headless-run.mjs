@@ -46,6 +46,8 @@ try {
       "--target=node20",
       // AsyncStorage gibt es unter Node nicht; die Tests nutzen die Map aus dem Mock.
       `--alias:@react-native-async-storage/async-storage=${path.join(appRoot, "scripts", "mocks", "async-storage.ts")}`,
+      // Das Diagnose-Modul fragt nur Gerätegröße und Plattform ab – dafür reicht der Mock.
+      `--alias:react-native=${path.join(appRoot, "scripts", "mocks", "react-native.ts")}`,
       `--outfile=${bundle}`,
       "--log-level=warning",
     ],

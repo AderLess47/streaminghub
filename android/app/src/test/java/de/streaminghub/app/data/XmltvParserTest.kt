@@ -42,6 +42,9 @@ class XmltvParserTest {
               <programme channel="film.de" start="20261110200000 +0000" stop="20261110220000 +0000">
                 <title>Gültiger Film</title>
               </programme>
+              <programme channel="film.de" start="20261110200000 +0000" stop="20261110200000 +0000">
+                <title>Null lang</title>
+              </programme>
               <programme channel="film.de" start="20261110200000 +0000" stop="20261110220000 +0000">
                 <desc>Ohne Titel</desc>
               </programme>
@@ -53,5 +56,18 @@ class XmltvParserTest {
         assertEquals(1, programmes.size)
         assertEquals("Gültiger Film", programmes[0].title)
         assertNull(programmes[0].description)
+    }
+
+    @Test
+    fun stopsAtFiftyThousandProgrammes() {
+        val xml = buildString {
+            append("<tv>")
+            repeat(50_001) { index ->
+                append("<programme channel=\"film.de\" start=\"20261110200000 +0000\" stop=\"20261110210000 +0000\"><title>Sendung $index</title></programme>")
+            }
+            append("</tv>")
+        }
+
+        assertEquals(50_000, XmltvParser.parse(xml).size)
     }
 }

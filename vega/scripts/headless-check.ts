@@ -25,6 +25,7 @@ import {
   loadProgress,
   loadReminders,
   loadSettings,
+  mergeRemoteProgress,
   saveActivationToken,
   saveDeviceName,
   saveEpg,
@@ -50,6 +51,7 @@ import { secureBaseUrl, StreamingHubApi, StreamingHubApiError } from "../src/dat
 import { insecureTransportHint } from "../src/data/transport";
 import { drmContentFields } from "../src/player/drm";
 import { describePlaybackError } from "../src/player/player-errors";
+import { clearLog, logEvent, logSummary, readLog } from "../src/data/diagnostics";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -129,6 +131,18 @@ await check("Playlist: leere Eingabe ergibt keine Sender", () => {
   assert.deepEqual(parseM3u(""), []);
 });
 
+await check("Playlist: mehr als 50 000 Sender werden abgeschnitten", () => {
+  const lines = ["#EXTM3U"];
+  for (let index = 0; index < 50_001; index += 1) {
+    lines.push(`#EXTINF:-1,Sender ${index}`, `https://example.test/live/${index}.m3u8`);
+  }
+
+  const limited = parseM3u(lines.join("\n"));
+  assert.equal(limited.length, 50_000);
+  assert.equal(limited[0].name, "Sender 0");
+  assert.equal(limited[49_999].name, "Sender 49999");
+});
+
 /* --------------------------------- XMLTV --------------------------------- */
 
 const xmltv = `<?xml version="1.0" encoding="UTF-8"?>
@@ -168,6 +182,33 @@ await check("XMLTV: Zeitzone wird verrechnet", () => {
 await check("XMLTV: unsinnige Zeit ergibt null", () => {
   assert.equal(parseXmltvTime("gestern"), null);
   assert.equal(parseXmltvTime(""), null);
+});
+
+await check("XMLTV: negative Zeitzone wird abgezogen", () => {
+  assert.equal(parseXmltvTime("20261113120000 -0100"), Date.UTC(2026, 10, 13, 13, 0, 0));
+  assert.equal(parseXmltvTime("20261113120000 -0130"), Date.UTC(2026, 10, 13, 13, 30, 0));
+});
+
+await check("XMLTV: Sendung ohne Länge (Stop gleich Start) wird verworfen", () => {
+  const ohneLaenge = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <programme start="20261113120000 +0000" stop="20261113120000 +0000" channel="ard.de">
+    <title>Null lang</title>
+  </programme>
+</tv>`;
+  assert.deepEqual(parseXmltv(ohneLaenge), []);
+});
+
+await check("XMLTV: mehr als 50 000 Sendungen werden abgeschnitten", () => {
+  const parts = ["<tv>"];
+  for (let index = 0; index < 50_001; index += 1) {
+    parts.push(
+      `<programme start="20261113120000 +0000" stop="20261113130000 +0000" channel="ard.de"><title>Sendung ${index}</title></programme>`,
+    );
+  }
+  parts.push("</tv>");
+
+  assert.equal(parseXmltv(parts.join("\n")).length, 50_000);
 });
 
 /* ---------------------------------- HLS ---------------------------------- */
@@ -285,6 +326,26 @@ await check("Einstellungen: kaputtes JSON wird still ignoriert", async () => {
   });
 });
 
+/* ------------------------------- Diagnose -------------------------------- */
+
+await check("Diagnose: höchstens 400 Einträge, die ältesten fallen zuerst heraus", async () => {
+  memoryStorage.__reset();
+  await clearLog();
+
+  for (let index = 0; index < 401; index += 1) {
+    await logEvent("test", `Eintrag ${index}`);
+  }
+
+  const entries = await readLog();
+  assert.equal(entries.length, 400);
+  assert.equal(entries[0].message, "Eintrag 1", "der älteste Eintrag fällt heraus");
+  assert.equal(entries[399].message, "Eintrag 400");
+  assert.deepEqual(await logSummary(), {
+    entries: 400,
+    chars: JSON.stringify(entries).length,
+  });
+});
+
 /* -------------------------------- Playlist ------------------------------- */
 
 await check("Speicher: Playlist übersteht Speichern und Laden", async () => {
@@ -387,6 +448,26 @@ await check("Fortschritt: unsinnige Einträge werden beim Laden verworfen", asyn
   await memoryStorage.setItem(KEY.progress, JSON.stringify({ a: -5, b: "12", c: 9_000, d: null }));
   const loaded: ProgressMap = await loadProgress();
   assert.deepEqual(loaded, { c: 9_000 });
+});
+
+await check("Fortschritt: eine gespeicherte Null ist kein Fortsetzungspunkt", async () => {
+  memoryStorage.__reset();
+  await memoryStorage.setItem(KEY.progress, JSON.stringify({ anfang: 0, negativ: -1, echt: 9_000 }));
+  assert.deepEqual(await loadProgress(), { echt: 9_000 });
+});
+
+await check("Fortschritt: ein Serverstand von 0 überschreibt keinen lokalen Stand", async () => {
+  memoryStorage.__reset();
+  const url = "https://example.test/film.mp4";
+  await saveProgress(url, 90_000, 600_000);
+
+  const merged = await mergeRemoteProgress([
+    { url, positionMs: 0, durationMs: 600_000 },
+    { url: "https://example.test/neu.mp4", positionMs: 0, durationMs: 600_000 },
+  ]);
+
+  assert.equal(merged[url], 90_000);
+  assert.equal(merged["https://example.test/neu.mp4"], undefined);
 });
 
 await check("Fortschritt: Zurücksetzen leert die Karte", async () => {
