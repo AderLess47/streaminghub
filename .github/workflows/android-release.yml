@@ -35,7 +35,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
 
       - name: Android-SDK-Pakete installieren
         run: |
@@ -63,6 +62,9 @@ jobs:
           fi
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
+      # Gradle-Caches gehoeren setup-gradle: setup-java mit "cache: gradle"
+      # legt ~/.gradle vorher an, worauf setup-gradle Restore und Save
+      # ueberspringt und jeder Lauf die Abhaengigkeiten neu laedt.
       - name: Gradle einrichten
         uses: gradle/actions/setup-gradle@v4
         with:
