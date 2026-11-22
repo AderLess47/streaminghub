@@ -284,6 +284,14 @@ jobs:
           # Exit 2 = Datei ist kein gueltiges YAML.
           "$RUNNER_TEMP/yajsv" -s "$RUNNER_TEMP/dependabot-2.0.json" .github/dependabot.yml
 
+      # Zeitdeckel: ein curl ohne --max-time laeuft bis zum Job-Timeout (10
+      # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
+      # vor #427. Der Check deckt .github/workflows und scripts/ ab und wird
+      # rot, sobald ein Aufruf den Deckel verliert oder ein neuer ohne
+      # --max-time dazukommt.
+      - name: Zeitdeckel der curl-Aufrufe pruefen
+        run: npm run check:curl-timeouts
+
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
   # erst beim next build auf. Der Build braucht keine Secrets.
