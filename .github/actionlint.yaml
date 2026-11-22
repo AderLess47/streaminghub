@@ -1,0 +1,4 @@
+# Eigenes Label des Vega-Runners (vega-shaka.yml); ohne diese Liste meldet
+# actionlint `label "vega" is unknown`.
+self-hosted-runner:
+  labels: [vega]
