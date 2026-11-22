@@ -261,10 +261,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      # Gehoeren zusammen: bei einem Robolectric-Update beide Werte anpassen.
-      # Die Jar-Staende stammen aus org.robolectric.plugins.DefaultSdkProvider
-      # (SDK 34 fuer die Tests, SDK 35 fuer das App-Paket).
-      ROBOLECTRIC_VERSION: "4.14.1"
+      # Einzige Quelle fuer die Jar-Staende (aus DefaultSdkProvider: SDK 34
+      # fuer die Tests, SDK 35 fuer das App-Paket). Fordert ein Robolectric-
+      # Update andere Staende an, scheitern die Tests offline mit dem exakten
+      # fehlenden Jar-Namen - dann diese Liste nachziehen.
       ROBOLECTRIC_JARS: "14-robolectric-10818077-i7 15-robolectric-12650502-i7"
 
     steps:
@@ -307,22 +307,6 @@ jobs:
           fi
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
-
-      # Die Jar-Liste in ROBOLECTRIC_JARS ist auf genau diese Robolectric-
-      # Version geprueft. Ein Update im Build macht den Job hier rot, damit die
-      # Staende bewusst nachgezogen werden, statt still online zu laden.
-      - name: Robolectric-Version prüfen
-        run: |
-          declared="$(grep -oE 'org\.robolectric:robolectric:[0-9][0-9.]*' android/app/build.gradle.kts | head -1 | cut -d: -f3)"
-          if [ -z "$declared" ]; then
-            echo "::error::Robolectric-Abhaengigkeit in android/app/build.gradle.kts nicht gefunden."
-            exit 1
-          fi
-          if [ "$declared" != "$ROBOLECTRIC_VERSION" ]; then
-            echo "::error::Robolectric $declared im Build, Offline-Jars sind fuer $ROBOLECTRIC_VERSION geprueft. ROBOLECTRIC_VERSION und ROBOLECTRIC_JARS im Workflow aktualisieren."
-            exit 1
-          fi
-          echo "Robolectric $declared passt zur geprueften Jar-Liste."
 
       # Robolectric laedt android-all-instrumented zur Testlaufzeit selbst von
       # Maven Central und lief dabei in den 429. Die Staende aus
