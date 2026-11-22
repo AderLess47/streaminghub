@@ -6,7 +6,8 @@
  * Ohne Deckel laeuft ein steckengebliebener Download bis zum Job-Timeout (10
  * bzw. 30 Minuten), statt zu scheitern; genau das passierte im
  * Robolectric-Schritt vor #427. Damit der Deckel nicht wieder abrutscht, ist
- * diese Pruefung Teil des Lint-Jobs.
+ * diese Pruefung Teil des Lint-Jobs; die Faelle selbst deckt
+ * scripts/check-curl-timeouts.test.mjs ab.
  *
  * curl wird nur an einer Kommando-Position erkannt (Zeilenanfang, nach
  * ";" "&" "|" "&&" "||" "$(" "then" "do" "!"), nicht in Kommentaren und nicht
@@ -18,15 +19,16 @@
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOTS = [".github/workflows", "scripts"];
-const EXTENSIONS = new Set([".yml", ".yaml", ".sh", ".bash", ".mjs", ".cjs", ".js", ".ts"]);
-const THIS_FILE = path.join("scripts", "check-curl-timeouts.mjs");
+export const ROOTS = [".github/workflows", "scripts"];
+export const EXTENSIONS = new Set([".yml", ".yaml", ".sh", ".bash", ".mjs", ".cjs", ".js", ".ts"]);
+export const THIS_FILE = path.join("scripts", "check-curl-timeouts.mjs");
 
 // "curl" muss ein Kommando sein und ein Argument haben; damit fallen Treffer
 // in Regex-Literalen ("curl[ \t]") und in Saetzen ("curl exit 22") heraus.
-const CURL_AT_COMMAND = /(?:^|[;&|]|\$\(|\bthen\b|\bdo\b|!)\s*curl[ \t]/;
-const TIME_CAP = /(?:^|\s)--max-time(?:=|\s)|(?:^|\s)-m\s/;
+export const CURL_AT_COMMAND = /(?:^|[;&|]|\$\(|\bthen\b|\bdo\b|!)\s*curl[ \t]/;
+export const TIME_CAP = /(?:^|\s)--max-time(?:=|\s)|(?:^|\s)-m\s/;
 const VARIABLE_REFERENCE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}|\$([A-Za-z_][A-Za-z0-9_]*)/g;
 
 async function collect(directory) {
@@ -50,7 +52,7 @@ async function collect(directory) {
 
 // Fuehrt Backslash-Fortsetzungen zusammen: der Deckel steht oft in der
 // naechsten Zeile, gehoert aber zum selben Aufruf.
-function logicalLines(text) {
+export function logicalLines(text) {
   const lines = [];
   let buffer = "";
   let start = 0;
@@ -72,7 +74,7 @@ function logicalLines(text) {
 
 // Deckel-Quellen derselben Datei: Shell-Zuweisungen, Array-Bloecke und
 // YAML-Schluessel (env:). Der Wert wird nur auf --max-time geprueft.
-function collectCaps(text) {
+export function collectCaps(text) {
   const caps = new Map();
   const lines = text.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
@@ -123,7 +125,7 @@ function capped(command, caps) {
   return false;
 }
 
-function inspect(file, text) {
+export function inspect(file, text) {
   const caps = collectCaps(text);
   const findings = [];
   let calls = 0;
@@ -134,32 +136,44 @@ function inspect(file, text) {
       if (!capped(command, caps)) findings.push({ file, line, command });
     }
   }
-  return { calls, findings, caps };
+  return { calls, findings };
 }
 
-const files = [];
-for (const root of ROOTS) files.push(...(await collect(root)));
-files.sort();
+export async function audit({ roots = ROOTS, skip = [THIS_FILE] } = {}) {
+  const skipped = new Set(skip.map((entry) => path.normalize(entry)));
+  const files = [];
+  for (const root of roots) files.push(...(await collect(root)));
+  const inspected = files.filter((file) => !skipped.has(path.normalize(file))).sort();
 
-let calls = 0;
-const findings = [];
-for (const file of files) {
-  if (path.normalize(file) === path.normalize(THIS_FILE)) continue;
-  const result = inspect(file, await readFile(file, "utf8"));
-  calls += result.calls;
-  findings.push(...result.findings);
-}
-
-if (findings.length > 0) {
-  for (const finding of findings) {
-    const snippet = finding.command.replace(/\s+/g, " ").slice(0, 120);
-    console.error(`::error file=${finding.file},line=${finding.line}::curl ohne --max-time: ${snippet}`);
+  let calls = 0;
+  const findings = [];
+  for (const file of inspected) {
+    const result = inspect(file, await readFile(file, "utf8"));
+    calls += result.calls;
+    findings.push(...result.findings);
   }
-  console.error(
-    `${findings.length} curl-Aufruf(e) ohne Zeitdeckel. Deckel setzen: --max-time <Sekunden> ` +
-      "(Werte siehe jobs.android in .github/workflows/ci.yml).",
-  );
-  process.exit(1);
+  return { calls, findings, files: inspected };
 }
 
-console.log(`curl-Zeitdeckel: ${calls} Aufrufe in ${files.length - 1} Dateien geprueft, alle gedeckelt.`);
+async function main() {
+  const { calls, findings, files } = await audit();
+
+  if (findings.length > 0) {
+    for (const finding of findings) {
+      const snippet = finding.command.replace(/\s+/g, " ").slice(0, 120);
+      console.error(`::error file=${finding.file},line=${finding.line}::curl ohne --max-time: ${snippet}`);
+    }
+    console.error(
+      `${findings.length} curl-Aufruf(e) ohne Zeitdeckel. Deckel setzen: --max-time <Sekunden> ` +
+        "(Werte siehe jobs.android in .github/workflows/ci.yml).",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`curl-Zeitdeckel: ${calls} Aufrufe in ${files.length} Dateien geprueft, alle gedeckelt.`);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

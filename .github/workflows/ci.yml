@@ -201,6 +201,12 @@ jobs:
       - name: Tests des öffentlichen HTML-Caches
         run: npm run test:public-cache
 
+      # Gegenprobe fuer den Zeitdeckel-Check im Lint-Job: ohne diese Faelle
+      # koennte die Pruefung still kaputtgehen und ungedeckelte Aufrufe
+      # durchwinken, statt den Job rot zu machen.
+      - name: Tests der curl-Zeitdeckel-Prüfung
+        run: npm run test:curl-timeouts
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
