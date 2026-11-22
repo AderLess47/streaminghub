@@ -51,6 +51,16 @@ final class WatchProgressMergeTests: XCTestCase {
         XCTAssertEqual(merged["a"]?.positionMs, 10_000)
     }
 
+    func testRemoteWithSamePositionDoesNotReplaceLocal() {
+        let stamp = Date(timeIntervalSince1970: 1_760_000_000)
+        let merged = WatchProgressMerge.merge(
+            local("a", 90_000),
+            remote: [.init(url: "a", positionMs: 90_000, durationMs: 600_000, updatedAt: stamp)]
+        )
+        XCTAssertEqual(merged["a"]?.positionMs, 90_000)
+        XCTAssertNil(merged["a"]?.updatedAt, "gleicher Stand ersetzt den lokalen Eintrag nicht")
+    }
+
     func testRemoteTimestampIsCarriedOver() {
         let stamp = Date(timeIntervalSince1970: 1_760_000_000)
         let merged = WatchProgressMerge.merge(

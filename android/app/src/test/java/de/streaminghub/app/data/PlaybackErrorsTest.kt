@@ -50,6 +50,20 @@ class PlaybackErrorsTest {
     }
 
     @Test
+    fun technicalDetailIsCutAtOneHundredFortyCharacters() {
+        val exact = "x".repeat(140)
+        val over = "x".repeat(141)
+
+        val atLimit = describe(PlaybackException.ERROR_CODE_UNSPECIFIED, detail = exact)
+        val aboveLimit = describe(PlaybackException.ERROR_CODE_UNSPECIFIED, detail = over)
+
+        assertTrue(atLimit.contains(exact))
+        assertFalse(atLimit.contains("…"))
+        assertTrue(aboveLimit.contains("x".repeat(139) + "…"))
+        assertFalse(aboveLimit.contains(over))
+    }
+
+    @Test
     fun genericFailureWithoutDetailStaysPlain() {
         val text = describe(PlaybackException.ERROR_CODE_UNSPECIFIED)
 

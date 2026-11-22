@@ -27,6 +27,12 @@ final class PlaybackRetryTests: XCTestCase {
         XCTAssertFalse(PlaybackRetry.canRetryAutomatically(attempts: PlaybackRetry.maxAutoRetries))
     }
 
+    func testRetryBudgetIsFourAttempts() {
+        XCTAssertTrue(PlaybackRetry.canRetryAutomatically(attempts: 3))
+        XCTAssertFalse(PlaybackRetry.canRetryAutomatically(attempts: 4))
+        XCTAssertFalse(PlaybackRetry.canRetryAutomatically(attempts: 5))
+    }
+
     func testHintAndInterval() {
         XCTAssertTrue(PlaybackRetry.hint.contains("automatisch"))
         XCTAssertEqual(5, PlaybackRetry.pollSeconds)
