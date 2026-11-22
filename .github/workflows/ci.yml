@@ -307,16 +307,13 @@ jobs:
       - name: Unit-Tests für alle Flavors ausführen
         working-directory: android
         run: |
-          set -uo pipefail
           for attempt in 1 2 3; do
             echo "Gradle-Lauf $attempt von 3"
             if ./gradlew --no-daemon testDirectDebugUnitTest testAmazonDebugUnitTest testPlayDebugUnitTest; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
-              delay=$((attempt * 30))
-              echo "Gradle-Lauf fehlgeschlagen (moeglicherweise Maven-Central-429); neuer Versuch in ${delay}s."
-              sleep "$delay"
+              sleep $((attempt * 30))
             fi
           done
           exit 1
