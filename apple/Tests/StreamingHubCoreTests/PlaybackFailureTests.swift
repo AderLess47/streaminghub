@@ -64,6 +64,22 @@ final class PlaybackFailureTests: XCTestCase {
         XCTAssertLessThan(message.count, 400, "technische Details müssen gekürzt werden")
     }
 
+    func testTechnicalDetailIsCutAtOneHundredFortyCharacters() {
+        let exact = String(repeating: "x", count: 140)
+        let over = String(repeating: "x", count: 141)
+        let atLimit = PlaybackFailureText.message(
+            for: NSError(domain: "AndereDomain", code: 1, userInfo: [NSLocalizedDescriptionKey: exact])
+        )
+        let aboveLimit = PlaybackFailureText.message(
+            for: NSError(domain: "AndereDomain", code: 1, userInfo: [NSLocalizedDescriptionKey: over])
+        )
+
+        XCTAssertTrue(atLimit.contains(exact))
+        XCTAssertFalse(atLimit.contains("…"))
+        XCTAssertTrue(aboveLimit.contains(exact + "…"))
+        XCTAssertFalse(aboveLimit.contains(over))
+    }
+
     func testMissingErrorStillProducesText() {
         let message = PlaybackFailureText.message(for: nil)
         XCTAssertTrue(message.contains("konnte nicht wiedergegeben werden"))

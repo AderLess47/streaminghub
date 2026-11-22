@@ -52,6 +52,8 @@ import { insecureTransportHint } from "../src/data/transport";
 import { drmContentFields } from "../src/player/drm";
 import { describePlaybackError } from "../src/player/player-errors";
 import { clearLog, logEvent, logSummary, readLog } from "../src/data/diagnostics";
+import { limitFor } from "../src/data/playlist";
+import { programmeAt, upcomingProgrammes } from "../src/data/epg";
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 
@@ -131,6 +133,20 @@ await check("Playlist: leere Eingabe ergibt keine Sender", () => {
   assert.deepEqual(parseM3u(""), []);
 });
 
+await check("Low-Spec: höchstens 600 Sender bleiben im Speicher", () => {
+  const many = Array.from({ length: 601 }, (_, index) => ({
+    name: `Sender ${index}`,
+    url: `https://example.test/live/${index}.m3u8`,
+    group: "Test",
+    kind: "live" as const,
+  }));
+
+  const limited = limitFor(many, true);
+  assert.equal(limited.length, 600);
+  assert.equal(limited[599].name, "Sender 599");
+  assert.equal(limitFor(many, false).length, 601, "ohne Low-Spec bleibt die Liste vollständig");
+});
+
 await check("Playlist: mehr als 50 000 Sender werden abgeschnitten", () => {
   const lines = ["#EXTM3U"];
   for (let index = 0; index < 50_001; index += 1) {
@@ -197,6 +213,26 @@ await check("XMLTV: Sendung ohne Länge (Stop gleich Start) wird verworfen", () 
   </programme>
 </tv>`;
   assert.deepEqual(parseXmltv(ohneLaenge), []);
+});
+
+const boundaryProgrammes = [
+  { channelId: "a", channelName: "A", startMs: 1_000, stopMs: 2_000, title: "Erste" },
+  { channelId: "a", channelName: "A", startMs: 2_000, stopMs: 3_000, title: "Zweite" },
+  { channelId: "a", channelName: "A", startMs: 3_001, stopMs: 4_000, title: "Dritte" },
+];
+
+await check("EPG: laufende Sendung endet exakt mit Stop und beginnt mit Start", () => {
+  assert.equal(programmeAt(boundaryProgrammes, "a", 1_000)?.title, "Erste");
+  assert.equal(programmeAt(boundaryProgrammes, "a", 1_999)?.title, "Erste");
+  assert.equal(programmeAt(boundaryProgrammes, "a", 2_000)?.title, "Zweite", "Stop ist exklusiv");
+});
+
+await check("EPG: Erinnerungsfenster beginnt danach und schließt den Rand ein", () => {
+  assert.deepEqual(
+    upcomingProgrammes(boundaryProgrammes, 1_000, 1_000).map((programme) => programme.title),
+    ["Zweite"],
+    "Start exklusiv, Fensterende einschließlich, späterer Start draußen",
+  );
 });
 
 await check("XMLTV: mehr als 50 000 Sendungen werden abgeschnitten", () => {
@@ -454,6 +490,18 @@ await check("Fortschritt: eine gespeicherte Null ist kein Fortsetzungspunkt", as
   memoryStorage.__reset();
   await memoryStorage.setItem(KEY.progress, JSON.stringify({ anfang: 0, negativ: -1, echt: 9_000 }));
   assert.deepEqual(await loadProgress(), { echt: 9_000 });
+});
+
+await check("Fortschritt: älterer Serverstand überschreibt keinen weiteren lokalen Stand", async () => {
+  memoryStorage.__reset();
+  const url = "https://example.test/film.mp4";
+  await saveProgress(url, 120_000, 600_000);
+
+  const older = await mergeRemoteProgress([{ url, positionMs: 90_000, durationMs: 600_000 }]);
+  assert.equal(older[url], 120_000, "lokal bleibt vorn");
+
+  const newer = await mergeRemoteProgress([{ url, positionMs: 150_000, durationMs: 600_000 }]);
+  assert.equal(newer[url], 150_000, "weiterer Serverstand gewinnt");
 });
 
 await check("Fortschritt: ein Serverstand von 0 überschreibt keinen lokalen Stand", async () => {
@@ -729,6 +777,12 @@ await check("API-Adresse: nur HTTPS, Klartext nur für Loopback", () => {
   assert.equal(secureBaseUrl("https://streaminghub.org/"), "https://streaminghub.org");
   assert.equal(secureBaseUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787");
   assert.equal(secureBaseUrl("http://localhost:8787"), "http://localhost:8787");
+  assert.equal(secureBaseUrl("http://[::1]:8787"), "http://[::1]:8787", "IPv6-Loopback ist erlaubt");
+  assert.throws(
+    () => secureBaseUrl("http://[2001:db8::1]:8787"),
+    /HTTPS/,
+    "globales IPv6 bleibt HTTPS-pflichtig",
+  );
 });
 
 await check("API: Weiterleitung wird abgelehnt, Token geht nur an den ersten Host", async () => {

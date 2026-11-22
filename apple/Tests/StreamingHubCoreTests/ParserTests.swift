@@ -229,6 +229,14 @@ final class ParserTests: XCTestCase {
         XCTAssertTrue(ProgressRules.shouldStore(positionMs: 100_000, durationMs: 600_000))
     }
 
+    func testProgressWindowBoundaries() {
+        // 5 000 ms Mindestposition und 10 s Endfenster gelten exakt an der Grenze.
+        XCTAssertFalse(ProgressRules.shouldStore(positionMs: 4_999, durationMs: 600_000))
+        XCTAssertTrue(ProgressRules.shouldStore(positionMs: 5_000, durationMs: 600_000))
+        XCTAssertTrue(ProgressRules.shouldStore(positionMs: 589_999, durationMs: 600_000))
+        XCTAssertFalse(ProgressRules.shouldStore(positionMs: 590_000, durationMs: 600_000))
+    }
+
     func testResumeTakesLaterPosition() {
         XCTAssertEqual(ProgressRules.resumePosition(local: 120_000, remote: 300_000), 300_000)
         XCTAssertEqual(ProgressRules.resumePosition(local: 400_000, remote: 300_000), 400_000)
