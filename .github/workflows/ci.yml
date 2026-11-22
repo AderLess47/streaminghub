@@ -232,9 +232,20 @@ jobs:
       # shellcheck aus: dessen Befunde haengen von der Runner-Version ab und
       # gehoeren nicht zu dieser Pruefung; Ausdruecke, Inputs und Labels
       # prueft actionlint selbst.
+      #
+      # Zeitdeckel: alle Downloads in diesem Job nutzen dieselben Werte wie der
+      # Robolectric-Schritt in jobs.android (siehe Kommentar dort):
+      # --connect-timeout 10, --max-time 180 je Transfer, --speed-limit 1024
+      # --speed-time 30 gegen steckengebliebene Transfers und --retry 3 im
+      # --retry-max-time-Fenster von 120 s. Vorher lief ein haengender Download
+      # mit --retry 5 ohne Deckel bis zum 10-Minuten-Job-Timeout, statt zu
+      # scheitern.
       - name: Workflows pruefen
         run: |
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/actionlint.tgz" \
+          curl -fsSL \
+            --connect-timeout 10 --max-time 180 --speed-limit 1024 --speed-time 30 \
+            --retry 3 --retry-delay 15 --retry-max-time 120 --retry-all-errors \
+            -o "$RUNNER_TEMP/actionlint.tgz" \
             "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz"
           echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$RUNNER_TEMP" actionlint
@@ -257,11 +268,17 @@ jobs:
           DEPENDABOT_SCHEMA_SHA256: "891027089ecaeaf235ba78fa6ec255542a49465e6cb71ffb92606a2d9edbc1ea"
           DEPENDABOT_SCHEMA_URL: "https://raw.githubusercontent.com/SchemaStore/schemastore/aa428f6a0d322aff9ec6828c15bf5d42bd37f60f/src/schemas/json/dependabot-2.0.json"
         run: |
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/yajsv" \
+          curl -fsSL \
+            --connect-timeout 10 --max-time 180 --speed-limit 1024 --speed-time 30 \
+            --retry 3 --retry-delay 15 --retry-max-time 120 --retry-all-errors \
+            -o "$RUNNER_TEMP/yajsv" \
             "https://github.com/neilpa/yajsv/releases/download/v1.4.1/yajsv.linux.amd64"
           echo "$YAJVSV_SHA256  $RUNNER_TEMP/yajsv" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/yajsv"
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/dependabot-2.0.json" "$DEPENDABOT_SCHEMA_URL"
+          curl -fsSL \
+            --connect-timeout 10 --max-time 180 --speed-limit 1024 --speed-time 30 \
+            --retry 3 --retry-delay 15 --retry-max-time 120 --retry-all-errors \
+            -o "$RUNNER_TEMP/dependabot-2.0.json" "$DEPENDABOT_SCHEMA_URL"
           echo "$DEPENDABOT_SCHEMA_SHA256  $RUNNER_TEMP/dependabot-2.0.json" | sha256sum -c -
           # yajsv meldet "pass" und Exit 0; Exit 1 = Schema-Verstoss,
           # Exit 2 = Datei ist kein gueltiges YAML.

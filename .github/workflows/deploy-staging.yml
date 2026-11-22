@@ -84,7 +84,11 @@ jobs:
       - name: flyctl installieren
         run: |
           set -euo pipefail
-          curl -fsSL https://fly.io/install.sh | sh
+          # Zeitdeckel wie im Robolectric-Schritt: kein Hang bis zum Job-Timeout.
+          curl -fsSL \
+            --connect-timeout 10 --max-time 180 --speed-limit 1024 --speed-time 30 \
+            --retry 3 --retry-delay 15 --retry-max-time 120 \
+            https://fly.io/install.sh | sh
           echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
 
       - name: Deployen
