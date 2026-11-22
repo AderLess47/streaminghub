@@ -147,7 +147,7 @@ jobs:
           echo "Amazon-APK: $(stat -c%s "$APK") Bytes, $(sha256sum "$APK" | cut -d' ' -f1)"
 
       - name: Amazon-Appstore-APK anhängen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: streaminghub-amazon-apk
           path: android/app/build/outputs/apk/amazon/release/app-amazon-release.apk
@@ -170,7 +170,7 @@ jobs:
           echo "Play-AAB: $(stat -c%s "$AAB") Bytes, $(sha256sum "$AAB" | cut -d' ' -f1)"
 
       - name: Google-Play-AAB anhängen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: streaminghub-play-aab
           path: android/app/build/outputs/bundle/playRelease/app-play-release.aab
