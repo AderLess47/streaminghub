@@ -133,6 +133,16 @@ await check("Playlist: leere Eingabe ergibt keine Sender", () => {
   assert.deepEqual(parseM3u(""), []);
 });
 
+await check("Playlist: .mkv, .avi und .webm ergeben Filme", () => {
+  for (const endung of ["mkv", "avi", "webm"]) {
+    assert.equal(
+      inferKind("Kanal", "TV", `https://example.test/aufnahme.${endung}`),
+      "movie",
+      `${endung} muss als Film gelten`,
+    );
+  }
+});
+
 await check("Low-Spec: höchstens 600 Sender bleiben im Speicher", () => {
   const many = Array.from({ length: 601 }, (_, index) => ({
     name: `Sender ${index}`,

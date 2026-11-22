@@ -49,6 +49,16 @@ class DemoLibraryTest {
     }
 
     @Test
+    fun guideSlotsAreExactMinutesAroundNow() {
+        val programmes = DemoLibrary.programmes(0L)
+
+        assertEquals(-4_500_000L, programmes.first().startMs)
+        assertEquals(-900_000L, programmes.first().stopMs)
+        assertEquals(setOf(-4_500_000L, -900_000L, 1_500_000L), programmes.map { it.startMs }.toSet())
+        assertEquals(setOf(-900_000L, 1_500_000L, 3_900_000L), programmes.map { it.stopMs }.toSet())
+    }
+
+    @Test
     fun guideIdsMatchThePlaylistSoTheGuideCanJoinThem() {
         val playlistIds = channels.mapNotNull { it.tvgId }.toSet()
         val guideIds = DemoLibrary.programmes(now).map { it.channelId }.toSet()

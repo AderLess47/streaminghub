@@ -70,6 +70,26 @@ class M3uParserTest {
     }
 
     @Test
+    fun infersMovieFromExtensionAndKeyword() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 group-title="TV",Kanal Eins
+            https://example.com/aufnahme.mkv
+            #EXTINF:-1 group-title="TV",Kanal Zwei
+            https://example.com/aufnahme.avi
+            #EXTINF:-1 group-title="TV",Kanal Drei
+            https://example.com/aufnahme.webm
+            #EXTINF:-1 group-title="TV",Doku über Berge
+            https://example.com/live/doku.m3u8
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist)
+
+        assertEquals(4, channels.size)
+        assertEquals(List(4) { MediaKind.MOVIE }, channels.map { it.kind })
+    }
+
+    @Test
     fun supportsExtGrpAndDeduplicatesUrls() {
         val playlist = """
             #EXTM3U
