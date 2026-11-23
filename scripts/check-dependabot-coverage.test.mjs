@@ -5,20 +5,16 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { audit, DEPENDABOT_FILE, inspect } from "./check-dependabot-coverage.mjs";
 
-const FILE = DEPENDABOT_FILE;
 const REQUIRED = ["github-actions", "docker"];
 
 // Fixtures als Zeilen: so bleibt im Test lesbar, welche Zeile geprueft wird.
-const findings = (required, ...rows) => inspect(FILE, rows.join("\n"), { required });
+// Die Angabe steht bewusst ohne directory/schedule - der Check liest nur
+// package-ecosystem, alles andere prueft das Schema.
+const findings = (required, ...rows) => inspect(DEPENDABOT_FILE, rows.join("\n"), { required });
 const ecosystems = (required, ...rows) => findings(required, ...rows).map((finding) => finding.ecosystem);
 
-const GITHUB_ACTIONS = [
-  '  - package-ecosystem: "github-actions"',
-  '    directory: "/"',
-  "    schedule:",
-  '      interval: "weekly"',
-];
-const DOCKER = ['  - package-ecosystem: "docker"', '    directory: "/"', "    schedule:", '      interval: "weekly"'];
+const GITHUB_ACTIONS = '  - package-ecosystem: "github-actions"';
+const DOCKER = '  - package-ecosystem: "docker"';
 
 async function withRepository(setup, run) {
   const root = await mkdtemp(path.join(tmpdir(), "dependabot-coverage-"));
@@ -32,11 +28,11 @@ async function withRepository(setup, run) {
 }
 
 test("akzeptiert beide genutzten Oekosysteme", () => {
-  assert.deepEqual(findings(REQUIRED, "version: 2", "updates:", ...GITHUB_ACTIONS, ...DOCKER), []);
+  assert.deepEqual(findings(REQUIRED, "version: 2", "updates:", GITHUB_ACTIONS, DOCKER), []);
 });
 
 test("meldet einen fehlenden Eintrag an der updates-Zeile", () => {
-  const found = findings(REQUIRED, "version: 2", "updates:", ...GITHUB_ACTIONS);
+  const found = findings(REQUIRED, "version: 2", "updates:", GITHUB_ACTIONS);
   assert.equal(found.length, 1);
   assert.equal(found[0].ecosystem, "docker");
   assert.equal(found[0].line, 2);
@@ -50,7 +46,7 @@ test("meldet fehlende Eintraege in fester Reihenfolge", () => {
 
 test("ignoriert auskommentierte Eintraege", () => {
   assert.deepEqual(
-    ecosystems(["docker"], "updates:", ...GITHUB_ACTIONS, '  # - package-ecosystem: "docker"'),
+    ecosystems(["docker"], "updates:", GITHUB_ACTIONS, '  # - package-ecosystem: "docker"'),
     ["docker"],
   );
 });
@@ -64,12 +60,12 @@ test("akzeptiert einfache und keine Anfuehrungszeichen", () => {
 
 test("prueft nur die als genutzt gemeldeten Oekosysteme", () => {
   assert.deepEqual(findings([], "updates: []"), []);
-  assert.deepEqual(findings(["docker"], "updates:", ...DOCKER), []);
+  assert.deepEqual(findings(["docker"], "updates:", DOCKER), []);
 });
 
 test("weitere Oekosysteme stoeren nicht", () => {
   assert.deepEqual(
-    findings(REQUIRED, "updates:", '  - package-ecosystem: "npm"', ...GITHUB_ACTIONS, ...DOCKER),
+    findings(REQUIRED, "updates:", '  - package-ecosystem: "npm"', GITHUB_ACTIONS, DOCKER),
     [],
   );
 });
@@ -92,7 +88,7 @@ test("Workflow allein verlangt nur github-actions", async () => {
   await withRepository(
     async (root) => {
       await writeFile(path.join(root, ".github", "workflows", "ci.yml"), "on: push\n");
-      await writeFile(path.join(root, DEPENDABOT_FILE), ["version: 2", "updates:", ...GITHUB_ACTIONS].join("\n"));
+      await writeFile(path.join(root, DEPENDABOT_FILE), ["version: 2", "updates:", GITHUB_ACTIONS].join("\n"));
     },
     async (root) => {
       const result = await audit({ root });

@@ -54,16 +54,16 @@ export function inspect(file, text, { required = [] } = {}) {
     }));
 }
 
-async function countWorkflows(root) {
+async function hasWorkflows(root) {
   const entries = await readdir(path.join(root, WORKFLOWS_DIR), { withFileTypes: true }).catch(() => []);
-  return entries.filter((entry) => entry.isFile() && EXTENSIONS.has(path.extname(entry.name))).length;
+  return entries.some((entry) => entry.isFile() && EXTENSIONS.has(path.extname(entry.name)));
 }
 
 // Was das Repo pflegt, muss die Datei abdecken. Kommt eine Quelle dazu (z. B.
 // package.json fuer npm), gehoert sie hierher.
 async function requiredEcosystems(root) {
   const required = [];
-  if ((await countWorkflows(root)) > 0) required.push("github-actions");
+  if (await hasWorkflows(root)) required.push("github-actions");
   if ((await collectDockerfiles(root)).length > 0) required.push("docker");
   return required;
 }
