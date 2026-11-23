@@ -23,43 +23,35 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDockerfiles } from "./check-docker-base-images.mjs";
 
-export const ROOT = ".";
 export const DEPENDABOT_FILE = path.join(".github", "dependabot.yml");
-export const WORKFLOWS_DIR = path.join(".github", "workflows");
-export const EXTENSIONS = new Set([".yml", ".yaml"]);
-
-// Reihenfolge der Meldungen; der erste Eintrag ist der, den es laenger gibt.
-export const REQUIRED_ORDER = ["github-actions", "docker"];
+const WORKFLOWS_DIR = path.join(".github", "workflows");
+const EXTENSIONS = new Set([".yml", ".yaml"]);
 
 // "- package-ecosystem: \"docker\"" und "package-ecosystem: docker".
-export const ECOSYSTEM_LINE = /^\s*(?:-\s+)?package-ecosystem:\s*["']?([A-Za-z0-9_.-]+)["']?\s*(?:#.*)?$/;
+// Kommentarzeilen koennen nicht treffen, weil sie mit "#" beginnen.
+const ECOSYSTEM_LINE = /^\s*(?:-\s+)?package-ecosystem:\s*["']?([A-Za-z0-9_.-]+)["']?\s*(?:#.*)?$/;
+const UPDATES_LINE = /^updates:\s*$/;
 
 export function inspect(file, text, { required = [] } = {}) {
   const declared = new Set();
-  let updatesLine = 1;
+  // Meldung an der updates-Liste statt an Zeile 1; ohne updates: bleibt es 1.
+  let line = 1;
 
-  text.split(/\r?\n/).forEach((raw, index) => {
-    const line = raw.replace(/\s+$/, "");
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) return;
-    if (/^updates:\s*$/.test(line)) updatesLine = index + 1;
-    const match = line.match(ECOSYSTEM_LINE);
+  for (const [index, row] of text.split("\n").entries()) {
+    if (UPDATES_LINE.test(row)) line = index + 1;
+    const match = row.match(ECOSYSTEM_LINE);
     if (match) declared.add(match[1]);
-  });
-
-  const findings = [];
-  for (const ecosystem of REQUIRED_ORDER) {
-    if (!required.includes(ecosystem) || declared.has(ecosystem)) continue;
-    findings.push({
-      file,
-      line: updatesLine,
-      reason: "missing",
-      ecosystem,
-      snippet: `package-ecosystem: "${ecosystem}" fehlt`,
-    });
   }
 
-  return { findings, declared: [...declared] };
+  return required
+    .filter((ecosystem) => !declared.has(ecosystem))
+    .map((ecosystem) => ({
+      file,
+      line,
+      ecosystem,
+      snippet: `package-ecosystem: "${ecosystem}" fehlt`,
+      hint: `"package-ecosystem: '${ecosystem}'" mit directory und schedule in ${DEPENDABOT_FILE} aufnehmen`,
+    }));
 }
 
 async function countWorkflows(root) {
@@ -67,20 +59,18 @@ async function countWorkflows(root) {
   return entries.filter((entry) => entry.isFile() && EXTENSIONS.has(path.extname(entry.name))).length;
 }
 
-// Was das Repo tatsaechlich nutzt: Oekosystem -> Begruendung fuer die Ausgabe.
-export async function detectEcosystems({ root = ROOT } = {}) {
-  const sources = new Map();
-  const workflows = await countWorkflows(root);
-  if (workflows > 0) sources.set("github-actions", `${workflows} Workflow-Datei(en)`);
-  const dockerfiles = await collectDockerfiles(root);
-  if (dockerfiles.length > 0) sources.set("docker", `${dockerfiles.length} Dockerfile(s)`);
-  return sources;
+// Was das Repo pflegt, muss die Datei abdecken. Kommt eine Quelle dazu (z. B.
+// package.json fuer npm), gehoert sie hierher.
+async function requiredEcosystems(root) {
+  const required = [];
+  if ((await countWorkflows(root)) > 0) required.push("github-actions");
+  if ((await collectDockerfiles(root)).length > 0) required.push("docker");
+  return required;
 }
 
-export async function audit({ root = ROOT } = {}) {
-  const sources = await detectEcosystems({ root });
-  const required = [...sources.keys()];
+export async function audit({ root = "." } = {}) {
   const file = path.join(root, DEPENDABOT_FILE);
+  const required = await requiredEcosystems(root);
 
   let text;
   try {
@@ -88,50 +78,33 @@ export async function audit({ root = ROOT } = {}) {
   } catch {
     return {
       file,
-      sources,
       required,
-      findings: [
-        {
-          file,
-          line: 1,
-          reason: "file",
-          ecosystem: null,
-          snippet: `${DEPENDABOT_FILE} fehlt oder ist nicht lesbar`,
-        },
-      ],
+      findings: [{ file, line: 1, ecosystem: null, snippet: `${DEPENDABOT_FILE} fehlt`, hint: "Datei anlegen" }],
     };
   }
 
-  const inspected = inspect(file, text, { required });
-  return { file, sources, required, declared: inspected.declared, findings: inspected.findings };
+  return { file, required, findings: inspect(file, text, { required }) };
 }
 
-// Einzeilig halten: GitHub bricht mehrzeilige ::error::-Meldungen ab.
-const HINTS = {
-  missing:
-    'Eintrag fehlt in .github/dependabot.yml - "- package-ecosystem: \'<oekosystem>\'" mit directory und schedule aufnehmen',
-  file: "Datei fehlt oder ist nicht lesbar - .github/dependabot.yml anlegen bzw. Rechte pruefen",
-};
-
 async function main() {
-  const { sources, findings } = await audit();
+  const { required, findings } = await audit();
 
   if (findings.length > 0) {
     for (const finding of findings) {
-      console.error(`::error file=${finding.file},line=${finding.line}::${finding.snippet} -- ${HINTS[finding.reason]}`);
+      console.error(`::error file=${finding.file},line=${finding.line}::${finding.snippet} -- ${finding.hint}`);
     }
     console.error(
-      `${findings.length} genutztes Oekosystem ohne Dependabot-Eintrag. Jedes Oekosystem, das im Repo ` +
-        "gepflegt wird (Workflows, Dockerfile), braucht einen Block in .github/dependabot.yml; sonst " +
-        "veralten die gepinnten Action-SHAs bzw. Image-Digests still.",
+      `${findings.length} Befund(e): .github/dependabot.yml deckt nicht jedes genutzte Oekosystem ab ` +
+        `(genutzt: ${required.join(", ")}). Ohne Eintrag veralten die gepinnten Action-SHAs bzw. ` +
+        "Image-Digests still.",
     );
     process.exitCode = 1;
     return;
   }
 
-  const listed = [...sources].map(([ecosystem, source]) => `${ecosystem} (${source})`).join(", ");
   console.log(
-    `Dependabot: ${sources.size} genutztes Oekosystem(e) erkannt (${listed}), alle in ${DEPENDABOT_FILE} eingetragen.`,
+    `Dependabot: ${required.length} genutztes Oekosystem(e) (${required.join(", ")}), ` +
+      `alle in ${DEPENDABOT_FILE} eingetragen.`,
   );
 }
 
