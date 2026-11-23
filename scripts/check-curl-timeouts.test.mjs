@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
-import { audit, inspect, ROOTS } from "./check-curl-timeouts.mjs";
+import { audit, inspect, inspectFile, ROOTS } from "./check-curl-timeouts.mjs";
 
 const FILE = path.join("scripts", "fixture.sh");
 
@@ -210,6 +210,201 @@ test("eine Variable ohne curl ist kein Aufruf", () => {
   assert.deepEqual(result.findings, []);
 });
 
+// wget: wget selbst kennt keinen Gesamtdeckel, --timeout/-T deckelt nur DNS,
+// Verbinden und Lesen; als Deckel zaehlt nur der timeout-Wrapper.
+test("meldet wget, das nur --timeout oder -T hat", () => {
+  for (const row of [
+    "wget --timeout=30 -q -O /tmp/a https://example.test/a",
+    "wget -T 30 -q -O /tmp/b https://example.test/b",
+    "sudo wget --timeout=20 -q -O /tmp/c https://example.test/c",
+  ]) {
+    const found = findings(row);
+    assert.equal(found.length, 1, row);
+    assert.equal(found[0].kind, "wget", row);
+    assert.match(found[0].command, /wget/, row);
+  }
+});
+
+test("akzeptiert wget hinter einem timeout-Wrapper", () => {
+  assert.deepEqual(findings("timeout 180 wget -q -O /tmp/a https://example.test/a"), []);
+  assert.deepEqual(findings("sudo timeout 180 wget -q -O /tmp/b https://example.test/b"), []);
+  assert.deepEqual(
+    findings("env HTTPS_PROXY=http://proxy timeout 60 wget -q -O /tmp/c https://example.test/c"),
+    [],
+  );
+});
+
+test("meldet wget ohne Deckel", () => {
+  const found = findings("wget -q -O /tmp/a https://example.test/a");
+
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, "wget");
+  assert.match(found[0].command, /example\.test\/a/);
+});
+
+test("akzeptiert einen wget-Aufruf aus einer Variablen mit timeout-Wrapper", () => {
+  const found = findings(
+    'WGET_CMD="timeout 60 wget -q"',
+    "$WGET_CMD https://example.test/a -O /tmp/a",
+  );
+
+  assert.deepEqual(found, []);
+});
+
+test("ein --timeout aus einer Variablen deckt wget nicht ab", () => {
+  const found = findings(
+    'WGET_LIMIT="--timeout=60"',
+    "wget $WGET_LIMIT -q -O /tmp/a https://example.test/a",
+  );
+
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, "wget");
+});
+
+test("meldet einen wget-Aufruf aus einer Variablen ohne Deckel", () => {
+  const found = findings('WGET_CMD="wget -q"', "$WGET_CMD https://example.test/a -O /tmp/a");
+
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, "wget");
+});
+
+// node fetch: als Download zaehlt nur, was die Antwort in eine Datei schreibt;
+// der Deckel ist AbortSignal.timeout(...).
+const fetchDownload = (call, prefix = []) =>
+  text(
+    ...prefix,
+    "async function download(url, target) {",
+    `  const response = await ${call};`,
+    "  await pipeline(Readable.fromWeb(response.body), createWriteStream(target));",
+    "}",
+  );
+
+test("akzeptiert fetch mit AbortSignal.timeout", () => {
+  const fixture = fetchDownload("fetch(url, { signal: AbortSignal.timeout(120_000) })");
+
+  assert.deepEqual(inspect(FILE, fixture).findings, []);
+  assert.equal(inspect(FILE, fixture).fetch, 1);
+});
+
+test("akzeptiert fetch mit Deckel aus einer Konstante", () => {
+  const fixture = fetchDownload("fetch(url, { signal: LIMIT })", ["const LIMIT = AbortSignal.timeout(60_000);"]);
+
+  assert.deepEqual(inspect(FILE, fixture).findings, []);
+});
+
+test("meldet einen ungedeckelten fetch-Download", () => {
+  const result = inspect(FILE, fetchDownload("fetch(url)"));
+
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].kind, "fetch");
+  assert.equal(result.findings[0].line, 2);
+});
+
+test("ein fetch ohne Dateizugriff ist kein Download", () => {
+  const result = inspect(
+    FILE,
+    text(
+      "async function check(url) {",
+      "  const response = await fetch(url);",
+      "  return response.json();",
+      "}",
+    ),
+  );
+
+  assert.equal(result.fetch, 0);
+  assert.deepEqual(result.findings, []);
+});
+
+test("eine fetch-Methodendefinition ist kein Download", () => {
+  const result = inspect(
+    FILE,
+    text(
+      "export default {",
+      "  async fetch(request, env) {",
+      '    writeFileSync(target, "x");',
+      "    return new Response();",
+      "  },",
+      "};",
+    ),
+  );
+
+  assert.equal(result.fetch, 0);
+  assert.deepEqual(result.findings, []);
+});
+
+// Deckel aus einer gesourcten Lib-Datei. read ist injiziert, damit die Tests
+// ohne Dateisystem auskommen.
+const fakeFs = (files) => async (target) => {
+  const name = path.basename(target);
+  if (files[name] === undefined) throw new Error(`ENOENT: ${target}`);
+  return files[name];
+};
+
+const sourcedScript = text(
+  "#!/usr/bin/env bash",
+  "set -euo pipefail",
+  "source lib/download-flags.sh",
+  'curl "${CURL_PROBE[@]}" -fsS -o /tmp/a https://example.test/a',
+);
+
+test("akzeptiert einen Deckel aus einer gesourcten Lib-Datei", async () => {
+  const result = await inspectFile(path.join("scripts", "run.sh"), {
+    read: fakeFs({
+      "run.sh": sourcedScript,
+      "download-flags.sh": text("CURL_PROBE=(--connect-timeout 10 --max-time 180)", 'WGET_LIMIT="--timeout=60"'),
+    }),
+  });
+
+  assert.deepEqual(result.findings, []);
+  assert.equal(result.curl, 1);
+});
+
+test("akzeptiert einen wget-Wrapper aus einer gesourcten Lib-Datei", async () => {
+  const result = await inspectFile(path.join("scripts", "run.sh"), {
+    read: fakeFs({
+      "run.sh": text(
+        "#!/usr/bin/env bash",
+        ". lib/download-flags.sh",
+        "$WGET_LIMIT -q -O /tmp/a https://example.test/a",
+      ),
+      "download-flags.sh": text('WGET_LIMIT="timeout 60 wget -q"'),
+    }),
+  });
+
+  assert.deepEqual(result.findings, []);
+  assert.equal(result.wget, 1);
+});
+
+test("loest verschachtelte Lib-Dateien auf", async () => {
+  const result = await inspectFile(path.join("scripts", "run.sh"), {
+    read: fakeFs({
+      "run.sh": sourcedScript,
+      "download-flags.sh": text(". caps.sh"),
+      "caps.sh": text("CURL_PROBE=(--max-time 45)"),
+    }),
+  });
+
+  assert.deepEqual(result.findings, []);
+});
+
+test("ein Zyklus aus Einbindungen terminiert und meldet den fehlenden Deckel", async () => {
+  const result = await inspectFile(path.join("scripts", "run.sh"), {
+    read: fakeFs({
+      "run.sh": sourcedScript,
+      "download-flags.sh": text(". ../run.sh"),
+    }),
+  });
+
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].kind, "curl");
+});
+
+test("eine fehlende Lib-Datei deckt nichts ab", async () => {
+  const result = await inspectFile(path.join("scripts", "run.sh"), { read: fakeFs({ "run.sh": sourcedScript }) });
+
+  assert.equal(result.findings.length, 1);
+});
+
 // Der eigentliche Zweck: dieses Repository bleibt vollstaendig gedeckelt.
 test("dieses Repository ist vollstaendig gedeckelt", async () => {
   const { calls, findings: repoFindings, files } = await audit();
@@ -220,6 +415,10 @@ test("dieses Repository ist vollstaendig gedeckelt", async () => {
   assert.ok(
     files.some((file) => file.startsWith(`scripts${path.sep}`)),
     "scripts/ wird durchsucht",
+  );
+  assert.ok(
+    files.some((file) => file.startsWith(`vega${path.sep}`)),
+    "vega/ wird durchsucht",
   );
   assert.ok(!files.some((file) => file.startsWith(`src${path.sep}`)), "src/ mit Doku-Snippets bleibt aus");
 });

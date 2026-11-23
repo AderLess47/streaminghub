@@ -47,6 +47,13 @@ const ARCHIVE_URL = `https://amzndevresources.com/vega/media-player/shaka-rel-v$
 const SAMPLE_WRAPPER_URL =
   "https://raw.githubusercontent.com/AmazonAppDev/vega-video-sample/main/src/w3cmedia/shakaplayer/ShakaPlayer.ts";
 
+// Download-Deckel (Sekunden): ohne sie haengt der Lauf an einer stummen
+// Verbindung bis zum naechsten Abbruch. Geprueft von
+// scripts/check-curl-timeouts.mjs; das Tarball ist einige hundert MB gross,
+// Amazons Wrapper dagegen nur wenige KB.
+const ARCHIVE_TIMEOUT_MS = 5 * 60_000;
+const WRAPPER_TIMEOUT_MS = 30_000;
+
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workDir = path.join(appRoot, ".shaka-build");
 const archivePath = path.join(workDir, `shaka-rel-v${RELEASE}.tar.gz`);
@@ -81,7 +88,7 @@ function copyInto(source, target) {
 
 async function download(url, target) {
   step(`Lade ${url}`);
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(ARCHIVE_TIMEOUT_MS) });
   if (!response.ok || !response.body) {
     fail(`Download fehlgeschlagen (HTTP ${response.status}). Bitte die Datei von Hand laden und mit --tarball übergeben.`);
   }
@@ -149,7 +156,7 @@ async function main() {
   const wrapperSource = path.join(appRoot, "src", "shakaplayer", "ShakaPlayer.ts");
   step("Ersetze den Wrapper durch Amazons selbstständige Sample-Fassung");
   try {
-    const response = await fetch(SAMPLE_WRAPPER_URL);
+    const response = await fetch(SAMPLE_WRAPPER_URL, { signal: AbortSignal.timeout(WRAPPER_TIMEOUT_MS) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const wrapperText = await response.text();
     if (!wrapperText.includes("implements PlayerInterface")) {
