@@ -31,11 +31,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   last_seen_at TEXT NOT NULL,
-  mfa_ok INTEGER NOT NULL DEFAULT 1,
+  mfa_ok INTEGER NOT NULL DEFAULT 0,
   ip TEXT,
   user_agent TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
 CREATE TABLE IF NOT EXISTS auth_tokens (
   id TEXT PRIMARY KEY,
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   used_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens(user_id, kind);
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash ON auth_tokens(token_hash);
 
 CREATE TABLE IF NOT EXISTS mfa_secrets (
   user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -81,6 +83,8 @@ CREATE TABLE IF NOT EXISTS customer_playlists (
   updated_at TEXT NOT NULL
 );
 
+-- Legacy-Tabelle: wird von älteren Geräteversionen erwartet und beim
+-- Entkoppeln weiterhin mit markiert. Aktive Tokens laufen über device-auth.ts.
 CREATE TABLE IF NOT EXISTS device_tokens (
   token_hash TEXT PRIMARY KEY,
   device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
@@ -106,6 +110,7 @@ CREATE TABLE IF NOT EXISTS pairing_requests (
   ip TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_pairing_prefix ON pairing_requests(code_prefix);
+CREATE INDEX IF NOT EXISTS idx_pairing_code_hash ON pairing_requests(code_hash);
 
 CREATE TABLE IF NOT EXISTS subscriptions (
   id TEXT PRIMARY KEY,
@@ -146,6 +151,8 @@ CREATE TABLE IF NOT EXISTS subscription_events (
   event_type TEXT NOT NULL,
   provider_event_id TEXT UNIQUE,
   payload TEXT NOT NULL,
+  -- NULL = noch nicht angewendet (Retry/Abstimmung offen).
+  processed_at TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -170,6 +177,8 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON ticket_messages(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id TEXT PRIMARY KEY,
@@ -314,6 +323,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_amazon_customer
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subs_apple_customer
   ON subscriptions(provider_customer_id) WHERE provider = 'apple';
 
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_devices_status ON devices(status);
+CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_messages(status);
+CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox_emails(status, created_at);
+
 -- Cross-device resume for premium accounts: one position per title and user.
 CREATE TABLE IF NOT EXISTS watch_progress (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -337,11 +351,4 @@ CREATE TABLE IF NOT EXISTS cloud_backups (
   restored_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_cloud_backups_user ON cloud_backups(user_id, created_at);
-
-CREATE TABLE IF NOT EXISTS request_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  route TEXT NOT NULL,
-  status INTEGER NOT NULL,
-  created_at TEXT NOT NULL
-);
 `;

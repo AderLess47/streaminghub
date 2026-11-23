@@ -13,6 +13,7 @@ import {
 } from "@/lib/contact-messages";
 import { all, get, nowIso, run } from "@/lib/db";
 import { FEATURE_FLAGS } from "@/lib/flags";
+import { setMaintenanceMode } from "@/lib/maintenance";
 import { DEFAULT_TRIAL_DAYS } from "@/lib/trial";
 import { generateRecoveryCodes, generateTotpSecret, verifyTotp } from "@/lib/totp";
 import { resendMail, sendMail, ticketReplyMail } from "@/lib/mail";
@@ -340,15 +341,24 @@ export async function setSubscriptionStatusAction(formData: FormData) {
   const allowed = ["none", "pending", "active", "past_due", "canceled", "incomplete"];
   if (!allowed.includes(status)) return;
 
-  const existing = get<{ id: string; status: string }>(
-    `SELECT id, status FROM subscriptions WHERE user_id = ?`,
+  const existing = get<{ id: string; status: string; current_period_end: string | null }>(
+    `SELECT id, status, current_period_end FROM subscriptions WHERE user_id = ?`,
     userId,
   );
   if (!existing) return;
 
+  // Beim Aktivieren ohne laufende Periode wird ein Monat gewährt. Ohne diesen
+  // Schritt meldet effectiveStatus() sofort wieder "canceled", weil das
+  // gespeicherte Periodenende in der Vergangenheit liegt.
+  let periodEnd = existing.current_period_end;
+  if (status === "active" && (!periodEnd || new Date(periodEnd).getTime() < Date.now())) {
+    periodEnd = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  }
+
   run(
-    `UPDATE subscriptions SET status = ?, updated_at = ? WHERE user_id = ?`,
+    `UPDATE subscriptions SET status = ?, current_period_end = ?, updated_at = ? WHERE user_id = ?`,
     status,
+    periodEnd,
     nowIso(),
     userId,
   );
@@ -358,7 +368,7 @@ export async function setSubscriptionStatusAction(formData: FormData) {
     actorEmail: staff.email,
     targetType: "subscription",
     targetId: userId,
-    meta: { from: existing.status, to: status },
+    meta: { from: existing.status, to: status, periodEnd },
   });
   revalidatePath("/admin/subscriptions");
   redirect(`${adminPath(formData, "/admin/subscriptions")}?ok=status`);
@@ -633,6 +643,27 @@ export async function deleteFaqAction(formData: FormData) {
   revalidatePath("/admin/content");
   revalidatePath("/faq");
   redirect("/admin/content?ok=deleted");
+}
+
+/**
+ * Öffentliche Website auf die Wartungsseite schalten. Dashboard, Admin,
+ * Statusseite und API bleiben erreichbar, damit Support und Betrieb arbeiten
+ * können.
+ */
+export async function setMaintenanceModeAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const enabled = String(formData.get("enabled") ?? "") === "1";
+  setMaintenanceMode(enabled);
+  logAudit({
+    action: enabled ? "admin.maintenance_enabled" : "admin.maintenance_disabled",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "settings",
+    targetId: "maintenance_mode",
+  });
+  revalidatePath("/", "layout");
+  revalidatePath("/status");
+  redirect(`/admin/content?ok=${enabled ? "maintenance-on" : "maintenance-off"}`);
 }
 
 /* ------------------------------ MFA enrollment ----------------------------- */

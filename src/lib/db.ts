@@ -110,6 +110,19 @@ function migrate(db: DatabaseSync) {
   for (const [name, definition] of subscriptionAdditions) {
     addColumn(db, "subscriptions", name, definition);
   }
+
+  // Zahlungsereignisse werden erst als angewendet markiert, wenn die
+  // Zustandsänderung durchgelaufen ist. NULL bedeutet: Retry ist erlaubt.
+  // Bestehende Datenbanken erhalten die Spalte hier; alte Zeilen gelten mit
+  // dem Migrationszeitpunkt als erledigt, damit sie nicht erneut Mails auslösen.
+  const eventColumns = db.prepare("PRAGMA table_info(subscription_events)").all() as { name: string }[];
+  if (!eventColumns.some((column) => column.name === "processed_at")) {
+    db.exec("ALTER TABLE subscription_events ADD COLUMN processed_at TEXT");
+    db.exec(`UPDATE subscription_events SET processed_at = created_at WHERE processed_at IS NULL`);
+  }
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_subscription_events_pending ON subscription_events(processed_at)",
+  );
 }
 
 function prepare(sql: string): Statement {
