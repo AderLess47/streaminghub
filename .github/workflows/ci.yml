@@ -201,10 +201,10 @@ jobs:
       - name: Tests des öffentlichen HTML-Caches
         run: npm run test:public-cache
 
-      # Gegenprobe fuer den Zeitdeckel-Check im Lint-Job: ohne diese Faelle
-      # koennte die Pruefung still kaputtgehen und ungedeckelte Aufrufe
+      # Gegenprobe fuer den Download-Zeitdeckel-Check im Lint-Job: ohne diese
+      # Faelle koennte die Pruefung still kaputtgehen und ungedeckelte Aufrufe
       # durchwinken, statt den Job rot zu machen.
-      - name: Tests der curl-Zeitdeckel-Prüfung
+      - name: Tests der Download-Zeitdeckel-Prüfung
         run: npm run test:curl-timeouts
 
       - name: Syntaxprüfung des Staging-Prozess-Checks
@@ -290,12 +290,14 @@ jobs:
           # Exit 2 = Datei ist kein gueltiges YAML.
           "$RUNNER_TEMP/yajsv" -s "$RUNNER_TEMP/dependabot-2.0.json" .github/dependabot.yml
 
-      # Zeitdeckel: ein curl ohne --max-time laeuft bis zum Job-Timeout (10
+      # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
       # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
-      # vor #427. Der Check deckt .github/workflows und scripts/ ab und wird
-      # rot, sobald ein Aufruf den Deckel verliert oder ein neuer ohne
-      # --max-time dazukommt.
-      - name: Zeitdeckel der curl-Aufrufe pruefen
+      # vor #427. Der Check deckt .github, ops, scripts, vega, apple, android
+      # und die Repo-Wurzel ab: curl braucht --max-time, wget --timeout (oder
+      # den timeout-Wrapper), ein fetch-Download AbortSignal.timeout; Deckel
+      # aus gesourcten Lib-Dateien werden aufgeloest. Er wird rot, sobald ein
+      # Aufruf den Deckel verliert oder ein neuer ohne Deckel dazukommt.
+      - name: Zeitdeckel der Download-Aufrufe pruefen
         run: npm run check:curl-timeouts
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
