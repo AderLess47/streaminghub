@@ -31,6 +31,7 @@ const COMPONENTS = [
   "dashboard-forms.tsx",
   "language-switcher.tsx",
   "mfa-setup-form.tsx",
+  "pager.tsx",
   "resend-verification.tsx",
   "retention-offer.tsx",
   "start-trial-button.tsx",

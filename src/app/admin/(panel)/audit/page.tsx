@@ -1,8 +1,9 @@
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
-import { purgeExpiredAuditLog } from "@/lib/audit";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +16,16 @@ function breakableMeta(meta: string) {
   return meta.replace(/,(?=\S)/g, ", ").replace(/:(?=\S)/g, ": ");
 }
 
-export default async function AdminAuditPage() {
+export default async function AdminAuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireStaff();
-  purgeExpiredAuditLog();
   const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM audit_log`)?.c ?? 0;
+  const page = parsePage(params.page, total);
 
   const entries = all<{
     id: string;
@@ -31,7 +38,9 @@ export default async function AdminAuditPage() {
     created_at: string;
   }>(
     `SELECT id, actor_email, action, target_type, target_id, ip, meta, created_at
-     FROM audit_log ORDER BY created_at DESC LIMIT 200`,
+     FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    page.pageSize,
+    page.offset,
   );
 
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
@@ -128,6 +137,17 @@ export default async function AdminAuditPage() {
           <li className="card p-6 text-center text-xs text-muted">{t.admin.audit.empty}</li>
         ) : null}
       </ul>
+
+      <Pager
+        basePath="/admin/audit"
+        params={{}}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
 
       <p className="text-[0.68rem] leading-relaxed text-muted">
         Das Protokoll ist append-only. Einträge werden nicht nachträglich verändert; Löschung erfolgt ausschließlich

@@ -1,17 +1,28 @@
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Icon } from "@/components/icons";
 import { FormStatus } from "@/components/form-status";
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { revokeDeviceAction } from "@/lib/actions/admin";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDevicesPage() {
+export default async function AdminDevicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireStaff();
   const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const de = locale !== "en";
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM devices`)?.c ?? 0;
+  const page = parsePage(params.page, total);
 
   const devices = all<{
     id: string;
@@ -24,7 +35,9 @@ export default async function AdminDevicesPage() {
   }>(
     `SELECT d.id, d.name, d.platform, d.status, d.activated_at, d.last_seen_at, u.email
      FROM devices d LEFT JOIN users u ON u.id = d.user_id
-     ORDER BY d.created_at DESC LIMIT 200`,
+     ORDER BY d.created_at DESC LIMIT ? OFFSET ?`,
+    page.pageSize,
+    page.offset,
   );
 
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "short" });
@@ -66,10 +79,17 @@ export default async function AdminDevicesPage() {
                       <input type="hidden" name="deviceId" value={device.id} />
                       <input type="hidden" name="returnTo" value="/admin/devices" />
                       <FormStatus label={t.ui.saving} />
-                      <button type="submit" className="btn btn-danger btn-sm">
+                      <ConfirmSubmitButton
+                        className="btn btn-danger btn-sm"
+                        message={
+                          de
+                            ? `Gerät „${device.name}“ wirklich entkoppeln? Es muss sich neu koppeln.`
+                            : `Really unlink device “${device.name}”? It must pair again.`
+                        }
+                      >
                         <Icon name="close" size={13} />
                         {t.admin.devices.revoke}
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   ) : (
                     <span className="text-[0.68rem] text-muted">—</span>
@@ -115,10 +135,17 @@ export default async function AdminDevicesPage() {
               <form action={revokeDeviceAction} className="mt-3">
                 <input type="hidden" name="deviceId" value={device.id} />
                 <input type="hidden" name="returnTo" value="/admin/devices" />
-                <button type="submit" className="btn btn-danger btn-sm w-full">
+                <ConfirmSubmitButton
+                  className="btn btn-danger btn-sm w-full"
+                  message={
+                    de
+                      ? `Gerät „${device.name}“ wirklich entkoppeln? Es muss sich neu koppeln.`
+                      : `Really unlink device “${device.name}”? It must pair again.`
+                  }
+                >
                   <Icon name="close" size={13} />
                   {t.admin.devices.revoke}
-                </button>
+                </ConfirmSubmitButton>
               </form>
             ) : null}
           </li>
@@ -127,6 +154,17 @@ export default async function AdminDevicesPage() {
           <li className="card p-6 text-center text-xs text-muted">{t.admin.devices.empty}</li>
         ) : null}
       </ul>
+
+      <Pager
+        basePath="/admin/devices"
+        params={{}}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
     </div>
   );
 }

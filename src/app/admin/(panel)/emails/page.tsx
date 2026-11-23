@@ -1,16 +1,25 @@
+import { Pager } from "@/components/pager";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { FormStatus } from "@/components/form-status";
 import { getI18n } from "@/i18n";
 import { releaseEmailSuppressionAction, retryEmailAction } from "@/lib/actions/admin";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { isEmailConfigured } from "@/lib/env";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminEmailsPage() {
+export default async function AdminEmailsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireStaff();
   const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM outbox_emails`)?.c ?? 0;
+  const page = parsePage(params.page, total);
 
   const mails = all<{
     id: string;
@@ -25,7 +34,9 @@ export default async function AdminEmailsPage() {
     error: string | null;
   }>(
     `SELECT id, to_email, subject, body_text, kind, status, provider_status, attempts, created_at, error
-     FROM outbox_emails ORDER BY created_at DESC LIMIT 50`,
+     FROM outbox_emails ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    page.pageSize,
+    page.offset,
   );
 
   const suppressions = all<{ email: string; reason: string; created_at: string }>(
@@ -83,6 +94,17 @@ export default async function AdminEmailsPage() {
         ))}
         {mails.length === 0 ? <p className="text-xs text-muted">{t.admin.emails.empty}</p> : null}
       </div>
+
+      <Pager
+        basePath="/admin/emails"
+        params={{}}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
 
       <section className="card p-4">
         <h2 className="text-base font-semibold">{t.admin.emails.suppressionsTitle}</h2>
