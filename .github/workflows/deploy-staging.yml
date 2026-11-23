@@ -213,7 +213,9 @@ jobs:
             echo "### Staging-Deploy"
             echo
             echo "- Auslöser: \`$EVENT_NAME\`"
-            echo "- Commit: \`$DEPLOYED_SHA\`"
+            # Faellt der Deploy-Schritt aus, ist der Output leer; dann steht
+            # "unbekannt" statt eines leeren Commit im Summary.
+            echo "- Commit: \`${DEPLOYED_SHA:-unbekannt}\`"
             echo "- Ergebnis: $JOB_STATUS"
             echo "- Ziel: \`https://streaminghub-staging.fly.dev\`"
           } >> "$GITHUB_STEP_SUMMARY"

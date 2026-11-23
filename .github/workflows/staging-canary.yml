@@ -303,7 +303,9 @@ jobs:
             echo "### Staging-Billing-Canary"
             echo
             echo "- Ziel: \`$BASE_URL\`"
-            echo "- Commit: \`$DEPLOYED_SHA\`"
+            # Bleibt der Deploy-Schritt ohne Output (z. B. vorzeitig
+            # abgebrochen), steht "unbekannt" statt eines leeren Commit.
+            echo "- Commit: \`${DEPLOYED_SHA:-unbekannt}\`"
             echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"
 
