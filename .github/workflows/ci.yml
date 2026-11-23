@@ -212,6 +212,11 @@ jobs:
       - name: Tests der Action-Pin-Prüfung
         run: npm run test:action-pins
 
+      # Wie bei den Action-Pins: ohne Faelle koennte die Pruefung eine fehlende
+      # Angabe im Workflow-Kopf still durchwinken, statt den Job rot zu machen.
+      - name: Tests der Workflow-Kopf-Prüfung
+        run: npm run test:workflow-hygiene
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -304,6 +309,15 @@ jobs:
       # scripts/check-action-pins.test.mjs.
       - name: Action-Pins pruefen
         run: npm run check:action-pins
+
+      # Jeder Workflow braucht workflow-weites permissions: - sonst darf
+      # GITHUB_TOKEN nach Repository-Standard mehr als der Lauf braucht - und
+      # concurrency:, sonst koennen sich zwei Laeufe ueberholen (doppelte
+      # Deploys, zwei Backups gleichzeitig, zwei Issues). Eine Angabe nur in
+      # einzelnen Jobs deckt die uebrigen Jobs nicht ab und zaehlt nicht.
+      # Faelle in scripts/check-workflow-hygiene.test.mjs.
+      - name: Workflow-Kopf pruefen
+        run: npm run check:workflow-hygiene
 
       # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
       # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall

@@ -17,6 +17,12 @@ permissions:
   contents: read
   issues: write
 
+# Ohne group koennten ein manueller Testlauf und der Jahreslauf parallel
+# dasselbe Issue anlegen; der zweite Lauf wartet jetzt statt zu doppeln.
+concurrency:
+  group: bfsg-review
+  cancel-in-progress: false
+
 jobs:
   review:
     name: BFSG-Einordnung prüfen

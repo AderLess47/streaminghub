@@ -32,6 +32,11 @@ on:
         type: boolean
         default: false
 
+# Der Lauf liest nur das Repository und laedt Logs als Artefakt hoch; mehr
+# braucht GITHUB_TOKEN hier nicht.
+permissions:
+  contents: read
+
 concurrency:
   group: vega-shaka-${{ github.ref }}
   cancel-in-progress: false
