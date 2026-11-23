@@ -207,6 +207,11 @@ jobs:
       - name: Tests der Download-Zeitdeckel-Prüfung
         run: npm run test:curl-timeouts
 
+      # Die Pin-Pruefung ist nur so gut wie ihre Faelle: ohne Tests koennte
+      # sie eine Zeile ohne SHA still durchwinken, statt den Job rot zu machen.
+      - name: Tests der Action-Pin-Prüfung
+        run: npm run test:action-pins
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -289,6 +294,16 @@ jobs:
           # yajsv meldet "pass" und Exit 0; Exit 1 = Schema-Verstoss,
           # Exit 2 = Datei ist kein gueltiges YAML.
           "$RUNNER_TEMP/yajsv" -s "$RUNNER_TEMP/dependabot-2.0.json" .github/dependabot.yml
+
+      # Actions duerfen nicht wieder auf bewegliche Tags zeigen: ein
+      # verschobener Tag liefe ungeprueft in Jobs mit Deploy- und
+      # Zugangs-Secrets. Verlangt wird der Commit-SHA des Release-Tags mit dem
+      # Tag als Kommentar ("uses: owner/action@<sha> # v5") - genau die
+      # Schreibweise, die Dependabot pflegt. Lokale Aktionen (./...) brauchen
+      # keinen Pin, docker:// einen Digest. Faelle in
+      # scripts/check-action-pins.test.mjs.
+      - name: Action-Pins pruefen
+        run: npm run check:action-pins
 
       # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
       # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
