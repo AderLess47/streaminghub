@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           # Bei `workflow_run` ist GITHUB_SHA der Kopf des Default-Branches,
           # nicht der Commit, der CI bestanden hat. Deshalb explizit der Lauf,
