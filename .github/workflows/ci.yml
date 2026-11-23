@@ -222,6 +222,11 @@ jobs:
       - name: Tests der Docker-Basis-Image-Prüfung
         run: npm run test:docker-base-images
 
+      # Die Abdeckungs-Pruefung ist der Grund, warum der docker-Block nicht
+      # still verschwinden kann; ohne Faelle wuerde sie das selbst nicht merken.
+      - name: Tests der Dependabot-Abdeckungsprüfung
+        run: npm run test:dependabot-coverage
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -304,6 +309,16 @@ jobs:
           # yajsv meldet "pass" und Exit 0; Exit 1 = Schema-Verstoss,
           # Exit 2 = Datei ist kein gueltiges YAML.
           "$RUNNER_TEMP/yajsv" -s "$RUNNER_TEMP/dependabot-2.0.json" .github/dependabot.yml
+
+      # Das Schema sagt nur, ob die Eintraege gueltig sind - nicht, ob alle
+      # genutzten Oekosysteme vorkommen. Fehlt der docker-Block, bleiben die
+      # gepinnten Image-Digests stehen und Sicherheitsupdates kommen nicht mehr;
+      # fehlt github-actions, veralten die gepinnten Action-SHAs. Genau diese
+      # Luecke prueft der naechste Schritt: Workflows vorhanden -> Eintrag da,
+      # Dockerfile vorhanden -> Eintrag da. Faelle in
+      # scripts/check-dependabot-coverage.test.mjs.
+      - name: Dependabot-Abdeckung pruefen
+        run: npm run check:dependabot-coverage
 
       # Actions duerfen nicht wieder auf bewegliche Tags zeigen: ein
       # verschobener Tag liefe ungeprueft in Jobs mit Deploy- und
