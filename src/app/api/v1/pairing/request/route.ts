@@ -1,5 +1,5 @@
 import { generatePairingCode, normalizePairingCode, randomToken, sha256 } from "@/lib/auth";
-import { apiError, clientIp, json, parseBody, tooManyRequests } from "@/lib/api";
+import { clientIp, json, parseBody, tooManyRequests } from "@/lib/api";
 import { addSeconds, nowIso, run } from "@/lib/db";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { pairingRequestSchema } from "@/lib/validation";

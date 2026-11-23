@@ -16,11 +16,12 @@ import {
   updateProfileAction,
 } from "@/lib/actions/dashboard";
 import { all, get } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { currentSessionTokenHash, requireUser } from "@/lib/session";
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
+  const de = locale !== "en";
 
   const profile = get<{ marketing_opt_in: number; locale: string }>(
     `SELECT marketing_opt_in, locale FROM users WHERE id = ?`,
@@ -34,8 +35,15 @@ export default async function SettingsPage() {
     `SELECT created_at FROM data_requests WHERE user_id = ? AND kind = 'deletion' AND status = 'requested' ORDER BY created_at DESC LIMIT 1`,
     user.id,
   );
-  const sessions = all<{ created_at: string; ip: string | null }>(
-    `SELECT created_at, ip FROM sessions WHERE user_id = ? ORDER BY last_seen_at DESC LIMIT 5`,
+  const currentTokenHash = await currentSessionTokenHash();
+  const sessions = all<{
+    token_hash: string;
+    created_at: string;
+    last_seen_at: string;
+    ip: string | null;
+  }>(
+    `SELECT token_hash, created_at, last_seen_at, ip FROM sessions
+     WHERE user_id = ? ORDER BY last_seen_at DESC LIMIT 5`,
     user.id,
   );
 
@@ -122,12 +130,27 @@ export default async function SettingsPage() {
           <h2 className="text-base font-semibold">{t.dashboard.settings.sessionsTitle}</h2>
           <p className="mt-1 text-xs text-muted">{t.dashboard.settings.sessionsNote}</p>
           <ul className="mt-3 grid gap-1.5 text-[0.72rem] text-muted">
-            {sessions.map((session, index) => (
-              <li key={index} className="flex justify-between gap-2 border-b border-line/40 pb-1.5">
-                <span>{session.ip ?? "—"}</span>
-                <span>{new Date(session.created_at).toLocaleString("de-DE")}</span>
-              </li>
-            ))}
+            {sessions.map((session) => {
+              const current = session.token_hash === currentTokenHash;
+              return (
+                <li
+                  key={session.token_hash}
+                  className="flex flex-wrap justify-between gap-2 border-b border-line/40 pb-1.5"
+                >
+                  <span className="min-w-0 truncate">
+                    {session.ip ?? "—"}
+                    {current ? (
+                      <span className="ms-1.5 text-cyan-200/90">
+                        ({de ? "diese Sitzung" : "this session"})
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="whitespace-nowrap">
+                    {new Date(session.created_at).toLocaleString("de-DE")}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <div className="mt-4">
             <SessionsForm action={signOutOtherSessionsAction} t={t.dashboard.settings} busy={t.ui.saving} />

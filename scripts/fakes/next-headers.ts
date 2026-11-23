@@ -18,6 +18,8 @@ export async function cookies() {
       if (name === "sh_session") {
         lastSetSession.value = value;
         lastSetSession.options = options ?? null;
+        // Wie ein Browser: eine gesetzte Cookie überschreibt die alte Session.
+        sessionToken.value = value;
       }
     },
     delete() {},

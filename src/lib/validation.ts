@@ -15,7 +15,7 @@ export const registerSchema = z.object({
   password: passwordSchema,
   displayName: z.string().trim().min(2, "Bitte gib deinen Namen an.").max(80),
   locale: z.enum(["de", "en", "tr", "ar", "fr", "es", "it", "el"]).default("de"),
-  acceptTerms: z.literal(true, { errorMap: () => ({ message: "Bitte akzeptiere die Nutzungsbedingungen." }) }),
+  acceptTerms: z.literal(true, { message: "Bitte akzeptiere die Nutzungsbedingungen." }),
   marketingOptIn: z.boolean().optional().default(false),
 });
 
@@ -90,7 +90,7 @@ export const contactSchema = z.object({
   subject: z.string().trim().min(3, "Bitte gib einen Betreff an.").max(120),
   message: z.string().trim().min(20, "Bitte beschreibe dein Anliegen mit mindestens 20 Zeichen.").max(4000),
   privacyAccepted: z.literal(true, {
-    errorMap: () => ({ message: "Bitte bestätige die Datenschutzhinweise." }),
+    message: "Bitte bestätige die Datenschutzhinweise.",
   }),
   /** Honeypot: muss leer bleiben. Inhalt wird von der Route still verworfen. */
   website: z.string().max(500).optional().default(""),
@@ -103,11 +103,11 @@ export const withdrawalSchema = z.object({
   name: z.string().trim().min(2, "Bitte gib deinen Namen an.").max(80),
   email,
   contract: z.enum(["web", "apple", "amazon", "other"], {
-    errorMap: () => ({ message: "Bitte wähle den Vertrag aus." }),
+    message: "Bitte wähle den Vertrag aus.",
   }),
   note: z.string().trim().max(1000).optional().default(""),
   privacyAccepted: z.literal(true, {
-    errorMap: () => ({ message: "Bitte bestätige die Datenschutzhinweise." }),
+    message: "Bitte bestätige die Datenschutzhinweise.",
   }),
   website: z.string().max(500).optional().default(""),
   renderedAt: z.coerce.number().optional(),
@@ -150,7 +150,7 @@ export const mfaVerifySchema = z.object({
 export const dataRequestSchema = z.object({
   kind: z.enum(["export", "deletion"]),
   confirm: z.literal(true, {
-    errorMap: () => ({ message: "Bitte bestätige die Anfrage." }),
+    message: "Bitte bestätige die Anfrage.",
   }),
   password: z.string().min(1, "Bitte bestätige dein Passwort."),
 });

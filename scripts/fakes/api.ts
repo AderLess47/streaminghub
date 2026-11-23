@@ -34,6 +34,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return sessionUser;
 }
 
+/** Wie im Original: `null`, solange die zweite Faktorprüfung aussteht. */
+export async function getFullyAuthenticatedUser(): Promise<SessionUser | null> {
+  return sessionUser;
+}
+
 /* -------------------------------- Premium -------------------------------- */
 
 const premiumUsers = new Set<string>();

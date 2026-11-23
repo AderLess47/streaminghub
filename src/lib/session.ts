@@ -6,6 +6,9 @@ import { randomToken, sha256 } from "./auth";
 
 export const SESSION_COOKIE = "sh_session";
 
+/** Obergrenze gespeicherter Sitzungen pro Konto; ältere werden verworfen. */
+const MAX_SESSIONS_PER_USER = 10;
+
 export type Role = "customer" | "support" | "admin";
 
 export type SessionUser = {
@@ -54,7 +57,21 @@ export async function createSession(
     meta.ip ?? null,
     (meta.userAgent ?? "").slice(0, 300),
   );
+  pruneUserSessions(userId);
   return token;
+}
+
+/** Hält die Sitzungstabelle je Konto beschränkt (älteste Einträge zuerst). */
+export function pruneUserSessions(userId: string, keep = MAX_SESSIONS_PER_USER) {
+  run(
+    `DELETE FROM sessions WHERE user_id = ? AND token_hash NOT IN (
+       SELECT token_hash FROM sessions WHERE user_id = ?
+       ORDER BY created_at DESC LIMIT ?
+     )`,
+    userId,
+    userId,
+    keep,
+  );
 }
 
 export async function applySessionCookie(token: string) {
@@ -71,6 +88,18 @@ export async function applySessionCookie(token: string) {
 export async function clearSessionCookie() {
   const store = await cookies();
   store.set(SESSION_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
+}
+
+/**
+ * Verwirft die Sitzung des aktuellen Cookies, bevor eine neue ausgestellt wird.
+ * Verhindert, dass wiederholte Anmeldeversuche (auch mit falschem MFA-Code)
+ * beliebig viele gültige Sitzungszeilen hinterlassen.
+ */
+export async function discardCurrentSession() {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return;
+  run(`DELETE FROM sessions WHERE token_hash = ?`, sha256(token));
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -106,6 +135,22 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     createdAt: row.created_at,
     mfaEnrolled: Boolean(row.mfa_confirmed),
   };
+}
+
+/**
+ * Eine Sitzung, die nur bis zur zweiten Faktorprüfung reicht. Sie darf weder
+ * das Dashboard noch Kontodaten oder Geräte erreichen – ausschließlich den
+ * MFA-Schritt.
+ */
+export function isMfaPending(user: SessionUser) {
+  return isStaff(user.role) && user.mfaEnrolled && !user.mfaOk;
+}
+
+/** Wie `getSessionUser`, lehnt aber unvollständig authentifizierte Sitzungen ab. */
+export async function getFullyAuthenticatedUser(): Promise<SessionUser | null> {
+  const user = await getSessionUser();
+  if (!user || isMfaPending(user)) return null;
+  return user;
 }
 
 export async function touchSession() {
@@ -157,7 +202,16 @@ async function loginUrl(nextPath: string) {
 export async function requireUser(nextPath = "/dashboard"): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect(await loginUrl(nextPath));
+  if (isMfaPending(user)) redirect("/admin/login?step=mfa");
   return user;
+}
+
+/**
+ * Für Routen und Server Actions, die ohne die zweite Faktorprüfung nicht
+ * laufen dürfen. Semantisch identisch zu `requireUser`, nur explizit benannt.
+ */
+export async function requireFullyAuthenticated(nextPath = "/dashboard"): Promise<SessionUser> {
+  return requireUser(nextPath);
 }
 
 const STAFF_ROLES: Role[] = ["support", "admin"];
