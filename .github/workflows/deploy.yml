@@ -102,11 +102,17 @@ jobs:
 
       - name: Zusammenfassung
         if: always()
+        # Werte ueber env: - im run:-Block wird jeder ${{ }}-Ausdruck vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOYED_SHA: ${{ steps.deployed_commit.outputs.sha }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           {
             echo "### Produktions-Deploy"
             echo
-            echo "- Auslöser: \`${{ github.event_name }}\`"
-            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha }}\`"
-            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Auslöser: \`$EVENT_NAME\`"
+            echo "- Commit: \`$DEPLOYED_SHA\`"
+            echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"

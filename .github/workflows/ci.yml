@@ -227,6 +227,11 @@ jobs:
       - name: Tests der Dependabot-Abdeckungsprüfung
         run: npm run test:dependabot-coverage
 
+      # Die Injection-Pruefung muss selbst geprueft sein: sonst wuerde sie einen
+      # Ausdruck im Shell-Text still durchwinken, statt den Job rot zu machen.
+      - name: Tests der Ausdruck-Injection-Prüfung
+        run: npm run test:expression-injection
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -348,6 +353,16 @@ jobs:
       # scripts/check-docker-base-images.test.mjs.
       - name: Docker-Basis-Images pruefen
         run: npm run check:docker-base-images
+
+      # GitHub ersetzt ${{ }} vor der Shell. Steht der Ausdruck im run:-Block,
+      # wird sein Inhalt zu Shell-Code - ein PR-Titel oder Branch-Name mit " oder
+      # $(...) fuehrt dann Befehle aus, im Job mit Secrets und Deploy-Rechten.
+      # Quoting hilft nicht, weil die Ersetzung davor passiert. Verlangt wird der
+      # Umweg ueber env: und "$VAR" im Skript; run unter outputs: ist kein
+      # Schritt und bleibt aussen vor. Faelle in
+      # scripts/check-expression-injection.test.mjs.
+      - name: Ausdruecke in run-Bloecken pruefen
+        run: npm run check:expression-injection
 
       # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
       # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall

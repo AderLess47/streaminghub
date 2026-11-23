@@ -77,14 +77,19 @@ jobs:
 
       - name: Setup, Build und HLS-Smoke-Test
         working-directory: vega
+        # Alle Werte ueber env: - ein ${{ }}-Ausdruck im run:-Block wird vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
         env:
           SMOKE_URL: ${{ inputs.smoke_url }}
           DEVICE: ${{ inputs.device }}
+          START_VVD: ${{ inputs.start_vvd }}
+          VVD_NO_GUI: ${{ inputs.vvd_no_gui }}
+          SKIP_BUILD: ${{ inputs.skip_build }}
         run: |
           args=(--device "$DEVICE" --smoke-url "$SMOKE_URL" --skip-install --require-device)
-          if [ "${{ inputs.start_vvd }}" = "true" ]; then args+=(--start-vvd); fi
-          if [ "${{ inputs.vvd_no_gui }}" = "true" ]; then args+=(--vvd-no-gui); fi
-          if [ "${{ inputs.skip_build }}" = "true" ]; then args+=(--skip-build); fi
+          if [ "$START_VVD" = "true" ]; then args+=(--start-vvd); fi
+          if [ "$VVD_NO_GUI" = "true" ]; then args+=(--vvd-no-gui); fi
+          if [ "$SKIP_BUILD" = "true" ]; then args+=(--skip-build); fi
           npm run verify:shaka -- "${args[@]}"
 
       - name: Geräte-Logs hochladen

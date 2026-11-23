@@ -44,10 +44,15 @@ jobs:
 
       - name: Ergebnis notieren
         if: always()
+        # Werte ueber env: - im run:-Block wird jeder ${{ }}-Ausdruck vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           {
             echo "### Admin-Prüfung"
             echo
-            echo "- Ziel: \`${{ inputs.base_url }}\`"
-            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Ziel: \`$BASE_URL\`"
+            echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -292,13 +292,19 @@ jobs:
 
       - name: Zusammenfassung
         if: always()
+        # Werte ueber env: - im run:-Block wird jeder ${{ }}-Ausdruck vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
+        env:
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          DEPLOYED_SHA: ${{ steps.deployed_commit.outputs.sha || github.sha }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           {
             echo "### Staging-Billing-Canary"
             echo
-            echo "- Ziel: \`${{ vars.STAGING_BASE_URL }}\`"
-            echo "- Commit: \`${{ steps.deployed_commit.outputs.sha || github.sha }}\`"
-            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Ziel: \`$BASE_URL\`"
+            echo "- Commit: \`$DEPLOYED_SHA\`"
+            echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"
 
   notify:
