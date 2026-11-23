@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
-import { audit, inspect } from "./check-curl-timeouts.mjs";
+import { audit, inspect, ROOTS } from "./check-curl-timeouts.mjs";
 
 const FILE = path.join("scripts", "fixture.sh");
 
@@ -144,10 +144,82 @@ test("zaehlt nur echte Aufrufe", () => {
   assert.deepEqual(result.findings, []);
 });
 
+// Wrapper: curl hinter sudo/env/timeout/xargs ist derselbe Download und braucht
+// denselben Deckel.
+test("erkennt curl hinter einem Wrapper", () => {
+  const uncapped = [
+    "sudo curl -fsSL https://example.test/a",
+    "env HTTPS_PROXY=http://proxy curl -fsSL https://example.test/b",
+    "timeout 30 curl -fsSL https://example.test/c",
+    "xargs curl -fsSL https://example.test/d",
+  ].flatMap((row) => findings(row));
+
+  assert.equal(uncapped.length, 4, "jeder Wrapper-Aufruf ohne Deckel muss gemeldet werden");
+  for (const finding of uncapped) assert.match(finding.command, /curl -fsSL/);
+});
+
+test("akzeptiert einen Wrapper-Aufruf mit Deckel", () => {
+  assert.deepEqual(findings("sudo curl -fsSL --max-time 20 https://example.test/a"), []);
+  assert.deepEqual(findings("timeout 60 curl -fsSL -m 20 https://example.test/b"), []);
+});
+
+test("erkennt curl nach if/while", () => {
+  const found = findings("if curl -fsSL https://example.test/health; then", "  echo ok", "fi");
+
+  assert.equal(found.length, 1);
+  assert.match(found[0].command, /health/);
+});
+
+test("command -v curl ist kein Aufruf", () => {
+  const result = inspect(FILE, text("command -v curl >/dev/null || exit 1", 'if ! command -v curl; then'));
+
+  assert.equal(result.calls, 0);
+  assert.deepEqual(result.findings, []);
+});
+
+// Variablen, die den ganzen Aufruf enthalten.
+test("akzeptiert einen ganzen Aufruf in einer Variablen mit Deckel", () => {
+  const found = findings(
+    'CURL_CMD="curl -fsS --max-time 8"',
+    '$CURL_CMD https://example.test/a -o /tmp/a',
+  );
+
+  assert.deepEqual(found, []);
+});
+
+test("meldet einen ganzen Aufruf in einer Variablen ohne Deckel", () => {
+  const found = findings('CURL_CMD="curl -fsS"', "$CURL_CMD https://example.test/a -o /tmp/a");
+
+  assert.equal(found.length, 1);
+  assert.match(found[0].command, /CURL_CMD=/);
+});
+
+test("akzeptiert einen Deckel am Aufruf selbst", () => {
+  const found = findings(
+    'CURL_CMD="curl -fsS"',
+    "$CURL_CMD --max-time 8 https://example.test/a -o /tmp/a",
+  );
+
+  assert.deepEqual(found, []);
+});
+
+test("eine Variable ohne curl ist kein Aufruf", () => {
+  const result = inspect(FILE, text('BASE_URL="https://example.test"', "$BASE_URL"));
+
+  assert.equal(result.calls, 0);
+  assert.deepEqual(result.findings, []);
+});
+
 // Der eigentliche Zweck: dieses Repository bleibt vollstaendig gedeckelt.
 test("dieses Repository ist vollstaendig gedeckelt", async () => {
-  const { calls, findings: repoFindings } = await audit();
+  const { calls, findings: repoFindings, files } = await audit();
 
-  assert.deepEqual(repoFindings, [], "kein curl-Aufruf in .github/workflows oder scripts/ ohne --max-time");
+  assert.deepEqual(repoFindings, [], "kein curl-Aufruf in den Skript-Verzeichnissen ohne --max-time");
   assert.ok(calls > 0, "es muessen curl-Aufrufe gefunden werden");
+  for (const root of ROOTS) assert.ok(files.length > 0 && root.length > 0);
+  assert.ok(
+    files.some((file) => file.startsWith(`scripts${path.sep}`)),
+    "scripts/ wird durchsucht",
+  );
+  assert.ok(!files.some((file) => file.startsWith(`src${path.sep}`)), "src/ mit Doku-Snippets bleibt aus");
 });
