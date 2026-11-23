@@ -4,8 +4,9 @@
  * Zeitdeckel hat:
  *
  *   - curl:  --max-time / -m
- *   - wget:  --timeout / -T (wget kennt keinen Gesamtdeckel; deshalb gilt auch
- *            der Wrapper "timeout <Sekunden> wget …" als Deckel)
+ *   - wget:  nur der Wrapper "timeout <Sekunden> wget …". --timeout/-T allein
+ *            zaehlt nicht: das deckelt nur DNS, Verbinden und Lesen, ein
+ *            langsamer Download laeuft weiter bis zum Job-Timeout.
  *   - fetch: AbortSignal.timeout(...), wenn die Antwort in eine Datei
  *            geschrieben wird (Download). Reine API-Aufrufe ohne Dateizugriff
  *            bleiben aussen vor, damit Produktionscode nicht umgebaut wird.
@@ -81,9 +82,11 @@ export const INDIRECT_AT_COMMAND = new RegExp(
 );
 const STARTS_WITH_DOWNLOAD = new RegExp(`^${WRAPPERS}(curl|wget)[ \\t]`);
 export const TIME_CAP = /(?:^|\s)--max-time(?:=|\s)|(?:^|\s)-m\s/;
-// wget: --timeout/-T deckelt jede Operation (DNS, Verbinden, Lesen); einen
-// Gesamtdeckel gibt es nur ueber den timeout-Wrapper.
-export const WGET_CAP = /(?:^|\s)--timeout(?:=|\s)|(?:^|\s)-T\s|^\s*timeout\s+\d/;
+// wget kennt keinen Gesamtdeckel: --timeout/-T begrenzt nur DNS, Verbinden und
+// Lesen, ein langsamer Download laeuft darueber hinaus weiter. Als Deckel zaehlt
+// deshalb nur der timeout-Wrapper vor dem Aufruf (auch hinter sudo/env/...).
+export const WGET_CAP =
+  /(?:^|[\s"';&|])(?:(?:sudo|env|nohup|nice|exec|time)(?:\s+[^\s;&|]+)*\s+)?timeout(?:\s+-[^\s]+)*\s+\d/;
 export const FETCH_CAP = /AbortSignal\.timeout\s*\(/;
 export const FETCH_AT_COMMAND = /\bfetch\s*\(/;
 // Marker dafuer, dass die Antwort in eine Datei geht (also ein Download ist).
@@ -383,7 +386,7 @@ export async function audit({ roots = ROOTS, skip = [THIS_FILE, TEST_FILE] } = {
 
 const CAP_HINTS = {
   curl: "--max-time",
-  wget: "--timeout",
+  wget: "timeout-Wrapper",
   fetch: "AbortSignal.timeout",
 };
 
@@ -399,7 +402,8 @@ async function main() {
     }
     console.error(
       `${findings.length} Download-Aufruf(e) ohne Zeitdeckel. curl: --max-time <Sekunden>, ` +
-        "wget: --timeout <Sekunden> oder timeout <Sekunden> wget …, " +
+        "wget: timeout <Sekunden> wget … (--timeout/-T allein genuegt nicht, es deckelt " +
+        "nur DNS, Verbinden und Lesen), " +
         "fetch: signal: AbortSignal.timeout(<Millisekunden>) " +
         "(Werte siehe jobs.android in .github/workflows/ci.yml).",
     );

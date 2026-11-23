@@ -210,16 +210,28 @@ test("eine Variable ohne curl ist kein Aufruf", () => {
   assert.deepEqual(result.findings, []);
 });
 
-// wget: wget selbst kennt keinen Gesamtdeckel, --timeout/-T deckelt DNS,
-// Verbinden und Lesen; ein echter Gesamtdeckel ist der timeout-Wrapper.
-test("akzeptiert wget mit --timeout und -T", () => {
-  assert.deepEqual(findings("wget --timeout=30 -q -O /tmp/a https://example.test/a"), []);
-  assert.deepEqual(findings("wget -T 30 -q -O /tmp/b https://example.test/b"), []);
+// wget: wget selbst kennt keinen Gesamtdeckel, --timeout/-T deckelt nur DNS,
+// Verbinden und Lesen; als Deckel zaehlt nur der timeout-Wrapper.
+test("meldet wget, das nur --timeout oder -T hat", () => {
+  for (const row of [
+    "wget --timeout=30 -q -O /tmp/a https://example.test/a",
+    "wget -T 30 -q -O /tmp/b https://example.test/b",
+    "sudo wget --timeout=20 -q -O /tmp/c https://example.test/c",
+  ]) {
+    const found = findings(row);
+    assert.equal(found.length, 1, row);
+    assert.equal(found[0].kind, "wget", row);
+    assert.match(found[0].command, /wget/, row);
+  }
 });
 
 test("akzeptiert wget hinter einem timeout-Wrapper", () => {
   assert.deepEqual(findings("timeout 180 wget -q -O /tmp/a https://example.test/a"), []);
-  assert.deepEqual(findings("sudo wget --timeout=20 -q -O /tmp/b https://example.test/b"), []);
+  assert.deepEqual(findings("sudo timeout 180 wget -q -O /tmp/b https://example.test/b"), []);
+  assert.deepEqual(
+    findings("env HTTPS_PROXY=http://proxy timeout 60 wget -q -O /tmp/c https://example.test/c"),
+    [],
+  );
 });
 
 test("meldet wget ohne Deckel", () => {
@@ -230,13 +242,23 @@ test("meldet wget ohne Deckel", () => {
   assert.match(found[0].command, /example\.test\/a/);
 });
 
-test("akzeptiert einen wget-Aufruf aus einer Variablen mit Deckel", () => {
+test("akzeptiert einen wget-Aufruf aus einer Variablen mit timeout-Wrapper", () => {
   const found = findings(
-    'WGET_CMD="wget -q --timeout=20"',
+    'WGET_CMD="timeout 60 wget -q"',
     "$WGET_CMD https://example.test/a -O /tmp/a",
   );
 
   assert.deepEqual(found, []);
+});
+
+test("ein --timeout aus einer Variablen deckt wget nicht ab", () => {
+  const found = findings(
+    'WGET_LIMIT="--timeout=60"',
+    "wget $WGET_LIMIT -q -O /tmp/a https://example.test/a",
+  );
+
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, "wget");
 });
 
 test("meldet einen wget-Aufruf aus einer Variablen ohne Deckel", () => {
@@ -337,7 +359,7 @@ test("akzeptiert einen Deckel aus einer gesourcten Lib-Datei", async () => {
   assert.equal(result.curl, 1);
 });
 
-test("akzeptiert einen wget-Deckel aus einer gesourcten Lib-Datei", async () => {
+test("akzeptiert einen wget-Wrapper aus einer gesourcten Lib-Datei", async () => {
   const result = await inspectFile(path.join("scripts", "run.sh"), {
     read: fakeFs({
       "run.sh": text(
@@ -345,7 +367,7 @@ test("akzeptiert einen wget-Deckel aus einer gesourcten Lib-Datei", async () => 
         ". lib/download-flags.sh",
         "$WGET_LIMIT -q -O /tmp/a https://example.test/a",
       ),
-      "download-flags.sh": text('WGET_LIMIT="wget --timeout=60"'),
+      "download-flags.sh": text('WGET_LIMIT="timeout 60 wget -q"'),
     }),
   });
 
