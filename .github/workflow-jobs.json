@@ -1,0 +1,115 @@
+{
+  ".github/workflows/admin-smoke.yml": {
+    "name": "Admin-Prüfung",
+    "jobs": {
+      "smoke": "Admin-Bereich prüfen"
+    }
+  },
+  ".github/workflows/amazon-secrets.yml": {
+    "name": "Amazon-Secrets einrichten",
+    "jobs": {
+      "configure": "Amazon-Secrets nach Fly übertragen"
+    }
+  },
+  ".github/workflows/amazon-sync.yml": {
+    "name": "Amazon-IAP-Abgleich",
+    "jobs": {
+      "sync": "Amazon-Abos erneut prüfen"
+    }
+  },
+  ".github/workflows/android-release.yml": {
+    "name": "Android-Release",
+    "jobs": {
+      "release": "Bauen, hochladen und veröffentlichen"
+    }
+  },
+  ".github/workflows/apple-app.yml": {
+    "name": "Apple-App",
+    "jobs": {
+      "ios": "iOS-Build und Smoke-Test",
+      "macos": "macOS-Build",
+      "tvos": "tvOS-Build"
+    }
+  },
+  ".github/workflows/backup-check.yml": {
+    "name": "Backup-Prüfung",
+    "jobs": {
+      "check": "Produktions-Backups auflisten"
+    }
+  },
+  ".github/workflows/bfsg-review.yml": {
+    "name": "BFSG-Prüfung",
+    "jobs": {
+      "review": "BFSG-Einordnung prüfen"
+    }
+  },
+  ".github/workflows/ci.yml": {
+    "name": "CI-Prüfungen",
+    "jobs": {
+      "android": "Android unit tests",
+      "apple-core": "Apple core tests",
+      "build": "Production build",
+      "checks": "Typecheck and tests",
+      "docker-staging-smoke": "Staging image smoke test",
+      "workflows": "Workflow-Lint"
+    }
+  },
+  ".github/workflows/deploy-smoke.yml": {
+    "name": "Deploy-Smoke-Test",
+    "jobs": {
+      "smoke": "Deployten Release prüfen"
+    }
+  },
+  ".github/workflows/deploy-staging.yml": {
+    "name": "Staging-Deploy",
+    "jobs": {
+      "deploy": "Auf Fly-Staging deployen"
+    }
+  },
+  ".github/workflows/deploy.yml": {
+    "name": "Produktions-Deploy",
+    "jobs": {
+      "deploy": "Auf Fly deployen"
+    }
+  },
+  ".github/workflows/device-notice-smoke.yml": {
+    "name": "Geräte-Vorwarnung im Konto",
+    "jobs": {
+      "production": "Geräte-Vorwarnung auf Produktion prüfen",
+      "staging": "Geräte-Vorwarnung auf Staging prüfen"
+    }
+  },
+  ".github/workflows/red-run-issue.yml": {
+    "name": "Rote Läufe melden",
+    "jobs": {
+      "failure": "Issue für roten Lauf öffnen",
+      "recovery": "Issue nach grünem Lauf schließen"
+    }
+  },
+  ".github/workflows/release-drift.yml": {
+    "name": "Release-Abweichung",
+    "jobs": {
+      "check": "Fallback mit Produktion vergleichen"
+    }
+  },
+  ".github/workflows/staging-canary.yml": {
+    "name": "Staging-Billing-Canary",
+    "jobs": {
+      "canary": "Staging-Billing-Canary ausführen",
+      "guard": "Entscheiden, ob der geplante Canary heute läuft",
+      "notify": "Über Canary-Fehler benachrichtigen"
+    }
+  },
+  ".github/workflows/trial-jobs.yml": {
+    "name": "Trial-Jobs",
+    "jobs": {
+      "trial-jobs": "Trials erinnern und ablaufen lassen"
+    }
+  },
+  ".github/workflows/vega-shaka.yml": {
+    "name": "Vega-Shaka-Smoke-Test",
+    "jobs": {
+      "verify": "Shaka-Setup, Build und HLS-Wiedergabe"
+    }
+  }
+}
