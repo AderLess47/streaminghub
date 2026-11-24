@@ -32,6 +32,7 @@
     "test:dependabot-coverage": "node --test scripts/check-dependabot-coverage.test.mjs",
     "test:expression-injection": "node --test scripts/check-expression-injection.test.mjs",
     "test:checker-wiring": "node --test scripts/check-checker-wiring.test.mjs",
+    "test:checker-cli": "node --test scripts/checker-cli.test.mjs",
     "test:db-migration": "node --test scripts/db-migration.test.mjs",
     "test:amazon-iap": "node --experimental-strip-types --test src/lib/amazon-iap.test.ts src/lib/amazon-subscriptions.test.ts src/lib/amazon-rtn.test.ts src/lib/amazon-sync.test.ts",
     "test:progress": "node --experimental-strip-types --test src/lib/watch-progress.test.ts",
