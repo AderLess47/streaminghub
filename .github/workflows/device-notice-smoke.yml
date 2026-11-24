@@ -74,13 +74,18 @@ jobs:
 
       - name: Zusammenfassung
         if: always()
+        # Werte ueber env: - im run:-Block wird jeder ${{ }}-Ausdruck vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
+        env:
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || 'main' }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           {
             echo "### Geräte-Vorwarnung im Konto (Staging)"
             echo
             echo "- Ziel: \`streaminghub-staging\` (127.0.0.1:3001)"
-            echo "- Commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
-            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Commit: \`$DEPLOYED_SHA\`"
+            echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"
 
   production:
@@ -123,11 +128,16 @@ jobs:
 
       - name: Zusammenfassung
         if: always()
+        # Werte ueber env: - im run:-Block wird jeder ${{ }}-Ausdruck vor dem
+        # Quoting ersetzt und waere dort Shell-Code.
+        env:
+          DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha || 'main' }}
+          JOB_STATUS: ${{ job.status }}
         run: |
           {
             echo "### Geräte-Vorwarnung im Konto (Produktion)"
             echo
             echo "- Ziel: \`streaminghub-org\` (127.0.0.1:3000)"
-            echo "- Commit: \`${{ github.event.workflow_run.head_sha || 'main' }}\`"
-            echo "- Ergebnis: ${{ job.status }}"
+            echo "- Commit: \`$DEPLOYED_SHA\`"
+            echo "- Ergebnis: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"

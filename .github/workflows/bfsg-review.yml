@@ -41,10 +41,14 @@ jobs:
       - name: Entscheidungsdatum prüfen
         id: check
         continue-on-error: true
+        # Wert ueber env: - ein ${{ }}-Ausdruck im run:-Block wird vor dem
+        # Quoting ersetzt; "${MAX_DAYS:-}" haelt set -u ruhig, wenn er fehlt.
+        env:
+          MAX_DAYS: ${{ inputs.max_days }}
         run: |
           set -euo pipefail
-          if [ -n "${{ inputs.max_days }}" ]; then
-            node scripts/bfsg-review.mjs --max-days "${{ inputs.max_days }}"
+          if [ -n "${MAX_DAYS:-}" ]; then
+            node scripts/bfsg-review.mjs --max-days "$MAX_DAYS"
           else
             node scripts/bfsg-review.mjs
           fi
