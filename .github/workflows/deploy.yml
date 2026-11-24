@@ -27,6 +27,10 @@ jobs:
     name: Auf Fly deployen
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # An der Umgebung haengen Umgebungs-Secrets und eine spaetere Freigaberegel
+    # (Required Reviewer); ohne sie laeuft der Produktions-Deploy an beidem
+    # vorbei und taucht in der Deployment-Historie der Umgebung nicht auf.
+    environment: production
     # `workflow_run` feuert auch für fehlgeschlagene oder abgebrochene Läufe
     # sowie für PRs. Ausgerollt wird nur ein erfolgreicher Push auf `main`.
     if: >-
