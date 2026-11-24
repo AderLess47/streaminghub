@@ -231,6 +231,7 @@ test("dieses Repository haelt alle drei Hygiene-Regeln ein", async () => {
   assert.equal(permissions, files.length);
   assert.equal(concurrency, files.length);
   assert.ok(jobs > 0, "keine Jobs gefunden");
+  // Strukturell statt fester Zahl: ein neuer Job soll den Test nicht rot machen,
+  // solange er selbst ein Timeout hat.
   assert.equal(timeouts, jobs, "jeder Job braucht ein Timeout");
-  assert.equal(jobs, 28);
 });
