@@ -8,10 +8,11 @@
  *   2. Auf Step-Ebene ist continue-on-error: true nur erlaubt, wenn der Step
  *      eine id: hat und ein spaeterer Step im selben Job steps.<id>.outcome
  *      liest: dann entscheidet sichtbar jemand, was mit dem Fehlschlag passiert
- *      (Issue oeffnen, Lauf explizit rot machen).
- *   3. Alles andere - Step ohne id, ohne outcome-Bezug, oder mit Ausdruck als
- *      Wert - steht mit Begruendung in EXEMPTIONS. Ein Eintrag ohne passenden
- *      Step ist selbst ein Befund, damit die Liste nicht verrottet.
+ *      (Issue oeffnen, ::warning::, Lauf explizit rot machen).
+ *   3. Eine Ausnahmeliste gibt es nicht: auch ein Aufraeum-Step, dessen Fehler
+ *      den Lauf nicht rot machen darf, haengt eine sichtbare ::warning:: an
+ *      (so in staging-canary.yml). Die Regel ist damit eine einzige, direkt im
+ *      Workflow pruefbare Bedingung, die nicht veralten kann.
  *
  * Faelle: scripts/check-continue-on-error.test.mjs.
  */
@@ -22,26 +23,24 @@ import { fileURLToPath } from "node:url";
 export const WORKFLOWS_DIR = path.join(".github", "workflows");
 const EXTENSIONS = new Set([".yml", ".yaml"]);
 
-// Datei::Step -> Grund. Nur Schritte, die bewusst keinen outcome-Bezug haben.
-export const EXEMPTIONS = {
-  "staging-canary.yml::Fehler-Issue nach Erholung schließen":
-    "raeumt ein offenes Fehler-Issue auf; ein API-Fehler beim Schliessen darf den Canary nicht rot machen, das Issue bleibt sichtbar offen",
-  "staging-canary.yml::Abweichungs-Issue nach Erholung schließen":
-    "raeumt ein offenes Abweichungs-Issue auf; ein API-Fehler beim Schliessen darf den Canary nicht rot machen",
-};
-
 const TOP_LEVEL = /^([A-Za-z0-9_.-]+):/;
 const JOB_HEADER = /^ {2}([A-Za-z0-9_-]+):\s*(?:#.*)?$/;
 const JOB_COE = /^ {4}continue-on-error:\s*(.*)$/;
-const STEP_START = /^ {6}- (?:name|uses):\s*(.*)$/;
+// Jeder Eintrag der steps:-Liste, unabhaengig davon, ob er mit name:, uses:,
+// run:, id: oder if: beginnt - die Schluessel eines Steps sind nicht geordnet.
+const STEP_START = /^ {6}- \S/;
 const STEP_COE = /^ {8}continue-on-error:\s*(.*)$/;
 const STEP_ID = /^ {8}id:\s*(.+?)\s*$/;
 const STEP_NAME = /^ {6}- name:\s*(.+?)\s*$/;
-
-const isIgnorable = (line) => line.trim() === "" || line.trimStart().startsWith("#");
+const STEP_KEY_NAME = /^ {8}name:\s*(.+?)\s*$/;
 
 function value(raw) {
   return raw.replace(/\s+#.*$/, "").trim();
+}
+
+function unquote(raw) {
+  const quoted = raw.match(/^(["'])(.*)\1$/);
+  return quoted ? quoted[2] : raw;
 }
 
 function jobBlocks(lines) {
@@ -66,7 +65,9 @@ function jobBlocks(lines) {
     const rows = [];
     for (let i = header.index + 1; i < stop; i += 1) rows.push({ line: i + 1, text: lines[i] });
 
-    const jobCoe = rows.find((row) => JOB_COE.test(row.text));
+    const jobCoeRow = rows.find((row) => JOB_COE.test(row.text));
+    const coe = jobCoeRow ? { line: jobCoeRow.line, value: value(jobCoeRow.text.match(JOB_COE)[1]) } : null;
+
     const steps = [];
     let current = null;
     for (const row of rows) {
@@ -78,21 +79,15 @@ function jobBlocks(lines) {
         continue;
       }
       if (!current) continue;
+      const name = row.text.match(STEP_KEY_NAME);
+      if (name) current.name = value(name[1]);
       const id = row.text.match(STEP_ID);
-      if (id) current.id = value(id[1]);
-      const coe = row.text.match(STEP_COE);
-      if (coe) current.coe = { line: row.line, value: value(coe[1]), index: row.line };
+      if (id) current.id = unquote(value(id[1]));
+      const stepCoe = row.text.match(STEP_COE);
+      if (stepCoe) current.coe = { line: row.line, value: value(stepCoe[1]) };
     }
 
-    return {
-      id: header.id,
-      line: header.index + 1,
-      start: header.index + 1,
-      end: stop,
-      coe: jobCoe ? { line: jobCoe.line, value: value(jobCoe.text.match(JOB_COE)[1]) } : null,
-      steps,
-      lines,
-    };
+    return { id: header.id, line: header.index + 1, end: stop, coe, steps, lines };
   });
 }
 
@@ -100,15 +95,12 @@ function jobBlocks(lines) {
 function outcomeReadAfter(job, step) {
   if (!step.id) return false;
   const pattern = new RegExp(`steps\\.${step.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.outcome`);
-  return job.lines
-    .slice(step.coe.line, job.end)
-    .some((text) => !text.trimStart().startsWith("#") && pattern.test(text));
+  return job.lines.slice(step.coe.line, job.end).some((text) => !text.trimStart().startsWith("#") && pattern.test(text));
 }
 
-export function inspect(file, text, { exempt = EXEMPTIONS } = {}) {
+export function inspect(file, text) {
   const lines = text.split(/\r?\n/);
   const findings = [];
-  const used = new Set();
   const jobs = jobBlocks(lines);
 
   for (const job of jobs) {
@@ -122,14 +114,7 @@ export function inspect(file, text, { exempt = EXEMPTIONS } = {}) {
     }
 
     for (const step of job.steps) {
-      if (!step.coe) continue;
-      if (step.coe.value === "false") continue;
-
-      const key = `${path.basename(file)}::${step.name}`;
-      if (exempt[key]) {
-        used.add(key);
-        continue;
-      }
+      if (!step.coe || step.coe.value === "false") continue;
       if (outcomeReadAfter(job, step)) continue;
 
       findings.push({
@@ -141,23 +126,16 @@ export function inspect(file, text, { exempt = EXEMPTIONS } = {}) {
     }
   }
 
-  for (const key of Object.keys(exempt)) {
-    if (key.startsWith(`${path.basename(file)}::`) && !used.has(key)) {
-      findings.push({ file, line: 1, reason: "stale-exemption", snippet: `Ausnahme ohne passenden Step: ${key}` });
-    }
-  }
-
   const steps = jobs.reduce(
     (sum, job) => sum + job.steps.filter((step) => step.coe && step.coe.value !== "false").length,
     0,
   );
-  return { findings, jobs: jobs.length, steps, exempted: used.size };
+  return { findings, jobs: jobs.length, steps };
 }
 
 const HINTS = {
   job: "continue-on-error auf Job-Ebene entfernen - ein Job, der nie rot wird, kann keinen Required Check erfuellen",
-  step: "dem Step eine id: geben und spaeter steps.<id>.outcome auswerten (Issue/::error/exit 1) oder den Grund in EXEMPTIONS eintragen",
-  "stale-exemption": "Eintrag in EXEMPTIONS entfernen oder den Step-Namen dort korrigieren",
+  step: "dem Step eine id: geben und spaeter steps.<id>.outcome auswerten (Issue/::warning::/exit 1)",
 };
 
 async function collect(directory) {
@@ -173,19 +151,18 @@ async function collect(directory) {
 
 export async function audit({ directory = WORKFLOWS_DIR } = {}) {
   const files = await collect(directory);
-  const result = { files: files.length, findings: [], jobs: 0, steps: 0, exempted: 0 };
+  const result = { files: files.length, findings: [], jobs: 0, steps: 0 };
   for (const file of files) {
     const inspected = inspect(file, await readFile(file, "utf8"));
     result.findings.push(...inspected.findings);
     result.jobs += inspected.jobs;
     result.steps += inspected.steps;
-    result.exempted += inspected.exempted;
   }
   return result;
 }
 
 async function main() {
-  const { files, findings, jobs, steps, exempted } = await audit();
+  const { files, findings, jobs, steps } = await audit();
 
   if (findings.length > 0) {
     for (const finding of findings) {
@@ -193,7 +170,7 @@ async function main() {
     }
     console.error(
       `${findings.length} Befund(e): continue-on-error verbirgt Befunde. Auf Job-Ebene ist es verboten; ` +
-        "auf Step-Ebene braucht es eine id: mit steps.<id>.outcome im selben Job oder einen Grund in EXEMPTIONS.",
+        "auf Step-Ebene braucht es eine id: mit steps.<id>.outcome im selben Job.",
     );
     process.exitCode = 1;
     return;
@@ -201,8 +178,7 @@ async function main() {
 
   console.log(
     `continue-on-error: ${files} Workflow-Dateien mit ${jobs} Job(s) geprueft, kein Job mit continue-on-error, ` +
-      `${steps} Step(s) mit continue-on-error (${exempted} davon per Ausnahme), ` +
-      `alle mit steps.<id>.outcome oder Begruendung (${WORKFLOWS_DIR}).`,
+      `${steps} Step(s) mit continue-on-error, alle mit steps.<id>.outcome im selben Job (${WORKFLOWS_DIR}).`,
   );
 }
 

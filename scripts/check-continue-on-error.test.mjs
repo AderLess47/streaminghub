@@ -6,8 +6,8 @@ const FILE = ".github/workflows/probe.yml";
 
 const workflow = (...jobs) => ["on: push", "jobs:", ...jobs].join("\n");
 const job = (...rows) => ["  build:", "    runs-on: ubuntu-latest", "    steps:", ...rows];
-const findings = (text, options) => inspect(FILE, text, options).findings;
-const reasons = (text, options) => findings(text, options).map((finding) => finding.reason);
+const findings = (text) => inspect(FILE, text).findings;
+const reasons = (text) => findings(text).map((finding) => finding.reason);
 
 test("akzeptiert einen Step mit id und spaeterem steps.<id>.outcome", () => {
   const text = workflow(
@@ -97,24 +97,31 @@ test("ein Ausdruck als Wert wird gemeldet", () => {
   assert.deepEqual(reasons(text), ["step"]);
 });
 
-test("Ausnahmen greifen nur mit passendem Dateinamen und Step-Namen", () => {
-  const text = workflow(...job("      - name: Aufraeumen", "        continue-on-error: true", "        run: gh issue close 1"));
-  const exempt = { "probe.yml::Aufraeumen": "Aufraeumen darf nicht rot machen" };
+test("findet einen Step, der nicht mit name: oder uses: beginnt", () => {
+  const text = workflow(...job("      - id: check", "        continue-on-error: true", "        run: node check.mjs"));
 
-  assert.deepEqual(reasons(text), ["step"]);
-  const inspected = inspect(FILE, text, { exempt });
-  assert.deepEqual(inspected.findings, []);
-  assert.equal(inspected.exempted, 1);
-
-  const foreign = inspect(".github/workflows/other.yml", text, { exempt });
-  assert.deepEqual(foreign.findings.map((finding) => finding.reason), ["step"]);
+  assert.deepEqual(reasons(text), ["step"], "Listenplatz zaehlt, nicht der erste Schluessel");
 });
 
-test("eine Ausnahme ohne passenden Step ist selbst ein Befund", () => {
-  const text = workflow(...job("      - name: Pruefen", "        id: check", "        continue-on-error: true", "        run: node check.mjs", "      - run: echo ${{ steps.check.outcome }}"));
-  const exempt = { "probe.yml::Gibt es nicht": "veraltet" };
+test("liest einen Step-Namen, der nicht in der ersten Zeile steht", () => {
+  const text = workflow(...job("      - run: node check.mjs", "        name: Spaet benannt", "        continue-on-error: true"));
 
-  assert.deepEqual(reasons(text, { exempt }), ["stale-exemption"]);
+  assert.match(findings(text)[0].snippet, /Step "Spaet benannt"/);
+});
+
+test("eine gequotete id wird erkannt", () => {
+  const text = workflow(
+    ...job(
+      "      - name: Pruefen",
+      '        id: "check"',
+      "        continue-on-error: true",
+      "        run: node check.mjs",
+      "      - run: echo hi",
+      "        if: steps.check.outcome == 'failure'",
+    ),
+  );
+
+  assert.deepEqual(findings(text), []);
 });
 
 test("Kommentarzeilen loesen keine Befunde aus", () => {
@@ -123,7 +130,7 @@ test("Kommentarzeilen loesen keine Befunde aus", () => {
   assert.deepEqual(findings(text), []);
 });
 
-test("zaehlt Jobs, Steps und Ausnahmen", () => {
+test("zaehlt Jobs und Steps", () => {
   const text = workflow(
     ...job(
       "      - name: Pruefen",
@@ -132,23 +139,23 @@ test("zaehlt Jobs, Steps und Ausnahmen", () => {
       "        run: node check.mjs",
       "      - run: echo ${{ steps.check.outcome }}",
       "      - name: Aufraeumen",
+      "        id: cleanup",
       "        continue-on-error: true",
       "        run: gh issue close 1",
+      "      - run: echo ${{ steps.cleanup.outcome }}",
     ),
   );
-  const inspected = inspect(FILE, text, { exempt: { "probe.yml::Aufraeumen": "Aufraeumen" } });
+  const inspected = inspect(FILE, text);
 
   assert.equal(inspected.jobs, 1);
   assert.equal(inspected.steps, 2);
-  assert.equal(inspected.exempted, 1);
 });
 
-test("dieses Repository begruendet jedes continue-on-error", async () => {
+test("dieses Repository haelt jedes continue-on-error sichtbar", async () => {
   const result = await audit();
 
   assert.deepEqual(result.findings, []);
   assert.equal(result.files, 17);
   assert.equal(result.jobs, 28);
   assert.equal(result.steps, 3);
-  assert.equal(result.exempted, 2, "zwei Aufraeum-Steps im Canary");
 });
