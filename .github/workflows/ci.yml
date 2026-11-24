@@ -217,8 +217,9 @@ jobs:
       - name: Tests der Workflow-Kopf-Prüfung
         run: npm run test:workflow-hygiene
 
-      # Und dasselbe fuer die Basis-Images: ohne Faelle wuerde ein beweglicher
-      # Tag oder eine auseinandergelaufene Node-Version still durchgehen.
+      # Auch die Basis-Images brauchen eigene Faelle: ohne sie wuerde ein
+      # beweglicher Tag oder eine auseinandergelaufene Node-Version still
+      # durchgehen.
       - name: Tests der Docker-Basis-Image-Prüfung
         run: npm run test:docker-base-images
 
@@ -315,17 +316,16 @@ jobs:
           # Exit 2 = Datei ist kein gueltiges YAML.
           "$RUNNER_TEMP/yajsv" -s "$RUNNER_TEMP/dependabot-2.0.json" .github/dependabot.yml
 
-      # Das Schema sagt nur, ob die Eintraege gueltig sind - nicht, ob alle
-      # genutzten Oekosysteme vorkommen. Fehlt der docker-Block, bleiben die
-      # gepinnten Image-Digests stehen und Sicherheitsupdates kommen nicht mehr;
-      # fehlt github-actions, veralten die gepinnten Action-SHAs. Genau diese
-      # Luecke prueft der naechste Schritt: Workflows vorhanden -> Eintrag da,
-      # Dockerfile vorhanden -> Eintrag da. Beim docker-Eintrag zusaetzlich:
-      # dessen directory/directories muss das Verzeichnis des Dockerfile nennen,
-      # weil Dependabot nicht rekursiv sucht. Faelle in
-      # scripts/check-dependabot-coverage.test.mjs.
-      - name: Dependabot-Abdeckung pruefen
-        run: npm run check:dependabot-coverage
+      # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
+      # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
+      # vor #427. Der Check deckt .github, ops, scripts, vega, apple, android
+      # und die Repo-Wurzel ab: curl braucht --max-time, wget nur den
+      # timeout-Wrapper (--timeout/-T deckelt bloss DNS, Verbinden und Lesen),
+      # ein fetch-Download AbortSignal.timeout; Deckel
+      # aus gesourcten Lib-Dateien werden aufgeloest. Er wird rot, sobald ein
+      # Aufruf den Deckel verliert oder ein neuer ohne Deckel dazukommt.
+      - name: Zeitdeckel der Download-Aufrufe pruefen
+        run: npm run check:curl-timeouts
 
       # Actions duerfen nicht wieder auf bewegliche Tags zeigen: ein
       # verschobener Tag liefe ungeprueft in Jobs mit Deploy- und
@@ -356,6 +356,18 @@ jobs:
       - name: Docker-Basis-Images pruefen
         run: npm run check:docker-base-images
 
+      # Das Schema sagt nur, ob die Eintraege gueltig sind - nicht, ob alle
+      # genutzten Oekosysteme vorkommen. Fehlt der docker-Block, bleiben die
+      # gepinnten Image-Digests stehen und Sicherheitsupdates kommen nicht mehr;
+      # fehlt github-actions, veralten die gepinnten Action-SHAs. Genau diese
+      # Luecke prueft der Schritt "Dependabot-Abdeckung pruefen" weiter unten:
+      # Workflows vorhanden -> Eintrag da, Dockerfile vorhanden -> Eintrag da.
+      # Beim docker-Eintrag zusaetzlich: dessen directory/directories muss das
+      # Verzeichnis des Dockerfile nennen, weil Dependabot nicht rekursiv sucht.
+      # Faelle in scripts/check-dependabot-coverage.test.mjs.
+      - name: Dependabot-Abdeckung pruefen
+        run: npm run check:dependabot-coverage
+
       # GitHub ersetzt ${{ }} vor der Shell. Steht der Ausdruck im run:-Block,
       # wird sein Inhalt zu Shell-Code - ein PR-Titel oder Branch-Name mit " oder
       # $(...) fuehrt dann Befehle aus, im Job mit Secrets und Deploy-Rechten.
@@ -365,17 +377,6 @@ jobs:
       # scripts/check-expression-injection.test.mjs.
       - name: Ausdruecke in run-Bloecken pruefen
         run: npm run check:expression-injection
-
-      # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
-      # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
-      # vor #427. Der Check deckt .github, ops, scripts, vega, apple, android
-      # und die Repo-Wurzel ab: curl braucht --max-time, wget nur den
-      # timeout-Wrapper (--timeout/-T deckelt bloss DNS, Verbinden und Lesen),
-      # ein fetch-Download AbortSignal.timeout; Deckel
-      # aus gesourcten Lib-Dateien werden aufgeloest. Er wird rot, sobald ein
-      # Aufruf den Deckel verliert oder ein neuer ohne Deckel dazukommt.
-      - name: Zeitdeckel der Download-Aufrufe pruefen
-        run: npm run check:curl-timeouts
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
