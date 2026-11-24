@@ -17,8 +17,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["node:sqlite"],
   // Dev-only: the cloud preview host proxies to this server. Exact hostname,
-  // never a wildcard. Production does not use the dev server.
-  allowedDevOrigins: ["pv-93f06bd5e4c5-592c78a8-9dae-4adf-b586-69836b8a1c1e.style.dev"],
+  // never a wildcard. Production does not use the dev server. The hostname
+  // changes with every preview, so it is configured per environment instead of
+  // being committed.
+  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   async headers() {
     return [
       {

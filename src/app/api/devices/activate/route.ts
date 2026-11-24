@@ -118,13 +118,8 @@ export async function POST(request: Request) {
     now,
     now,
   );
-  run(
-    `UPDATE pairing_requests SET claimed_at = ?, device_id = ?, user_id = ? WHERE id = ?`,
-    now,
-    deviceId,
-    user.id,
-    pairing.id,
-  );
+  // Legacy-Zeile für ältere Clients; die Autorisierung läuft über den signierten
+  // Device-Token, der Status wird bei jedem Aufruf gegen `devices` geprüft.
   run(
     `INSERT INTO device_tokens (token_hash, device_id, user_id, created_at)
      VALUES (?, ?, ?, ?)`,
@@ -132,6 +127,13 @@ export async function POST(request: Request) {
     deviceId,
     user.id,
     now,
+  );
+  run(
+    `UPDATE pairing_requests SET claimed_at = ?, device_id = ?, user_id = ? WHERE id = ?`,
+    now,
+    deviceId,
+    user.id,
+    pairing.id,
   );
 
   logAudit({

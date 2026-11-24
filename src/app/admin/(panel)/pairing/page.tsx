@@ -1,16 +1,25 @@
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { FormStatus } from "@/components/form-status";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { blockPairingCodeAction } from "@/lib/actions/admin";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPairingPage() {
+export default async function AdminPairingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireStaff();
   const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM pairing_requests`)?.c ?? 0;
+  const page = parsePage(params.page, total);
 
   const rows = all<{
     id: string;
@@ -25,7 +34,9 @@ export default async function AdminPairingPage() {
   }>(
     `SELECT p.id, p.code_prefix, p.device_name, p.platform, p.attempts, p.created_at, p.expires_at, p.claimed_at, u.email
      FROM pairing_requests p LEFT JOIN users u ON u.id = p.user_id
-     ORDER BY p.created_at DESC LIMIT 100`,
+     ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+    page.pageSize,
+    page.offset,
   );
 
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
@@ -156,6 +167,17 @@ export default async function AdminPairingPage() {
           <li className="card p-6 text-center text-xs text-muted">{t.admin.pairing.empty}</li>
         ) : null}
       </ul>
+
+      <Pager
+        basePath="/admin/pairing"
+        params={{}}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
 
       <p className="text-[0.68rem] leading-relaxed text-muted">
         Codes werden ausschließlich als Hash gespeichert. Nach Einlösung, Ablauf oder fünf Fehlversuchen sind sie

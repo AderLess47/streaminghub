@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Dictionary } from "@/i18n/de";
 import type { Locale } from "@/i18n/config";
-import { localeMeta, locales } from "@/i18n/config";
 import { focusSoon } from "./focus-soon";
 import { FormStatus } from "./form-status";
 import { Icon } from "./icons";
@@ -98,7 +97,7 @@ export function LoginForm({
   const [step, setStep] = useState<"credentials" | "mfa">("credentials");
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [mfaCode, setMfaCode] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const { pending, error, fields, submit, setError } = useAuthSubmit(

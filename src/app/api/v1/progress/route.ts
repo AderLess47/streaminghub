@@ -1,4 +1,4 @@
-import { apiError, clientIp, json, tooManyRequests } from "@/lib/api";
+import { apiError, json, tooManyRequests } from "@/lib/api";
 import { all, get, nowIso, run } from "@/lib/db";
 import { verifyDeviceToken } from "@/lib/device-auth";
 import { getEntitlements } from "@/lib/entitlements";

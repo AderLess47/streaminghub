@@ -34,6 +34,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/backup-db.mjs ./scripts/backup-db.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/db-maintenance.mjs ./scripts/db-maintenance.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/contact-retention.mjs ./scripts/contact-retention.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/audit-retention.mjs ./scripts/audit-retention.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/staging-canary-assert.mjs ./scripts/staging-canary-assert.mjs

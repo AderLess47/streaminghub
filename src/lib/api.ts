@@ -49,6 +49,13 @@ export { clientIp } from "./client-ip";
  * are protected by bearer tokens instead of cookies.
  */
 export function isSameOrigin(request: Request): boolean {
+  // Moderne Browser senden Sec-Fetch-Site bei jedem Request. Ein explizit
+  // fremder Kontext wird abgelehnt, auch wenn Origin fehlt.
+  const fetchSite = request.headers.get("sec-fetch-site");
+  // Nur same-origin ist erlaubt; "same-site" (Subdomain) wäre weiterhin ein
+  // fremder Origin. Clients ohne den Header sind die native App.
+  if (fetchSite && fetchSite !== "same-origin") return false;
+
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
   if (!origin) return true;
@@ -60,9 +67,20 @@ export function isSameOrigin(request: Request): boolean {
   }
 }
 
+/** Kein Aufruf braucht mehr; schützt vor riesigen JSON-Bodies. */
+const MAX_BODY_BYTES = 32 * 1024;
+
 export async function parseBody<S extends ZodTypeAny>(request: Request, schema: S): Promise<
   { ok: true; data: output<S> } | { ok: false; response: NextResponse }
 > {
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return {
+      ok: false,
+      response: apiError("invalid_request", "Die Anfrage ist zu groß."),
+    };
+  }
+
   let raw: unknown;
   try {
     raw = await request.json();

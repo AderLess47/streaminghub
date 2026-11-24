@@ -53,7 +53,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /* --------------------------------- sending -------------------------------- */
 
-export async function sendMail(mail: QueuedMail): Promise<DeliveryResult> {
+export async function sendMail(
+  mail: QueuedMail,
+  options: { maxAttempts?: number } = {},
+): Promise<DeliveryResult> {
   const id = randomToken(9);
   run(
     `INSERT INTO outbox_emails (id, to_email, subject, body_text, kind, status, created_at)
@@ -70,7 +73,7 @@ export async function sendMail(mail: QueuedMail): Promise<DeliveryResult> {
     return { delivered: false, queued: true, id, reason: "email_not_configured" };
   }
 
-  return deliver(id);
+  return deliver(id, options.maxAttempts);
 }
 
 /** Re-attempt delivery of an outbox entry (admin action). */
@@ -85,7 +88,7 @@ export async function resendMail(id: string): Promise<DeliveryResult> {
   return deliver(id);
 }
 
-async function deliver(id: string): Promise<DeliveryResult> {
+async function deliver(id: string, maxAttempts = MAX_ATTEMPTS): Promise<DeliveryResult> {
   const row = get<OutboxRow>(
     `SELECT id, to_email, subject, body_text, kind, status FROM outbox_emails WHERE id = ?`,
     id,
@@ -112,7 +115,8 @@ async function deliver(id: string): Promise<DeliveryResult> {
   const html = renderHtml(row.body_text);
   let lastError = "Unbekannter Fehler";
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  const attempts = Math.min(Math.max(maxAttempts, 1), MAX_ATTEMPTS);
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     const attemptedAt = nowIso();
     run(
       `UPDATE outbox_emails SET attempts = attempts + 1, last_attempt_at = ? WHERE id = ?`,

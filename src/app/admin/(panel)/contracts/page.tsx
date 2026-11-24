@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { setContractRequestHandledAction } from "@/lib/actions/admin";
 import {
   contractRequestStats,
+  countContractRequests,
   listContractRequests,
   type ContractRequest,
   type ContractRequestKind,
 } from "@/lib/contract-requests";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -60,15 +63,17 @@ function href(filter: Filter, next: Partial<Filter>): string {
 export default async function AdminContractsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; state?: string; ok?: string }>;
+  searchParams: Promise<{ kind?: string; state?: string; ok?: string; page?: string }>;
 }) {
   await requireStaff();
-  const { kind, state, ok } = await searchParams;
+  const { kind, state, ok, page: pageParam } = await searchParams;
   const { t, locale } = await getI18n();
   const de = locale !== "en";
 
   const filter = parseFilter(kind, state);
-  const rows = listContractRequests({ ...filter, limit: 200 });
+  const total = countContractRequests(filter);
+  const page = parsePage(pageParam, total);
+  const rows = listContractRequests({ ...filter, limit: page.pageSize, offset: page.offset });
   const stats = contractRequestStats();
 
   const dateFormat = new Intl.DateTimeFormat(de ? "de-DE" : "en-GB", {
@@ -322,6 +327,17 @@ export default async function AdminContractsPage({
           <li className="card p-6 text-center text-xs text-muted">{t.admin.contracts.empty}</li>
         ) : null}
       </ul>
+
+      <Pager
+        basePath="/admin/contracts"
+        params={{ kind: filter.kind, state: filter.state }}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
     </div>
   );
 }

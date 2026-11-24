@@ -4,14 +4,14 @@ import { logAudit } from "@/lib/audit";
 import { env, isEmailConfigured } from "@/lib/env";
 import { sendMail, verificationMail } from "@/lib/mail";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { getSessionUser } from "@/lib/session";
+import { getFullyAuthenticatedUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiError("forbidden", "Ungültige Herkunft der Anfrage.");
 
-  const user = await getSessionUser();
+  const user = await getFullyAuthenticatedUser();
   if (!user) return apiError("unauthorized", "Bitte melde dich an.");
 
   const ip = clientIp(request);

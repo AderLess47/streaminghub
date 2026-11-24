@@ -1,4 +1,4 @@
-import { consumeAuthToken, hashPassword } from "@/lib/auth";
+import { consumeAuthToken, hashPasswordAsync } from "@/lib/auth";
 import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { nowIso, run } from "@/lib/db";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   run(
     `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`,
-    hashPassword(parsed.data.password),
+    await hashPasswordAsync(parsed.data.password),
     nowIso(),
     row.user_id,
   );

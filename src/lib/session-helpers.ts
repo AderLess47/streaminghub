@@ -7,8 +7,12 @@ export {
   clearSessionCookie,
   createSession,
   currentSessionTokenHash,
-  markSessionMfaVerified,
+  discardCurrentSession,
+  getFullyAuthenticatedUser,
   invalidateUserSessions,
+  isMfaPending,
+  markSessionMfaVerified,
+  pruneUserSessions,
   SESSION_COOKIE,
 } from "./session";
 export { get } from "./db";

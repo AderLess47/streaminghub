@@ -13,7 +13,8 @@ primary_region = "fra"
   BACKUP_DIR = "/app/data/backups"
   BACKUP_RETENTION_DAYS = "30"
   AMAZON_STORE_URL = ""
-  ADMIN_EMAIL = "aarondursun@gmail.com"
+  # ADMIN_EMAIL / ADMIN_PASSWORD sind Fly-Secrets und gehören nicht ins Repository:
+  # fly secrets set ADMIN_EMAIL=… ADMIN_PASSWORD=…
   EMAIL_FROM = "StreamingHub <service@streaminghub.org>"
   EMAIL_REPLY_TO = "service@streaminghub.org"
   STRIPE_PRICE_ID = "price_1UdbPYPmp8Jh8xSPMWv47Lya"

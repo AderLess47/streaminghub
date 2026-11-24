@@ -21,6 +21,14 @@ import {
 
 // Weiterhin von hier exportiert, damit bestehende Importe unverändert bleiben.
 export { PREMIUM_PLAN_ID, PREMIUM_PRICE_EUR };
+
+/**
+ * Mails aus Zahlungs-Webhooks und Bestätigungsrouten: genau ein Zustellversuch,
+ * damit Stripe/Svix innerhalb ihres Zeitfensters eine Antwort erhalten. Der
+ * Ausgang behält die Nachricht und der Admin kann sie erneut senden.
+ */
+const sendWebhookMail = (mail: Parameters<typeof sendMail>[0]) =>
+  sendMail(mail, { maxAttempts: 1 });
 const STRIPE_TIMEOUT_MS = 10_000;
 
 export type CheckoutOutcome =
@@ -389,9 +397,14 @@ export type StripeEvent = {
 };
 
 export async function applyStripeEvent(event: StripeEvent) {
+  // Claim-then-complete: Das Ereignis wird mit processed_at = NULL angelegt und
+  // erst nach erfolgreicher Zustandsänderung als erledigt markiert. Bricht der
+  // Prozess dazwischen ab, verarbeitet der nächste Stripe-Retry es erneut,
+  // statt es fälschlich als Duplikat zu verwerfen.
   const inserted = run(
-    `INSERT OR IGNORE INTO subscription_events (id, user_id, provider, event_type, provider_event_id, payload, created_at)
-     VALUES (?, ?, 'stripe', ?, ?, ?, ?)`,
+    `INSERT OR IGNORE INTO subscription_events
+       (id, user_id, provider, event_type, provider_event_id, payload, processed_at, created_at)
+     VALUES (?, ?, 'stripe', ?, ?, ?, NULL, ?)`,
     randomUUID(),
     null,
     event.type,
@@ -399,7 +412,15 @@ export async function applyStripeEvent(event: StripeEvent) {
     JSON.stringify(event.data.object).slice(0, 200_000),
     nowIso(),
   );
-  if (inserted.changes === 0) return { handled: true, duplicate: true as const };
+  if (inserted.changes === 0) {
+    const existing = get<{ processed_at: string | null }>(
+      `SELECT processed_at FROM subscription_events WHERE provider_event_id = ?`,
+      event.id,
+    );
+    // Bereits vollständig angewendet: Retry darf nichts wiederholen.
+    if (!existing || existing.processed_at) return { handled: true, duplicate: true as const };
+    // Früherer Versuch abgebrochen: erneut anwenden (Zustand und Mails sind idempotent).
+  }
 
   const object = event.data.object;
   const metadata = (object.metadata as Record<string, string> | undefined) ?? {};
@@ -509,7 +530,7 @@ export async function applyStripeEvent(event: StripeEvent) {
       if (wasPastDue) {
         const user = userContact(userId);
         if (user) {
-          await sendMail({
+          await sendWebhookMail({
             to: user.email,
             ...paymentRecoveredMail({ name: user.display_name, locale: user.locale }),
             kind: "subscription",
@@ -529,7 +550,7 @@ export async function applyStripeEvent(event: StripeEvent) {
       // Nur der erste Fehlversuch informiert den Kunden; die Wiederholungen
       // innerhalb desselben Zahlungsplans wären dieselbe Nachricht.
       if (user && attemptCount <= 1) {
-        await sendMail({
+        await sendWebhookMail({
           to: user.email,
           ...paymentFailedMail({ name: user.display_name, locale: user.locale }),
           kind: "subscription",
@@ -546,7 +567,7 @@ export async function applyStripeEvent(event: StripeEvent) {
                 dateStyle: "long",
               })
             : null;
-        await sendMail({
+        await sendWebhookMail({
           to: env.supportEmail,
           ...paymentFailedSupportNotice({
             name: user.display_name,
@@ -564,7 +585,12 @@ export async function applyStripeEvent(event: StripeEvent) {
       return { handled: false, reason: "ignored" as const, duplicate: false as const };
   }
 
-  run(`UPDATE subscription_events SET user_id = ? WHERE provider_event_id = ?`, userId, event.id);
+  run(
+    `UPDATE subscription_events SET user_id = ?, processed_at = ? WHERE provider_event_id = ?`,
+    userId,
+    nowIso(),
+    event.id,
+  );
   return { handled: true, duplicate: false as const, status };
 }
 
@@ -572,11 +598,12 @@ export async function applyStripeEvent(event: StripeEvent) {
 function claimMailMarker(userId: string, key: string) {
   const result = run(
     `INSERT OR IGNORE INTO subscription_events
-       (id, user_id, provider, event_type, provider_event_id, payload, created_at)
-     VALUES (?, ?, 'stripe', 'mail.sent', ?, '{}', ?)`,
+       (id, user_id, provider, event_type, provider_event_id, payload, processed_at, created_at)
+     VALUES (?, ?, 'stripe', 'mail.sent', ?, '{}', ?, ?)`,
     randomUUID(),
     userId,
     key,
+    nowIso(),
     nowIso(),
   );
   return Number(result.changes ?? 0) > 0;
@@ -634,7 +661,7 @@ export async function notifyStoreSubscriptionEnded(input: {
           deviceLimit,
           devicesRevoked,
         });
-  await sendMail({ to: user.email, ...template, kind: "subscription" });
+  await sendWebhookMail({ to: user.email, ...template, kind: "subscription" });
   return true;
 }
 
@@ -660,7 +687,7 @@ async function sendPurchaseConfirmation(params: {
   const priceCents = subscription?.price_cents ?? cents(PREMIUM_PRICE_EUR);
   const interval =
     billingIntervalOf(subscription?.plan, subscription?.billing_interval) ?? "month";
-  await sendMail({
+  await sendWebhookMail({
     to: user.email,
     ...purchaseConfirmationMail({
       name: user.display_name,
@@ -686,7 +713,7 @@ async function mailSubscriptionEnded(
   if (!claimMailMarker(userId, key)) return;
   const deviceLimit = freeDeviceLimit();
   const devicesRevoked = revokeDevicesOverLimit(userId, nowIso(), deviceLimit, "subscription_ended");
-  await sendMail({
+  await sendWebhookMail({
     to: user.email,
     ...subscriptionEndedMail({
       name: user.display_name,

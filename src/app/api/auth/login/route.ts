@@ -1,10 +1,14 @@
-import { verifyPassword } from "@/lib/auth";
+import { verifyPasswordAsync } from "@/lib/auth";
 import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { get, nowIso, run } from "@/lib/db";
 import { verifyTotp } from "@/lib/totp";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { applySessionCookie, createSession } from "@/lib/session-helpers";
+import {
+  applySessionCookie,
+  createSession,
+  discardCurrentSession,
+} from "@/lib/session-helpers";
 import { loginSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
     email,
   );
 
-  if (!user || !verifyPassword(parsed.data.password, user.password_hash)) {
+  if (!user || !(await verifyPasswordAsync(parsed.data.password, user.password_hash))) {
     logAudit({ action: "auth.login_failed", actorEmail: email, ip });
     return apiError("invalid_request", "E-Mail-Adresse oder Passwort ist falsch.");
   }
@@ -55,6 +59,9 @@ export async function POST(request: Request) {
 
   if (mfaRequired) {
     if (!parsed.data.mfaCode) {
+      // Nur eine Sitzung für den MFA-Schritt: Sie darf weder Dashboard noch
+      // Kontodaten erreichen (siehe isMfaPending in session.ts).
+      await discardCurrentSession();
       const pendingSession = await createSession(user.id, {
         ip,
         userAgent: request.headers.get("user-agent"),
@@ -72,6 +79,7 @@ export async function POST(request: Request) {
     }
   }
 
+  await discardCurrentSession();
   const session = await createSession(user.id, {
     ip,
     userAgent: request.headers.get("user-agent"),

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Icon } from "@/components/icons";
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { Badge } from "@/components/ui";
 import type { Dictionary } from "@/i18n/de";
@@ -30,15 +32,28 @@ export function CustomerTable({
   dictionary,
   initialQuery,
   total,
+  locale,
+  pager,
 }: {
   rows: CustomerRow[];
   dictionary: Dictionary;
   initialQuery: string;
   /** Gesamtzahl der Konten; ist sie größer als die geladene Liste, sucht der Server mit. */
   total: number;
+  locale: string;
+  /** Blätterung der ungefilterten Liste (Zahlen ohne Suchbegriff). */
+  pager: {
+    page: number;
+    pages: number;
+    total: number;
+    previousLabel: string;
+    nextLabel: string;
+    pageLabel: string;
+  };
 }) {
   const truncated = total > rows.length;
   const t = dictionary;
+  const de = locale !== "en";
   const [query, setQuery] = useState(initialQuery);
   const [remote, setRemote] = useState<CustomerRow[]>([]);
   const [searching, setSearching] = useState(false);
@@ -191,14 +206,18 @@ export function CustomerTable({
                       <option value="support">support</option>
                       <option value="admin">admin</option>
                     </select>
-                    <button
-                      type="submit"
+                    <ConfirmSubmitButton
                       className="btn btn-ghost btn-sm !min-w-11 !px-2"
                       title={t.ui.save}
-                      aria-label={t.ui.save}
+                      ariaLabel={`${t.admin.customers.role}: ${row.email}`}
+                      message={
+                        de
+                          ? "Rolle dieses Kontos ändern? Adminrechte umfassen alle Bereiche."
+                          : "Change this account's role? Admin grants full access."
+                      }
                     >
                       <Icon name="check" size={13} />
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </td>
                 <td>{row.devices}</td>
@@ -214,26 +233,38 @@ export function CustomerTable({
                       <input type="hidden" name="userId" value={row.id} />
                       <input type="hidden" name="disable" value={row.disabled ? "0" : "1"} />
                       <input type="hidden" name="returnTo" value="/admin/customers" />
-                      <button
-                        type="submit"
+                      <ConfirmSubmitButton
                         className="btn btn-ghost btn-sm !min-w-11 !px-2"
                         title={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
-                        aria-label={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
+                        ariaLabel={`${row.disabled ? t.admin.customers.enable : t.admin.customers.disable}: ${row.email}`}
+                        message={
+                          row.disabled
+                            ? de
+                              ? "Konto wieder aktivieren?"
+                              : "Re-enable this account?"
+                            : de
+                              ? "Konto deaktivieren? Der Kunde wird sofort abgemeldet."
+                              : "Disable this account? The customer is signed out immediately."
+                        }
                       >
                         <Icon name={row.disabled ? "check" : "close"} size={13} />
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                     <form action={resetCustomerMfaAction}>
                       <input type="hidden" name="userId" value={row.id} />
                       <input type="hidden" name="returnTo" value="/admin/customers" />
-                      <button
-                        type="submit"
+                      <ConfirmSubmitButton
                         className="btn btn-ghost btn-sm !min-w-11 !px-2"
                         title={t.admin.customers.resetMfa}
-                        aria-label={t.admin.customers.resetMfa}
+                        ariaLabel={`${t.admin.customers.resetMfa}: ${row.email}`}
+                        message={
+                          de
+                            ? "MFA für dieses Konto zurücksetzen? Der Nutzer muss sie neu einrichten."
+                            : "Reset MFA for this account? The user must enrol again."
+                        }
                       >
                         <Icon name="shield" size={13} />
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                     <Link
                       href={`/admin/customers/${row.id}`}
@@ -311,9 +342,18 @@ export function CustomerTable({
                   <option value="support">support</option>
                   <option value="admin">admin</option>
                 </select>
-                <button type="submit" className="btn btn-ghost btn-sm !min-w-11 !px-2" title={t.ui.save}>
+                <ConfirmSubmitButton
+                  className="btn btn-ghost btn-sm !min-w-11 !px-2"
+                  title={t.ui.save}
+                  ariaLabel={`${t.admin.customers.role}: ${row.email}`}
+                  message={
+                    de
+                      ? "Rolle dieses Kontos ändern? Adminrechte umfassen alle Bereiche."
+                      : "Change this account's role? Admin grants full access."
+                  }
+                >
                   <Icon name="check" size={13} />
-                </button>
+                </ConfirmSubmitButton>
               </form>
 
               <div className="flex items-center gap-1">
@@ -321,24 +361,38 @@ export function CustomerTable({
                   <input type="hidden" name="userId" value={row.id} />
                   <input type="hidden" name="disable" value={row.disabled ? "0" : "1"} />
                   <input type="hidden" name="returnTo" value="/admin/customers" />
-                  <button
-                    type="submit"
+                  <ConfirmSubmitButton
                     className="btn btn-ghost btn-sm !min-w-11 !px-2"
                     title={row.disabled ? t.admin.customers.enable : t.admin.customers.disable}
+                    ariaLabel={`${row.disabled ? t.admin.customers.enable : t.admin.customers.disable}: ${row.email}`}
+                    message={
+                      row.disabled
+                        ? de
+                          ? "Konto wieder aktivieren?"
+                          : "Re-enable this account?"
+                        : de
+                          ? "Konto deaktivieren? Der Kunde wird sofort abgemeldet."
+                          : "Disable this account? The customer is signed out immediately."
+                    }
                   >
                     <Icon name={row.disabled ? "check" : "close"} size={13} />
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
                 <form action={resetCustomerMfaAction}>
                   <input type="hidden" name="userId" value={row.id} />
                   <input type="hidden" name="returnTo" value="/admin/customers" />
-                  <button
-                    type="submit"
+                  <ConfirmSubmitButton
                     className="btn btn-ghost btn-sm !min-w-11 !px-2"
                     title={t.admin.customers.resetMfa}
+                    ariaLabel={`${t.admin.customers.resetMfa}: ${row.email}`}
+                    message={
+                      de
+                        ? "MFA für dieses Konto zurücksetzen? Der Nutzer muss sie neu einrichten."
+                        : "Reset MFA for this account? The user must enrol again."
+                    }
                   >
                     <Icon name="shield" size={13} />
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
                 <Link
                   href={`/admin/customers/${row.id}`}
@@ -355,6 +409,21 @@ export function CustomerTable({
           <li className="card p-6 text-center text-xs text-muted">{t.ui.noResults}</li>
         ) : null}
       </ul>
+
+      {/* Bei aktiver Suche ist die Trefferliste bereits vollständig (inklusive der
+          nachgeladenen Treffer), deshalb entfällt dann die Blätterung. */}
+      {needle ? null : (
+        <Pager
+          basePath="/admin/customers"
+          params={{}}
+          page={pager.page}
+          pages={pager.pages}
+          total={pager.total}
+          previousLabel={pager.previousLabel}
+          nextLabel={pager.nextLabel}
+          pageLabel={pager.pageLabel}
+        />
+      )}
     </>
   );
 }

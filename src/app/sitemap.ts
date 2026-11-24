@@ -1,6 +1,9 @@
 import type { MetadataRoute } from "next";
 
 const BASE = process.env.APP_URL ?? "https://streaminghub.org";
+// Stabiler Änderungszeitpunkt statt "jetzt": sonst meldet jede Anfrage eine
+// Änderung und Crawler laden unnötig neu. Über RELEASE_DATE beim Deploy setzbar.
+const LAST_MODIFIED = process.env.RELEASE_DATE ?? "2026-11-01";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const publicRoutes: { path: string; priority: number; changeFrequency: "weekly" | "monthly" | "yearly" }[] = [
@@ -26,7 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return publicRoutes.map((route) => ({
     url: `${BASE}${route.path}`,
-    lastModified: new Date(),
+    lastModified: LAST_MODIFIED,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));

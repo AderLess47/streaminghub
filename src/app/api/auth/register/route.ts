@@ -1,4 +1,4 @@
-import { randomToken, hashPassword, issueAuthToken } from "@/lib/auth";
+import { randomToken, hashPasswordAsync, issueAuthToken } from "@/lib/auth";
 import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { nowIso, run } from "@/lib/db";
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
      VALUES (?, ?, ?, ?, ?, 'customer', 0, ?, ?, ?)`,
     userId,
     email,
-    hashPassword(data.password),
+    await hashPasswordAsync(data.password),
     data.displayName,
     data.locale,
     data.marketingOptIn ? 1 : 0,

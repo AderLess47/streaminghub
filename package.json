@@ -91,22 +91,31 @@
     "staging:canary:sweep": "node scripts/staging-canary-sweep.mjs",
     "staging:canary:db-sweep": "node scripts/staging-canary-db-sweep.mjs",
     "retention:purge": "node scripts/contact-retention.mjs",
-    "retention:audit": "node scripts/audit-retention.mjs"
+    "retention:audit": "node scripts/audit-retention.mjs",
+    "maintenance:db": "node scripts/db-maintenance.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
-    "next": "^15.5.7",
+    "next": "^15.5.29",
     "react": "19.1.1",
     "react-dom": "19.1.1",
-    "zod": "3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "4.1.14",
     "@types/node": "22.18.6",
     "@types/react": "19.1.13",
     "@types/react-dom": "19.1.9",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^15.5.29",
     "tailwindcss": "4.1.14",
     "typescript": "5.9.2",
     "wrangler": "^4.160.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.32",
+    "sharp": "^0.35.5"
   },
   "allowScripts": {
     "@tailwindcss/oxide@4.1.14": true,

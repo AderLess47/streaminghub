@@ -104,11 +104,7 @@ function insert(input: {
  * Liste für die Admin-Ansicht: offene Erklärungen zuerst, danach nach Datum.
  * `state` filtert auf noch offene oder bereits bearbeitete Vorgänge.
  */
-export function listContractRequests(filter: {
-  kind?: ContractRequestKind;
-  state?: "open" | "handled";
-  limit?: number;
-} = {}): ContractRequest[] {
+function contractWhere(filter: { kind?: ContractRequestKind; state?: "open" | "handled" }) {
   const where: string[] = [];
   const params: string[] = [];
   if (filter.kind) {
@@ -117,12 +113,39 @@ export function listContractRequests(filter: {
   }
   if (filter.state === "open") where.push("handled_at IS NULL");
   if (filter.state === "handled") where.push("handled_at IS NOT NULL");
+  return { clause: where.length ? `WHERE ${where.join(" AND ")}` : "", params };
+}
+
+export function listContractRequests(filter: {
+  kind?: ContractRequestKind;
+  state?: "open" | "handled";
+  limit?: number;
+  offset?: number;
+} = {}): ContractRequest[] {
+  const { clause, params } = contractWhere(filter);
 
   const sql = `SELECT ${COLUMNS} FROM contract_requests
-    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+    ${clause}
     ORDER BY handled_at IS NOT NULL, created_at DESC
-    LIMIT ?`;
-  return all<ContractRequest>(sql, ...params, Math.min(Math.max(filter.limit ?? 200, 1), 500));
+    LIMIT ? OFFSET ?`;
+  return all<ContractRequest>(
+    sql,
+    ...params,
+    Math.min(Math.max(filter.limit ?? 50, 1), 500),
+    Math.max(filter.offset ?? 0, 0),
+  );
+}
+
+/** Anzahl der Vorgänge für den aktuellen Filter (Blätterung). */
+export function countContractRequests(filter: {
+  kind?: ContractRequestKind;
+  state?: "open" | "handled";
+} = {}): number {
+  const { clause, params } = contractWhere(filter);
+  return get<{ c: number }>(
+    `SELECT COUNT(*) AS c FROM contract_requests ${clause}`,
+    ...params,
+  )?.c ?? 0;
 }
 
 /** Zählt offene Erklärungen je Art – für die Kennzahlen über der Liste. */

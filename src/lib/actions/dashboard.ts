@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { hashPassword, randomToken, verifyPassword } from "@/lib/auth";
+import { hashPasswordAsync, randomToken, verifyPasswordAsync } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { get, nowIso, run } from "@/lib/db";
 import { getEntitlements } from "@/lib/entitlements";
@@ -18,7 +18,6 @@ import { declineRetentionOffer, retentionOffer } from "@/lib/retention";
 import {
   currentSessionTokenHash,
   invalidateUserSessions,
-  SESSION_COOKIE,
   requireUser,
 } from "@/lib/session";
 import {
@@ -131,7 +130,7 @@ export async function changePasswordAction(
   }
 
   const row = get<{ password_hash: string }>(`SELECT password_hash FROM users WHERE id = ?`, user.id);
-  if (!row || !verifyPassword(parsed.data.currentPassword, row.password_hash)) {
+  if (!row || !(await verifyPasswordAsync(parsed.data.currentPassword, row.password_hash))) {
     return {
       ok: false,
       message: "Das aktuelle Passwort ist falsch.",
@@ -141,7 +140,7 @@ export async function changePasswordAction(
 
   run(
     `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`,
-    hashPassword(parsed.data.newPassword),
+    await hashPasswordAsync(parsed.data.newPassword),
     nowIso(),
     user.id,
   );
@@ -294,7 +293,7 @@ export async function dataRequestAction(
   }
 
   const row = get<{ password_hash: string }>(`SELECT password_hash FROM users WHERE id = ?`, user.id);
-  if (!row || !verifyPassword(parsed.data.password, row.password_hash)) {
+  if (!row || !(await verifyPasswordAsync(parsed.data.password, row.password_hash))) {
     return { ok: false, message: "Das Passwort ist falsch.", fieldErrors: { password: "Das Passwort ist falsch." } };
   }
 
@@ -352,10 +351,4 @@ export async function cancelSubscriptionAction(
   });
   revalidatePath("/dashboard/subscription");
   return { ok: result.ok, message: result.message };
-}
-
-export async function dashboardBootstrapCheck() {
-  // Keeps session cookie helpers imported in this module's server context.
-  const store = await cookies();
-  return Boolean(store.get(SESSION_COOKIE));
 }

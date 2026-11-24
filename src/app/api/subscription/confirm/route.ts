@@ -2,7 +2,7 @@ import { apiError, clientIp, isSameOrigin, json, parseBody, tooManyRequests } fr
 import { logAudit } from "@/lib/audit";
 import { reconcileCheckoutSession } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { getSessionUser } from "@/lib/session";
+import { getFullyAuthenticatedUser } from "@/lib/session";
 import { checkoutConfirmSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return apiError("forbidden", "Ungültige Herkunft der Anfrage.");
 
-  const user = await getSessionUser();
+  const user = await getFullyAuthenticatedUser();
   if (!user) return apiError("unauthorized", "Bitte melde dich an.");
 
   const ip = clientIp(request);

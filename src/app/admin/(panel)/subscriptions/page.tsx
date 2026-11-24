@@ -1,16 +1,27 @@
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { Pager } from "@/components/pager";
 import { ScrollRegion } from "@/components/scroll-region";
 import { FormStatus } from "@/components/form-status";
 import { Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
 import { setSubscriptionStatusAction } from "@/lib/actions/admin";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
+import { parsePage } from "@/lib/pagination";
 import { requireStaff } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminSubscriptionsPage() {
+export default async function AdminSubscriptionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireStaff();
   const { t, locale } = await getI18n();
+  const params = await searchParams;
+  const de = locale !== "en";
+  const total = get<{ c: number }>(`SELECT COUNT(*) AS c FROM subscriptions`)?.c ?? 0;
+  const page = parsePage(params.page, total);
 
   const rows = all<{
     user_id: string;
@@ -23,7 +34,9 @@ export default async function AdminSubscriptionsPage() {
   }>(
     `SELECT s.user_id, u.email, s.status, s.channel, s.provider, s.current_period_end, s.updated_at
      FROM subscriptions s JOIN users u ON u.id = s.user_id
-     ORDER BY s.updated_at DESC LIMIT 200`,
+     ORDER BY s.updated_at DESC LIMIT ? OFFSET ?`,
+    page.pageSize,
+    page.offset,
   );
 
   const dateFormat = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", { dateStyle: "short" });
@@ -76,14 +89,18 @@ export default async function AdminSubscriptionsPage() {
                       ))}
                     </select>
                     <FormStatus label={t.ui.saving} />
-                    <button
-                      type="submit"
+                    <ConfirmSubmitButton
                       className="btn btn-ghost btn-sm !min-w-11 !px-2"
                       title={t.ui.save}
-                      aria-label={t.ui.save}
+                      ariaLabel={t.ui.save}
+                      message={
+                        de
+                          ? "Abonnementstatus wirklich ändern?"
+                          : "Change the subscription status?"
+                      }
                     >
                       <span aria-hidden="true">✓</span>
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </td>
               </tr>
@@ -148,14 +165,16 @@ export default async function AdminSubscriptionsPage() {
                 ))}
               </select>
               <FormStatus label={t.ui.saving} />
-              <button
-                type="submit"
+              <ConfirmSubmitButton
                 className="btn btn-ghost btn-sm !min-w-11 !px-2"
                 title={t.ui.save}
-                aria-label={t.ui.save}
+                ariaLabel={t.ui.save}
+                message={
+                  de ? "Abonnementstatus wirklich ändern?" : "Change the subscription status?"
+                }
               >
                 <span aria-hidden="true">✓</span>
-              </button>
+              </ConfirmSubmitButton>
             </form>
           </li>
         ))}
@@ -163,6 +182,17 @@ export default async function AdminSubscriptionsPage() {
           <li className="card p-6 text-center text-xs text-muted">{t.admin.subscriptions.empty}</li>
         ) : null}
       </ul>
+
+      <Pager
+        basePath="/admin/subscriptions"
+        params={{}}
+        page={page.page}
+        pages={page.pages}
+        total={page.total}
+        previousLabel={t.ui.previous}
+        nextLabel={t.ui.next}
+        pageLabel={t.ui.pageOf}
+      />
     </div>
   );
 }

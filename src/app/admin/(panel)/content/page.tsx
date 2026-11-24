@@ -2,8 +2,14 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { FormStatus } from "@/components/form-status";
 import { Alert, Badge, PageHeader } from "@/components/ui";
 import { getI18n } from "@/i18n";
-import { deleteFaqAction, saveFaqAction, saveSettingsAction } from "@/lib/actions/admin";
+import {
+  deleteFaqAction,
+  saveFaqAction,
+  saveSettingsAction,
+  setMaintenanceModeAction,
+} from "@/lib/actions/admin";
 import { getAllFaqRows, getSetting } from "@/lib/content";
+import { isMaintenanceModeEnabled } from "@/lib/maintenance";
 import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -14,15 +20,52 @@ export default async function AdminContentPage({
   searchParams: Promise<{ ok?: string }>;
 }) {
   await requireAdmin();
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
+  const de = locale !== "en";
   const params = await searchParams;
   const faqItems = getAllFaqRows();
+  const maintenance = isMaintenanceModeEnabled();
 
   return (
     <div className="grid grid-cols-1 gap-5">
       <PageHeader eyebrow={t.admin.nav.content} title={t.admin.content.title} description={t.admin.content.subtitle} />
 
-      {params.ok ? <Alert tone="success">{params.ok === "faq" ? t.admin.content.saved : t.admin.content.saved}</Alert> : null}
+      {params.ok ? <Alert tone="success">{t.admin.content.saved}</Alert> : null}
+
+      <form action={setMaintenanceModeAction} className="card grid gap-3 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">{de ? "Wartungsmodus" : "Maintenance mode"}</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted">
+              {de
+                ? "Blendet die öffentliche Website aus und zeigt Besuchern eine Wartungsseite. Admin-Bereich, Statusseite, App-Download und API bleiben erreichbar."
+                : "Replaces the public website with a maintenance page for visitors. Admin, status page, app download and API stay reachable."}
+            </p>
+          </div>
+          <Badge tone={maintenance ? "warn" : "ok"}>
+            {maintenance ? (de ? "aktiv" : "active") : de ? "aus" : "off"}
+          </Badge>
+        </div>
+        <input type="hidden" name="enabled" value={maintenance ? "0" : "1"} />
+        <div className="justify-self-start">
+          {maintenance ? (
+            <button type="submit" className="btn btn-outline btn-sm">
+              {de ? "Wartungsmodus beenden" : "End maintenance"}
+            </button>
+          ) : (
+            <ConfirmSubmitButton
+              message={
+                de
+                  ? "Öffentliche Website in den Wartungsmodus schalten?"
+                  : "Put the public website into maintenance mode?"
+              }
+              className="btn btn-danger btn-sm"
+            >
+              {de ? "Wartungsmodus starten" : "Start maintenance"}
+            </ConfirmSubmitButton>
+          )}
+        </div>
+      </form>
 
       <form action={saveSettingsAction} className="card grid grid-cols-1 gap-3 p-5">
         <h2 className="text-sm font-semibold">{t.admin.content.announcement}</h2>

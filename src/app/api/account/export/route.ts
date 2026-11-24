@@ -1,15 +1,15 @@
-import { apiError, clientIp, json, tooManyRequests } from "@/lib/api";
+import { apiError, clientIp, tooManyRequests } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { all, get, nowIso, run } from "@/lib/db";
 import { getSubscription } from "@/lib/payments";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { getSessionUser } from "@/lib/session";
+import { getFullyAuthenticatedUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 /** GDPR data export (Art. 15/20). Requires an authenticated session. */
 export async function GET(request: Request) {
-  const user = await getSessionUser();
+  const user = await getFullyAuthenticatedUser();
   if (!user) return apiError("unauthorized", "Bitte melde dich an.");
 
   const ip = clientIp(request);
