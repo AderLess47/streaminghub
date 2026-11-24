@@ -137,7 +137,9 @@ export function inspect(file, text, { expectedNodeMajor = null } = {}) {
   return { findings, ...counts };
 }
 
-async function collect(directory) {
+// Wird auch von scripts/check-dependabot-coverage.mjs genutzt, damit "es gibt
+// ein Dockerfile" im Repo nur an einer Stelle definiert ist.
+export async function collectDockerfiles(directory) {
   const found = [];
   let entries;
   try {
@@ -149,7 +151,7 @@ async function collect(directory) {
     const full = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      found.push(...(await collect(full)));
+      found.push(...(await collectDockerfiles(full)));
     } else if (entry.isFile() && (DOCKERFILE_NAME.test(entry.name) || path.extname(entry.name) === DOCKERFILE_EXTENSION)) {
       found.push(full);
     }
@@ -158,7 +160,7 @@ async function collect(directory) {
 }
 
 export async function audit({ root = ROOT, expectedNodeMajor } = {}) {
-  const files = await collect(root);
+  const files = await collectDockerfiles(root);
   let engines = null;
   let expected = expectedNodeMajor;
   if (expected === undefined) {
