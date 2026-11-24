@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# Zwei gleichzeitige Laeufe wuerden dieselbe Liste abfragen und nur den
+# Produktionszugang doppelt belasten; ein festes group genuegt hier.
+concurrency:
+  group: backup-check
+  cancel-in-progress: false
+
 jobs:
   check:
     name: Produktions-Backups auflisten
