@@ -320,7 +320,9 @@ jobs:
       # gepinnten Image-Digests stehen und Sicherheitsupdates kommen nicht mehr;
       # fehlt github-actions, veralten die gepinnten Action-SHAs. Genau diese
       # Luecke prueft der naechste Schritt: Workflows vorhanden -> Eintrag da,
-      # Dockerfile vorhanden -> Eintrag da. Faelle in
+      # Dockerfile vorhanden -> Eintrag da. Beim docker-Eintrag zusaetzlich:
+      # dessen directory/directories muss das Verzeichnis des Dockerfile nennen,
+      # weil Dependabot nicht rekursiv sucht. Faelle in
       # scripts/check-dependabot-coverage.test.mjs.
       - name: Dependabot-Abdeckung pruefen
         run: npm run check:dependabot-coverage

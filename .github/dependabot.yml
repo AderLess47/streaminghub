@@ -43,7 +43,10 @@ updates:
   # demselben Tag nach (und hebt bei einem neuen Major den Tag mit an), sodass
   # beide Ziele zusammenpassen: unveraenderlich im Build, aktuell im Betrieb.
   - package-ecosystem: "docker"
-    # "/" ist das Verzeichnis des Dockerfile in der Repo-Wurzel.
+    # "/" ist das Verzeichnis des Dockerfile in der Repo-Wurzel. Dependabot
+    # sucht dort nicht rekursiv: ein Dockerfile in einem Unterverzeichnis
+    # braucht einen eigenen Eintrag (bzw. einen Wert in "directories"), sonst
+    # bleibt es ungepflegt. check:dependabot-coverage meldet genau das.
     directory: "/"
     schedule:
       # Gleicher Slot wie die Actions: ein fester Review-Termin pro Woche
