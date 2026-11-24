@@ -100,13 +100,12 @@ test("dieses Repository deklariert jede Deploy-Umgebung", async () => {
   const result = await audit();
 
   assert.deepEqual(result.findings, []);
-  assert.equal(result.files, 17);
-  assert.equal(result.jobs, 28);
-  // Kein fester Sollwert: ein neuer Deploy-Job ist kein Testfehler. Die
-  // Untergrenze zeigt nur, dass der Parser im echten Repo ueberhaupt Deploys
-  // erkennt; Meldungs- und Kommentartexte zaehlen dabei nicht mit (Faelle
-  // oben). Ein Zuviel faellt an result.findings auf, weil ein solcher Job kein
-  // environment: haette.
+  // Untergrenzen statt Inventar-Sollwerten (17 Dateien, 28 Jobs): ein neuer
+  // Workflow oder Deploy-Job ist kein Testfehler. Dass der Parser wirklich die
+  // echten Dateien liest, zeigen die leeren Befunde und die erkannten Deploys;
+  // ein Zuviel faellt dort auf, weil ein solcher Job kein environment: haette.
+  assert.ok(result.files > 0, "Workflow-Dateien gefunden");
+  assert.ok(result.jobs > 0, "Jobs geparst");
   assert.ok(result.deploys > 0, "mindestens ein Deploy-Job im Repo erkannt");
   assert.ok(result.deploys <= result.jobs, "gezaehlt wird je Job, nicht je Aufruf");
 });
