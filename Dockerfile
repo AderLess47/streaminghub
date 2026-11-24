@@ -1,17 +1,27 @@
 # Production image for the StreamingHub Node server (SQLite + Next.js standalone).
-FROM node:22-bookworm-slim AS deps
+#
+# Die Basis-Images sind per Digest gepinnt: ein beweglicher Tag kann unter der
+# gleichen Kennung ausgetauscht werden, und der naechste Build zoege das neue
+# Image ungeprueft - dieselbe Luecke schliessen die Commit-SHAs bei den Actions.
+# Der lesbare Tag bleibt vor dem Digest stehen, damit der Diff die Version zeigt.
+# Beim Node-Update Tag und Digest gemeinsam anpassen; den aktuellen Digest eines
+# Tags zeigt
+#   docker buildx imagetools inspect node:22-bookworm-slim
+# Geprueft von scripts/check-docker-base-images.mjs, inklusive Abgleich des
+# Node-Majors mit engines.node in package.json.
+FROM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-FROM node:22-bookworm-slim AS builder
+FROM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS runner
 WORKDIR /app
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT \

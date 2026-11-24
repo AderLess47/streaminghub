@@ -217,6 +217,11 @@ jobs:
       - name: Tests der Workflow-Kopf-Prüfung
         run: npm run test:workflow-hygiene
 
+      # Und dasselbe fuer die Basis-Images: ohne Faelle wuerde ein beweglicher
+      # Tag oder eine auseinandergelaufene Node-Version still durchgehen.
+      - name: Tests der Docker-Basis-Image-Prüfung
+        run: npm run test:docker-base-images
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -318,6 +323,16 @@ jobs:
       # Faelle in scripts/check-workflow-hygiene.test.mjs.
       - name: Workflow-Kopf pruefen
         run: npm run check:workflow-hygiene
+
+      # Die Actions sind per Commit-SHA gepinnt, die Docker-Basis-Images waren
+      # es nicht: "FROM node:22-bookworm-slim" zieht beim naechsten Build, was
+      # gerade unter dem Tag liegt. Verlangt wird image:tag@sha256:<64
+      # Hexzeichen>; dazu muss der Node-Major zu engines.node passen, sonst
+      # laeuft der Server auf einer Version, die das Projekt nicht mehr
+      # zusagt. Stage-Verweise und FROM scratch sind ausgenommen. Faelle in
+      # scripts/check-docker-base-images.test.mjs.
+      - name: Docker-Basis-Images pruefen
+        run: npm run check:docker-base-images
 
       # Zeitdeckel: ein Download ohne Deckel laeuft bis zum Job-Timeout (10
       # bzw. 30 Minuten), statt zu scheitern - das war der Robolectric-Vorfall
