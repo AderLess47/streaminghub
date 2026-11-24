@@ -249,6 +249,10 @@ jobs:
       - name: Tests der Checker-Verdrahtung
         run: npm run test:checker-wiring
 
+      # Sonst meldet der Snapshot-Abgleich Umbenennungen falsch - oder gar nicht.
+      - name: Tests des Job-Namen-Snapshots
+        run: npm run test:job-names
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -400,6 +404,12 @@ jobs:
       # fuer jedes check:*/test:*-Skript und jede scripts/*.test.mjs.
       - name: Checker-Verdrahtung pruefen
         run: npm run check:checker-wiring
+
+      # Ein umbenannter oder entfernter Job laesst den Required Check der
+      # Branch-Protection ins Leere laufen, ein umbenannter Workflow stoppt
+      # workflow_run-Folgelaeufe. Der Snapshot macht beides sichtbar.
+      - name: Job-Namen mit dem Snapshot vergleichen
+        run: npm run check:job-names
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
