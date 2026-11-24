@@ -2,6 +2,11 @@
 # mussten Versionssprunge von Hand nachgezogen werden (#418, #419, #420).
 # Bewusst nur "github-actions": npm, Gradle, CocoaPods und SwiftPM haben eigene
 # Wege und wuerden hier nur zusaetzliche PRs erzeugen.
+#
+# Alle Actions sind auf den Commit-SHA gepinnt, mit dem Release-Tag als
+# Kommentar dahinter ("uses: owner/action@<sha> # v5"). Dependabot versteht
+# diese Schreibweise und aktualisiert SHA und Kommentar gemeinsam; von Hand
+# bitte nie auf einen beweglichen Tag zurueckstellen.
 version: 2
 
 updates:
