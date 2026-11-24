@@ -249,6 +249,11 @@ jobs:
       - name: Tests der Checker-Verdrahtung
         run: npm run test:checker-wiring
 
+      # Muss selbst geprueft sein: sonst winkt der Check eine pull_request_target-
+      # oder ungefilterte workflow_run-Stelle durch, statt den Job rot zu machen.
+      - name: Tests der Trigger- und Secret-Pruefung
+        run: npm run test:trigger-secrets
+
       # Die Unit-Tests decken inspect()/audit() ab; hier laeuft jeder Checker
       # als Prozess gegen eine Fixture mit Befund (Exit 1 plus ::error-Zeile)
       # und einmal im Repo (Exit 0). So ist der Befund auch ueber den Exit belegt.
@@ -406,6 +411,13 @@ jobs:
       # fuer jedes check:*/test:*-Skript und jede scripts/*.test.mjs.
       - name: Checker-Verdrahtung pruefen
         run: npm run check:checker-wiring
+
+      # pull_request_target gibt PR-Code Secrets und Schreibrechte; ein
+      # workflow_run-Job mit Secrets ohne conclusion-Filter kann auf einem
+      # fehlgeschlagenen oder fremden Lauf arbeiten; secrets.* im workflow-weiten
+      # env: sieht jeder Step und jede Third-Party-Action.
+      - name: Trigger und Secrets pruefen
+        run: npm run check:trigger-secrets
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
