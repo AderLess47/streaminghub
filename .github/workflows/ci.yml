@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Node.js einrichten
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
@@ -236,7 +236,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Download, Pruefsumme und Lauf in einem Schritt: das Binary liegt nur in
       # $RUNNER_TEMP und muss nicht ueber $GITHUB_PATH weitergereicht werden.
@@ -328,7 +328,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Node.js einrichten
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
@@ -352,7 +352,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Staging-Image bauen
         run: |
@@ -378,7 +378,7 @@ jobs:
 
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Java 17 einrichten
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -513,7 +513,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: StreamingHubCore testen
         run: |
