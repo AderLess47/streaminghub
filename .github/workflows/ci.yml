@@ -244,6 +244,11 @@ jobs:
       - name: Tests des Release-Abgleichs
         run: npm run test:release-sync
 
+      # Der Verdrahtungs-Check muss selbst geprueft sein: sonst winkt er eine
+      # unverdrahtete Pruefung durch, statt den Job rot zu machen.
+      - name: Tests der Checker-Verdrahtung
+        run: npm run test:checker-wiring
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -388,6 +393,13 @@ jobs:
       # scripts/check-expression-injection.test.mjs.
       - name: Ausdruecke in run-Bloecken pruefen
         run: npm run check:expression-injection
+
+      # Eine Pruefung, die kein Workflow aufruft, wird gruen, ohne etwas zu
+      # pruefen: test:release-sync lief so monatelang in keiner CI, der
+      # Versionsabgleich hatte gar keine Faelle. Der Check haelt beides fest -
+      # fuer jedes check:*/test:*-Skript und jede scripts/*.test.mjs.
+      - name: Checker-Verdrahtung pruefen
+        run: npm run check:checker-wiring
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
