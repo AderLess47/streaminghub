@@ -1,7 +1,7 @@
 # Dependabot haelt die Actions in .github/workflows nach. Ohne diese Datei
 # mussten Versionssprunge von Hand nachgezogen werden (#418, #419, #420).
-# Bewusst nur "github-actions": npm, Gradle, CocoaPods und SwiftPM haben eigene
-# Wege und wuerden hier nur zusaetzliche PRs erzeugen.
+# Bewusst nur "github-actions" und "docker": npm, Gradle, CocoaPods und
+# SwiftPM haben eigene Wege und wuerden hier nur zusaetzliche PRs erzeugen.
 #
 # Alle Actions sind auf den Commit-SHA gepinnt, mit dem Release-Tag als
 # Kommentar dahinter ("uses: owner/action@<sha> # v5"). Dependabot versteht
@@ -34,3 +34,27 @@ updates:
         update-types:
           - "minor"
           - "patch"
+
+  # Das Basis-Image im Dockerfile ist per Tag und Digest gepinnt
+  # (node:22-bookworm-slim@sha256:...). Ohne diesen Eintrag friert der Digest
+  # ein: neue Node-22-Patchversionen und Sicherheitsupdates kaemen nur noch von
+  # Hand ins Image, waehrend das Pinning genau das verhindern soll, dass ein
+  # beweglicher Tag ungeprueft mitwandert. Dependabot zieht den Digest unter
+  # demselben Tag nach (und hebt bei einem neuen Major den Tag mit an), sodass
+  # beide Ziele zusammenpassen: unveraenderlich im Build, aktuell im Betrieb.
+  - package-ecosystem: "docker"
+    # "/" ist das Verzeichnis des Dockerfile in der Repo-Wurzel.
+    directory: "/"
+    schedule:
+      # Gleicher Slot wie die Actions: ein fester Review-Termin pro Woche
+      # statt verteilter PRs ueber den Tag.
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    # Ein Basis-Image in drei FROM-Zeilen: Dependabot aktualisiert sie in einem
+    # PR. Mehr als zwei offene PRs waeren hier nur Rauschen.
+    open-pull-requests-limit: 2
+    commit-message:
+      # Passt zur bisherigen Schreibweise der Workflow- und Image-Commits.
+      prefix: "ci"
