@@ -98,16 +98,19 @@ test("url, duration and the tolerated overshoot have fixed limits", () => {
 });
 
 test("a finished title is not resumable", () => {
-  assert.equal(isFinished(2_700_000, 2_700_000), true);
-  assert.equal(isFinished(2_700_000 - FINISH_MARGIN_MS, 2_700_000), true);
-  assert.equal(isFinished(2_700_000 - FINISH_MARGIN_MS - 1, 2_700_000), false);
+  const duration = 2_700_000;
+  assert.equal(FINISH_MARGIN_MS, 10_000, "the grace window stays at 10 seconds");
+  assert.equal(isFinished(duration, duration), true);
+  assert.equal(isFinished(duration - 10_000, duration), true, "exactly 10 seconds before the end");
+  assert.equal(isFinished(duration - 10_000 - 1, duration), false, "one millisecond earlier");
   assert.equal(isFinished(5_000, 0), false);
 });
 
 test("remembers only positions worth resuming", () => {
   const value = (positionMs: number, durationMs = 2_700_000) => ({ url: URL, positionMs, durationMs });
-  assert.equal(shouldRemember(value(MIN_RESUME_MS)), true);
-  assert.equal(shouldRemember(value(MIN_RESUME_MS - 1)), false);
+  assert.equal(MIN_RESUME_MS, 5_000, "the minimum stays at 5 seconds");
+  assert.equal(shouldRemember(value(5_000)), true, "exactly 5 seconds");
+  assert.equal(shouldRemember(value(4_999)), false, "one millisecond below");
   assert.equal(shouldRemember(value(2_700_000)), false);
 });
 
