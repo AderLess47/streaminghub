@@ -264,6 +264,10 @@ jobs:
       - name: Tests des Job-Namen-Snapshots
         run: npm run test:job-names
 
+      # Sonst gelten unbegruendete continue-on-error-Stellen als in Ordnung.
+      - name: Tests der continue-on-error-Pruefung
+        run: npm run test:continue-on-error
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -428,6 +432,12 @@ jobs:
       # workflow_run-Folgelaeufe. Der Snapshot macht beides sichtbar.
       - name: Job-Namen mit dem Snapshot vergleichen
         run: npm run check:job-names
+
+      # continue-on-error auf Job-Ebene macht einen Job gruen, egal was
+      # scheitert; auf Step-Ebene braucht es steps.<id>.outcome oder eine
+      # begruendete Ausnahme, sonst verschwindet der Befund.
+      - name: continue-on-error begruenden lassen
+        run: npm run check:continue-on-error
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
