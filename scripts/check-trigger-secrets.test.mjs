@@ -4,7 +4,7 @@ import { audit, inspect } from "./check-trigger-secrets.mjs";
 
 const WORKFLOW_RUN = "on:\n  workflow_run:\n    types: [completed]";
 
-const guardedDeploy = (condition = "github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'") =>
+const guardedDeploy = (condition = "github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'", head = `    if: ${condition}`) =>
   [
     WORKFLOW_RUN,
     "",
@@ -15,7 +15,7 @@ const guardedDeploy = (condition = "github.event.workflow_run.conclusion == 'suc
     "  deploy:",
     "    name: Auf Fly deployen",
     "    runs-on: ubuntu-latest",
-    `    if: ${condition}`,
+    head,
     "    steps:",
     "      - name: Deployen",
     "        run: flyctl deploy",
@@ -30,11 +30,27 @@ test("akzeptiert einen abgesicherten Deploy mit conclusion und event=push", () =
   assert.deepEqual(findings("deploy.yml", guardedDeploy()), []);
 });
 
-test("akzeptiert gefaltete if-Bloecke (if: >- )", () => {
-  const folded = guardedDeploy()
-    .replace("    if: ", "    if: >-\n      ")
-    .replace(" && github.event.workflow_run.event == 'push'", "\n      && github.event.workflow_run.event == 'push'");
-  assert.deepEqual(findings("deploy.yml", folded), []);
+test("akzeptiert gefaltete if-Bloecke, auch mit Kommentar dahinter", () => {
+  const withComment = guardedDeploy(
+    null,
+    "    if: >-  # nur ein erfolgreicher Push auf main rollt aus\n" +
+      "      github.event.workflow_run.conclusion == 'success' &&\n" +
+      "      github.event.workflow_run.event == 'push'",
+  );
+  assert.deepEqual(findings("deploy.yml", withComment), []);
+
+  const plainFold = guardedDeploy(
+    null,
+    "    if: >\n      github.event.workflow_run.conclusion == 'success' &&\n      github.event.workflow_run.event == 'push'",
+  );
+  assert.deepEqual(findings("deploy.yml", plainFold), []);
+});
+
+test("meldet den if-Befund in der Zeile der Bedingung", () => {
+  const text = guardedDeploy("github.event.workflow_run.conclusion == 'success'");
+  const ifLine = text.split("\n").findIndex((line) => line.includes("if:")) + 1;
+
+  assert.equal(findings("deploy.yml", text)[0].line, ifLine);
 });
 
 test("verbietet pull_request_target auch in der Kurzform", () => {
@@ -97,6 +113,20 @@ test("Deploy-Erkennung greift auch ueber den Dateinamen", () => {
 
   assert.equal(found.length, 1);
   assert.equal(found[0].reason, "push");
+});
+
+test("nur bei schedule laufende Jobs brauchen keinen Filter", () => {
+  const text = guardedDeploy("github.event_name == 'schedule'").replace("  deploy:", "  canary-guard:").replace("Auf Fly deployen", "Guard");
+  const inspected = inspect("staging-canary.yml", text);
+
+  assert.deepEqual(inspected.findings, []);
+  assert.equal(inspected.gated, 1);
+  assert.equal(inspected.exempted, 0);
+});
+
+test("ein Job, der workflow_run nennt, braucht den Filter weiterhin", () => {
+  const text = guardedDeploy("github.event_name == 'schedule' || github.event_name == 'workflow_run'");
+  assert.equal(findings("smoke.yml", text).length, 1);
 });
 
 test("Ausnahmen greifen nur mit Eintrag und werden gezaehlt", () => {
@@ -169,5 +199,6 @@ test("dieses Repository haelt die Trigger- und Secret-Regeln ein", async () => {
   const result = await audit();
   assert.deepEqual(result.findings, []);
   assert.equal(result.files, 17);
-  assert.equal(result.exempted, 3, "drei begruendete Ausnahmen fuer Fehler-Meldungen");
+  assert.equal(result.gated, 1, "guard laeuft nur bei schedule - Bedingung statt Ausnahme");
+  assert.equal(result.exempted, 2, "zwei begruendete Ausnahmen fuer Fehler-Meldungen");
 });
