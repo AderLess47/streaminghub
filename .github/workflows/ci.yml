@@ -35,6 +35,11 @@ jobs:
       - name: App-Versionen abgleichen
         run: npm run check:app-versions
 
+      # Ohne Faelle koennte der Abgleich eine fehlende oder auseinandergelaufene
+      # Versionsangabe still durchwinken, statt den Job rot zu machen.
+      - name: Tests des Versionsabgleichs
+        run: npm run test:app-versions
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -232,6 +237,12 @@ jobs:
       # Ausdruck im Shell-Text still durchwinken, statt den Job rot zu machen.
       - name: Tests der Ausdruck-Injection-Prüfung
         run: npm run test:expression-injection
+
+      # release-sync laeuft in prebuild (also in jedem Build) und im
+      # Release-Drift-Workflow; ohne diese Faelle faellt ein kaputter Renderer
+      # oder eine gelockerte Validierung erst im naechsten Lauf auf.
+      - name: Tests des Release-Abgleichs
+        run: npm run test:release-sync
 
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs

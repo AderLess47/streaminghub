@@ -22,6 +22,7 @@
     "check:dependabot-coverage": "node scripts/check-dependabot-coverage.mjs",
     "check:expression-injection": "node scripts/check-expression-injection.mjs",
     "test:download-page": "node --test scripts/download-page.test.mjs",
+    "test:app-versions": "node --test scripts/check-app-versions.test.mjs",
     "test:release-sync": "node --test scripts/release-sync.test.mjs",
     "test:curl-timeouts": "node --test scripts/check-curl-timeouts.test.mjs",
     "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
