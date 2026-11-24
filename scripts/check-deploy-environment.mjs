@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /**
- * Prueft, ob jeder Deploy-Job die passende GitHub-Umgebung deklariert:
+ * Prueft, ob jeder Deploy-Job eine GitHub-Umgebung deklariert:
  *
- *   1. Ein Job, der `flyctl deploy` ausfuehrt, braucht ein `environment:`, das
- *      zur deployten App passt (DEPLOY_ENVIRONMENTS). An der Umgebung haengen
- *      Umgebungs-Secrets und Required Reviewer; ein Produktions-Deploy ohne
- *      `environment: production` kann beides nicht bekommen, umgeht eine
- *      spaetere Freigaberegel und fehlt in der Deployment-Historie.
- *   2. Der App-Name muss statisch im Befehl stehen (`--app streaminghub-org`);
- *      `--app "$APP"` ist nicht pruefbar und deshalb ein Befund.
- *   3. Eine App ohne Eintrag in DEPLOY_ENVIRONMENTS ist ein Befund, damit ein
- *      neues Deploy-Ziel nicht still ohne Umgebung durchrutscht.
+ *   1. Ein Job, der `flyctl deploy` (oder `fly deploy`) ausfuehrt, braucht ein
+ *      `environment:`. An der Umgebung haengen Umgebungs-Secrets und Required
+ *      Reviewer; ohne sie laeuft der Deploy an beidem vorbei und fehlt in der
+ *      Deployment-Historie der Umgebung.
+ *   2. Ein leerer Wert (`environment:` ohne `name:` darunter) ist ein Befund:
+ *      der Job sieht aus, als haette er eine Umgebung, hat aber keine.
+ *   3. Welcher Name passt, bewertet die Regel nicht. Eine App-zu-Umgebung-
+ *      Tabelle hier waere eine zweite Wahrheit neben fly.toml und koennte
+ *      selbst falsch sein - dann segnet sie genau den Fehler ab, den sie
+ *      finden soll. Der Name steht im Diff, und die Deployment-Historie der
+ *      Umgebung zeigt sofort, wenn ein Deploy dort falsch haengt.
  *
  * Andere `flyctl`-Aufrufe (secrets set, ssh) sind kein Deploy und werden nicht
- * bewertet. Geprueft wird nur die Deklaration - ob Required Reviewer
- * eingerichtet sind, ist eine Repository-Einstellung und hier nicht sichtbar.
+ * bewertet. Ein Ausdruck als Wert (${{ inputs.environment }}) ist nicht
+ * statisch pruefbar und zaehlt als gesetzt.
  *
  * Faelle: scripts/check-deploy-environment.test.mjs.
  */
@@ -25,12 +27,6 @@ import { fileURLToPath } from "node:url";
 export const WORKFLOWS_DIR = path.join(".github", "workflows");
 const EXTENSIONS = new Set([".yml", ".yaml"]);
 
-// Fly-App -> GitHub-Umgebung. Neue Deploy-Ziele brauchen hier einen Eintrag.
-export const DEPLOY_ENVIRONMENTS = {
-  "streaminghub-org": "production",
-  "streaminghub-staging": "staging",
-};
-
 const TOP_LEVEL = /^([A-Za-z0-9_.-]+):/;
 const JOB_HEADER = /^ {2}([A-Za-z0-9_-]+):\s*(?:#.*)?$/;
 const JOB_ENV = /^ {4}environment:\s*(.*)$/;
@@ -38,15 +34,9 @@ const JOB_ENV_NAME = /^ {6}name:\s*(.*)$/;
 // Nur ein Aufruf zaehlt, nicht das Wort in einer Meldung: "::error …::flyctl
 // deploy kam nicht voran" beginnt nach einem Doppelpunkt und faellt hier raus.
 const DEPLOY_CALL = /(?:^|[\s;|&(])(?:flyctl|fly)\s+deploy\b/;
-const APP_FLAG = /(?:^|\s)--app(?:=|\s+)(\S+)/;
 
 function value(raw) {
   return raw.replace(/\s+#.*$/, "").trim();
-}
-
-function unquote(raw) {
-  const quoted = raw.match(/^(["'])(.*)\1$/);
-  return quoted ? quoted[2] : raw;
 }
 
 function jobBlocks(lines) {
@@ -74,27 +64,9 @@ function jobBlocks(lines) {
   });
 }
 
-// Fortsetzungszeilen (Zeilenende "\") zu einem Befehl zusammenfassen: `--app`
-// steht oft erst in der zweiten Zeile von `flyctl deploy`.
-function logicalLines(rows) {
-  const lines = [];
-  let pending = null;
-  for (const row of rows) {
-    const text = row.text.trim();
-    if (pending) {
-      pending.text += ` ${text.replace(/\\$/, "")}`;
-      if (!text.endsWith("\\")) {
-        lines.push(pending);
-        pending = null;
-      }
-      continue;
-    }
-    if (text === "" || text.startsWith("#")) continue;
-    if (text.endsWith("\\")) pending = { line: row.line, text: text.replace(/\\$/, "") };
-    else lines.push({ line: row.line, text });
-  }
-  if (pending) lines.push(pending);
-  return lines;
+function isDeployCall(row) {
+  const text = row.text.trim();
+  return text !== "" && !text.startsWith("#") && DEPLOY_CALL.test(text);
 }
 
 // environment: inline oder als Block mit name: darunter.
@@ -103,99 +75,52 @@ function declaredEnvironment(rows) {
     const inline = rows[i].text.match(JOB_ENV);
     if (!inline) continue;
     const raw = value(inline[1]);
-    if (raw) return { line: rows[i].line, name: unquote(raw) };
+    if (raw) return { line: rows[i].line, name: raw };
     for (let j = i + 1; j < rows.length; j += 1) {
       const text = rows[j].text;
       if (text.trim() === "" || text.trimStart().startsWith("#")) continue;
       if (!text.startsWith("      ")) break;
       const nested = text.match(JOB_ENV_NAME);
-      if (nested) return { line: rows[j].line, name: unquote(value(nested[1])) };
+      if (nested) return { line: rows[j].line, name: value(nested[1]) };
     }
     return { line: rows[i].line, name: "" };
   }
   return null;
 }
 
-function deployedApps(rows) {
-  const apps = new Map();
-  for (const line of logicalLines(rows)) {
-    if (!DEPLOY_CALL.test(line.text)) continue;
-    const app = line.text.match(APP_FLAG);
-    const name = app ? unquote(app[1].replace(/["']$/, "")) : "";
-    if (!apps.has(name)) apps.set(name, line.line);
-  }
-  return apps;
-}
-
 export function inspect(file, text) {
-  const lines = text.split(/\r?\n/);
+  const jobs = jobBlocks(text.split(/\r?\n/));
   const findings = [];
-  const environments = new Set();
-  const jobs = jobBlocks(lines);
   let deploys = 0;
 
   for (const job of jobs) {
-    const apps = deployedApps(job.rows);
-    if (apps.size === 0) continue;
+    if (!job.rows.some(isDeployCall)) continue;
+    deploys += 1;
 
     const declared = declaredEnvironment(job.rows);
-    for (const [app, line] of apps) {
-      deploys += 1;
-
-      if (app === "" || app.includes("$")) {
-        findings.push({
-          file,
-          line,
-          reason: "app-dynamic",
-          snippet: `Job ${job.id} deployt mit --app ${app || "<fehlt>"}: App nicht statisch bestimmbar, Umgebung nicht pruefbar`,
-        });
-        continue;
-      }
-
-      const expected = DEPLOY_ENVIRONMENTS[app];
-      if (!expected) {
-        findings.push({
-          file,
-          line,
-          reason: "app-unknown",
-          snippet: `Job ${job.id} deployt App "${app}", die keiner Umgebung zugeordnet ist`,
-        });
-        continue;
-      }
-
-      if (!declared || declared.name === "") {
-        findings.push({
-          file,
-          line: job.line,
-          reason: "environment-missing",
-          snippet: `Job ${job.id} deployt "${app}" (${expected}) ohne environment: ${expected}`,
-        });
-        continue;
-      }
-      if (declared.name.includes("$")) {
-        continue; // Ausdruck: nicht statisch pruefbar, zaehlt als gesetzt
-      }
-      if (declared.name !== expected) {
-        findings.push({
-          file,
-          line: declared.line,
-          reason: "environment-mismatch",
-          snippet: `Job ${job.id} deployt "${app}" (${expected}), hat aber environment: ${declared.name}`,
-        });
-        continue;
-      }
-      environments.add(expected);
+    if (!declared) {
+      findings.push({
+        file,
+        line: job.line,
+        reason: "environment-missing",
+        snippet: `Job ${job.id} deployt ohne environment:`,
+      });
+    } else if (declared.name === "") {
+      findings.push({
+        file,
+        line: declared.line,
+        reason: "environment-empty",
+        snippet: `Job ${job.id}: environment: ohne Namen`,
+      });
     }
   }
 
-  return { findings, jobs: jobs.length, deploys, environments: [...environments].sort() };
+  return { findings, jobs: jobs.length, deploys };
 }
 
 const HINTS = {
   "environment-missing": "environment: <name> im Job ergaenzen - daran haengen Umgebungs-Secrets und Required Reviewer",
-  "environment-mismatch": "environment: auf die Umgebung der deployten App setzen (siehe DEPLOY_ENVIRONMENTS)",
-  "app-unknown": "App in DEPLOY_ENVIRONMENTS einer Umgebung zuordnen",
-  "app-dynamic": "--app <name> statisch hinschreiben, sonst ist die Umgebung nicht pruefbar",
+  "environment-empty": "environment: braucht einen Namen (inline oder als name: darunter)",
 };
 
 async function collect(directory) {
@@ -211,29 +136,26 @@ async function collect(directory) {
 
 export async function audit({ directory = WORKFLOWS_DIR } = {}) {
   const files = await collect(directory);
-  const result = { files: files.length, findings: [], jobs: 0, deploys: 0, environments: [] };
-  const environments = new Set();
+  const result = { files: files.length, findings: [], jobs: 0, deploys: 0 };
   for (const file of files) {
     const inspected = inspect(file, await readFile(file, "utf8"));
     result.findings.push(...inspected.findings);
     result.jobs += inspected.jobs;
     result.deploys += inspected.deploys;
-    for (const name of inspected.environments) environments.add(name);
   }
-  result.environments = [...environments].sort();
   return result;
 }
 
 async function main() {
-  const { files, findings, jobs, deploys, environments } = await audit();
+  const { files, findings, jobs, deploys } = await audit();
 
   if (findings.length > 0) {
     for (const finding of findings) {
       console.error(`::error file=${finding.file},line=${finding.line}::${finding.snippet} -- ${HINTS[finding.reason]}`);
     }
     console.error(
-      `${findings.length} Befund(e): Deploy-Jobs brauchen ein environment:, das zur deployten App passt ` +
-        "(DEPLOY_ENVIRONMENTS). An der Umgebung haengen Umgebungs-Secrets und Required Reviewer.",
+      `${findings.length} Befund(e): Jeder Deploy-Job braucht ein environment: - daran haengen ` +
+        "Umgebungs-Secrets und Required Reviewer.",
     );
     process.exitCode = 1;
     return;
@@ -241,8 +163,7 @@ async function main() {
 
   console.log(
     `Deploy-Umgebungen: ${files} Workflow-Dateien mit ${jobs} Job(s) geprueft, ` +
-      `${deploys} Deploy(s) in ${environments.join(", ") || "keiner Umgebung"} mit passendem environment: ` +
-      `(${WORKFLOWS_DIR}).`,
+      `${deploys} Deploy-Job(s), alle mit environment: (${WORKFLOWS_DIR}).`,
   );
 }
 
