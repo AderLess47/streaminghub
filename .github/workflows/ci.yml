@@ -260,6 +260,10 @@ jobs:
       - name: Tests der Checker-Exit-Codes
         run: npm run test:checker-cli
 
+      # Sonst meldet der Snapshot-Abgleich Umbenennungen falsch - oder gar nicht.
+      - name: Tests des Job-Namen-Snapshots
+        run: npm run test:job-names
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
@@ -418,6 +422,12 @@ jobs:
       # env: sieht jeder Step und jede Third-Party-Action.
       - name: Trigger und Secrets pruefen
         run: npm run check:trigger-secrets
+
+      # Ein umbenannter oder entfernter Job laesst den Required Check der
+      # Branch-Protection ins Leere laufen, ein umbenannter Workflow stoppt
+      # workflow_run-Folgelaeufe. Der Snapshot macht beides sichtbar.
+      - name: Job-Namen mit dem Snapshot vergleichen
+        run: npm run check:job-names
 
   # Typecheck faengt Typfehler, aber keine Buildfehler: fehlgeschlagenes
   # Prerendering, verbotene Client-/Server-Importe oder PostCSS-Probleme fallen
