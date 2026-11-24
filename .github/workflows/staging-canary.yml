@@ -488,7 +488,10 @@ jobs:
           esac
 
       - name: Fehler-Issue nach Erholung schließen
+        id: close_failure_issue
         if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
+        # A gh failure here must not turn a recovered canary red; "Aufräum-Fehler
+        # sichtbar machen" reports it as a warning annotation instead.
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -513,6 +516,7 @@ jobs:
           gh issue close "$existing" --reason completed
 
       - name: Abweichungs-Issue nach Erholung schließen
+        id: close_drift_issue
         # A green unattended run proves staging now serves the expected commit,
         # so a drift issue left over from an earlier run is resolved as well.
         if: needs.canary.result == 'success' && (github.event_name != 'workflow_dispatch' || github.event.inputs.source == 'external')
@@ -566,3 +570,22 @@ jobs:
           status=$(curl --fail --silent --show-error --max-time 10 --retry 5 \
             --output /dev/null --write-out '%{http_code}' "$HEARTBEAT_URL")
           echo "Heartbeat pinged (HTTP $status)."
+
+      - name: Aufräum-Fehler sichtbar machen
+        # The two closing steps above are continue-on-error so that a gh API
+        # failure cannot make a recovered canary red. This step is why that is
+        # allowed: it turns their outcome into a visible annotation, so the
+        # failure does not disappear silently.
+        if: always() && (steps.close_failure_issue.outcome == 'failure' || steps.close_drift_issue.outcome == 'failure')
+        env:
+          FAILURE_CLOSE: ${{ steps.close_failure_issue.outcome }}
+          DRIFT_CLOSE: ${{ steps.close_drift_issue.outcome }}
+        run: |
+          set -euo pipefail
+          for entry in "Fehler-Issue=${FAILURE_CLOSE}" "Abweichungs-Issue=${DRIFT_CLOSE}"; do
+            label=${entry%%=*}
+            outcome=${entry#*=}
+            if [ "$outcome" = 'failure' ]; then
+              echo "::warning::${label} konnte nach der Erholung nicht geschlossen werden (siehe Step-Log); ein offenes Issue bleibt sichtbar."
+            fi
+          done
