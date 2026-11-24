@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { audit, inspect, REQUIRED_KEYS, WORKFLOWS_DIR } from "./check-workflow-hygiene.mjs";
+import { audit, inspect, JOB_TIMEOUT, REQUIRED_KEYS, WORKFLOWS_DIR } from "./check-workflow-hygiene.mjs";
 
 const FILE = ".github/workflows/fixture.yml";
 
@@ -26,11 +26,12 @@ const COMPLETE = [
   "jobs:",
   "  build:",
   "    runs-on: ubuntu-latest",
+  "    timeout-minutes: 10",
   "    steps:",
   "      - run: echo ok",
 ];
 
-test("akzeptiert einen Workflow mit permissions und concurrency", () => {
+test("akzeptiert einen Workflow mit permissions, concurrency und Job-Timeout", () => {
   assert.deepEqual(findings(...COMPLETE), []);
 });
 
@@ -55,10 +56,11 @@ test("meldet fehlende concurrency", () => {
   assert.deepEqual(reasons("on: push", "permissions:", "  contents: read"), ["concurrency"]);
 });
 
-test("meldet beide Angaben in fester Reihenfolge", () => {
+test("meldet die Angaben in fester Reihenfolge", () => {
   assert.deepEqual(reasons("on: push", "jobs:", "  build:", "    runs-on: ubuntu-latest"), [
     "permissions",
     "concurrency",
+    "timeout",
   ]);
 });
 
@@ -101,7 +103,7 @@ test("zaehlt eingerueckte Angaben in Jobs nicht als Workflow-Kopf", () => {
   );
   assert.deepEqual(
     found.map((finding) => finding.reason),
-    ["permissions", "concurrency"],
+    ["permissions", "concurrency", "timeout"],
   );
 });
 
@@ -122,7 +124,11 @@ test("erkennt einen Block auch hinter Leerzeilen und Kommentaren", () => {
 
 test("verwechselt den naechsten Schluessel nicht mit einem Block", () => {
   const found = findings("permissions:", "  # folgt spaeter", "jobs:", "  build:");
-  assert.deepEqual(reasons("permissions:", "  # folgt spaeter", "jobs:", "  build:"), ["permissions-empty", "concurrency"]);
+  assert.deepEqual(reasons("permissions:", "  # folgt spaeter", "jobs:", "  build:"), [
+    "permissions-empty",
+    "concurrency",
+    "timeout",
+  ]);
   assert.equal(found[0].line, 1);
 });
 
@@ -139,24 +145,92 @@ test("meldet eine leere Datei mit beiden Angaben", () => {
   assert.deepEqual(reasons(""), ["permissions", "concurrency"]);
 });
 
+test("meldet ein fehlendes Job-Timeout an der Job-Zeile", () => {
+  const found = findings(
+    "permissions: {}",
+    "concurrency: beispiel",
+    "jobs:",
+    "  build:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - run: echo ok",
+  );
+
+  assert.deepEqual(
+    found.map((finding) => finding.reason),
+    ["timeout"],
+  );
+  assert.equal(found[0].line, 4, "Zeile des Jobs");
+  assert.equal(found[0].key, JOB_TIMEOUT);
+  assert.match(found[0].snippet, /Job build: timeout-minutes: fehlt/);
+});
+
+test("meldet ein Timeout ohne Wert und ohne brauchbare Zahl", () => {
+  const base = ["permissions: {}", "concurrency: beispiel", "jobs:", "  build:", "    timeout-minutes:"];
+  const empty = findings(...base)[0];
+  assert.equal(empty.reason, "timeout-empty");
+  assert.equal(empty.line, 5);
+
+  for (const value of ["0", "-5", "abc", "1.5"]) {
+    const found = findings("permissions: {}", "concurrency: beispiel", "jobs:", "  build:", `    timeout-minutes: ${value}`);
+    assert.equal(found.length, 1, `Wert ${value}`);
+    assert.equal(found[0].reason, "timeout-invalid", `Wert ${value}`);
+  }
+});
+
+test("nimmt einen Ausdruck als Timeout hin", () => {
+  assert.deepEqual(
+    findings("permissions: {}", "concurrency: beispiel", "jobs:", "  build:", "    timeout-minutes: ${{ inputs.timeout }}"),
+    [],
+  );
+});
+
+test("ein Step-Timeout deckt den Job nicht ab", () => {
+  const found = findings(
+    "permissions: {}",
+    "concurrency: beispiel",
+    "jobs:",
+    "  build:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - run: echo ok",
+    "        timeout-minutes: 5",
+  );
+
+  assert.deepEqual(
+    found.map((finding) => finding.reason),
+    ["timeout"],
+  );
+  assert.equal(found[0].line, 4);
+});
+
 test("zaehlt Dateien mit den Angaben fuer die Zusammenfassung", () => {
   const result = inspect(FILE, text(...COMPLETE));
   assert.equal(result.hasPermissions, true);
   assert.equal(result.hasConcurrency, true);
+  assert.equal(result.jobs, 1);
+  assert.equal(result.timeouts, 1);
+
   const missing = inspect(FILE, text("on: push"));
   assert.equal(missing.hasPermissions, false);
   assert.equal(missing.hasConcurrency, false);
+  assert.equal(missing.jobs, 0);
+  assert.equal(missing.timeouts, 0);
 });
 
-test("Pruefmuster deckt beide Angaben ab", () => {
+test("Pruefmuster deckt alle drei Regeln ab", () => {
   assert.equal(WORKFLOWS_DIR, ".github/workflows");
   assert.deepEqual(REQUIRED_KEYS, ["permissions", "concurrency"]);
+  assert.equal(JOB_TIMEOUT, "timeout-minutes");
 });
 
-test("dieses Repository hat ueberall permissions und concurrency", async () => {
-  const { findings: found, files, permissions, concurrency } = await audit();
+test("dieses Repository haelt alle drei Hygiene-Regeln ein", async () => {
+  const { findings: found, files, permissions, concurrency, jobs, timeouts } = await audit();
   assert.deepEqual(found, []);
   assert.ok(files.length > 0, "keine Workflow-Dateien gefunden");
   assert.equal(permissions, files.length);
   assert.equal(concurrency, files.length);
+  assert.ok(jobs > 0, "keine Jobs gefunden");
+  assert.equal(timeouts, jobs, "jeder Job braucht ein Timeout");
+  assert.equal(jobs, 28);
 });
