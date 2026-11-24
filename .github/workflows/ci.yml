@@ -254,6 +254,12 @@ jobs:
       - name: Tests der Trigger- und Secret-Pruefung
         run: npm run test:trigger-secrets
 
+      # Die Unit-Tests decken inspect()/audit() ab; hier laeuft jeder Checker
+      # als Prozess gegen eine Fixture mit Befund (Exit 1 plus ::error-Zeile)
+      # und einmal im Repo (Exit 0). So ist der Befund auch ueber den Exit belegt.
+      - name: Tests der Checker-Exit-Codes
+        run: npm run test:checker-cli
+
       - name: Syntaxprüfung des Staging-Prozess-Checks
         run: node --check scripts/staging-process-check.cjs
 
