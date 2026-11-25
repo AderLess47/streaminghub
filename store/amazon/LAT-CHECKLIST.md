@@ -1,7 +1,7 @@
-# LAT checklist for build 11 (1.4.0)
+# LAT checklist for build 13 (1.6.0)
 
 Live App Testing is the only place where a real Amazon purchase happens before
-customers see one. This list covers the three things build 11 changes: the
+customers see one. This list covers the three things the Amazon build sells: the
 purchase itself, restoring it, and continuing a title on a second device.
 
 Artifact, hashes and console steps live in [`UPLOAD.md`](UPLOAD.md). Money never
@@ -19,9 +19,9 @@ receipts.
 - [ ] `AMAZON_RVS_SANDBOX=1` is set on the Fly app for the duration of the round.
 - [ ] Two test accounts exist in App Tester (one for premium, one to prove that a
       fresh account gets nothing), each with a Fire TV device or a Fire TV Stick.
-- [ ] The LAT round carries the build 11 artifact: `versionCode 11`,
-      `versionName 1.4.0`, SHA-256 `ac2e1136…`.
-- [ ] Website is on 1.4.0: `curl -s https://streaminghub.org/api/release`.
+- [ ] The LAT round carries the build 13 artifact: `versionCode 13`,
+      `versionName 1.6.0`, SHA-256 taken from the workflow log.
+- [ ] Website is on 1.6.0: `curl -s https://streaminghub.org/api/release`.
 
 ## A. Free account behaves as before
 

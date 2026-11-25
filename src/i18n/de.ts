@@ -208,7 +208,7 @@ export const de = {
       amazon: {
         title: "Amazon Appstore",
         description:
-          "Im Amazon-Appstore-Build ist Premium derzeit nicht erhältlich.",
+          "Im Amazon-Appstore-Build wird Premium über Amazon In-App-Purchasing abgerechnet.",
         points: [
           "Keine externen Zahlungsaufforderungen in der App",
           "Verwaltung über dein Amazon-Konto",
@@ -335,8 +335,15 @@ export const de = {
     fileSizeLabel: "Dateigröße",
     fileLabel: "Datei",
     checksumLabel: "SHA-256",
-    amazonCta: "Im Amazon Appstore öffnen",
-    amazonPlaceholder: "Amazon-Appstore-Listung noch nicht verfügbar",
+    amazon: {
+      cta: "Im Amazon Appstore öffnen",
+      ctaAria: "StreamingHub im Amazon Appstore öffnen (neuer Tab)",
+      placeholder: "Amazon-Appstore-Listung noch nicht verfügbar",
+      liveHint:
+        "StreamingHub für Fire TV im Amazon Appstore. Premium läuft dort über Amazon In-App-Purchasing.",
+      pendingHint:
+        "Die Appstore-Listung ist in Vorbereitung. Bis dahin installierst du die APK unten; im Appstore-Build wird Premium über Amazon In-App-Purchasing abgerechnet.",
+    },
     sideloadTitle: "Android-Sideload-Installation",
     downloaderTitle: "Fire TV Downloader",
     downloaderHint:

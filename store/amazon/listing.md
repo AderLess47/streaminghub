@@ -1,7 +1,7 @@
 # Amazon-Listing: Texte
 
 Fertige Texte für die Amazon-Appstore-Einreichung von StreamingHub
-(`de.streaminghub.app`, Version 1.4.0). Alle Felder sind reiner Text ohne
+(`de.streaminghub.app`, Version 1.6.0). Alle Felder sind reiner Text ohne
 HTML; die Zeichen- und Byte-Grenzen von Amazon sind unten je Feld geprüft.
 Englische Fassung: [`listing-en.md`](listing-en.md).
 
@@ -107,15 +107,18 @@ Der vollständige Ablauf steht in `docs/DEMO-REVIEW.md`.
 - Die Texte beschreiben bewusst keine Inhalte: StreamingHub ist ein Player für
   Quellen, die Nutzer selbst hinzufügen. Das entspricht der Produktbeschreibung
   auf der Website und im Android-README.
-- Premium wird seit 1.4.0 über Amazon In-App-Purchasing verkauft (SKU
-  `premium_monthly`, Monatsabo). Deshalb darf und muss das Abo hier genannt
-  werden; ein Preis steht bewusst nirgends, den zeigt der Amazon-Dialog. Die
-  Konsolen-Schritte und der Testlauf stehen in [`UPLOAD.md`](UPLOAD.md) und
-  [`LAT-CHECKLIST.md`](LAT-CHECKLIST.md).
+- Premium wird über Amazon In-App-Purchasing verkauft: ein Monatsabo (SKU
+  `premium_monthly`). Ein Jahresabo gibt es im Amazon-Build nicht. Deshalb nennt
+  das Listing das Abo, aber keinen Preis – den zeigt der Amazon-Dialog, und ein
+  doppelter Preis würde mit der nächsten Konsolen-Änderung veralten (siehe
+  [`README.md`](README.md)). Die Konsolen-Schritte und der Testlauf stehen in
+  [`UPLOAD.md`](UPLOAD.md) und [`LAT-CHECKLIST.md`](LAT-CHECKLIST.md).
 - Keine Erfolgs- oder Verführungsversprechen („garantiert", „bester"). Premium
   schaltet genau zwei Dinge frei, und beide sind oben konkret benannt.
 - Keine Amazon-Logos und keine Formulierungen, die eine Partnerschaft mit
   Amazon nahelegen; „für Fire TV" und „über dein Amazon-Konto" beschreiben nur
   Kompatibilität und den Abrechnungsweg.
-- Screenshots und Grafik liegen im selben Ordner (`store/amazon/`), die
-  Demo-Anleitung in `docs/DEMO-REVIEW.md`.
+- Screenshots und Grafik liegen im selben Ordner (`store/amazon/`); die Bilder
+  sind Renderings der 1.6.0-Oberfläche aus `scripts/capture-amazon-screens.sh`
+  (Details in [`README.md`](README.md)), die Demo-Anleitung steht in
+  `docs/DEMO-REVIEW.md`.

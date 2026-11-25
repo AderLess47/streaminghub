@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { PREMIUM_PRICE_EUR, PRICE_BOOK, cents } from "./pricing.ts";
 import {
   AMAZON_ERROR_MESSAGES,
   buildVerifyUrl,
@@ -246,6 +250,43 @@ test("verifyReceipt retries throttling and never leaks the secret", async () => 
   assert.equal(calls.length, 2);
   assert.equal(result.ok, true);
   assert.equal(JSON.stringify(result).includes("shared-secret-value"), false);
+});
+
+// Drift guard for the App Tester file: the Amazon console, the Android client
+// and the server must all use the same single monthly SKU and the same price.
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const readRepoFile = (path: string) => readFileSync(join(repoRoot, path), "utf8");
+
+test("the App Tester file matches client SKU, server SKU and price book", () => {
+  const tester = JSON.parse(readRepoFile("store/amazon/amazon.sdktester.json")) as Record<
+    string,
+    { itemType: string; price: number; term: string }
+  >;
+
+  const clientSku = /const val DEFAULT_PREMIUM_SKU = "([^"]+)"/.exec(
+    readRepoFile(
+      "android/app/src/main/java/de/streaminghub/app/billing/PremiumPurchaseController.kt",
+    ),
+  )?.[1];
+  const serverSku = /amazonIapSku: process\.env\.AMAZON_IAP_SKU \?\? "([^"]+)"/.exec(
+    readRepoFile("src/lib/env.ts"),
+  )?.[1];
+
+  assert.equal(clientSku, "premium_monthly", "DEFAULT_PREMIUM_SKU must be readable");
+  assert.equal(serverSku, clientSku, "AMAZON_IAP_SKU must default to the client SKU");
+  assert.deepEqual(
+    Object.keys(tester),
+    [clientSku],
+    "the App Tester file must contain exactly the one supported SKU",
+  );
+
+  for (const [sku, item] of Object.entries(tester)) {
+    assert.equal(sku, clientSku);
+    assert.equal(item.itemType, "SUBSCRIPTION");
+    assert.equal(item.term, "Monthly");
+    assert.equal(item.price, PRICE_BOOK.standard_monthly.eur);
+    assert.equal(cents(item.price), cents(PREMIUM_PRICE_EUR));
+  }
 });
 
 test("a network failure becomes a provider error without the secret", async () => {
