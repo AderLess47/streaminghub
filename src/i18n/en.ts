@@ -206,7 +206,7 @@ export const en: Dictionary = {
       amazon: {
         title: "Amazon Appstore",
         description:
-          "Premium is not available in the Amazon Appstore build.",
+          "In the Amazon Appstore build premium is billed through Amazon In-App Purchasing.",
         points: [
           "No external payment prompts inside the app",
           "Managed via your Amazon account",
@@ -332,8 +332,15 @@ export const en: Dictionary = {
     fileSizeLabel: "File size",
     fileLabel: "File",
     checksumLabel: "SHA-256",
-    amazonCta: "Open in Amazon Appstore",
-    amazonPlaceholder: "Amazon Appstore listing not available yet",
+    amazon: {
+      cta: "Open in Amazon Appstore",
+      ctaAria: "Open StreamingHub in the Amazon Appstore (new tab)",
+      placeholder: "Amazon Appstore listing not available yet",
+      liveHint:
+        "StreamingHub for Fire TV in the Amazon Appstore. Premium is billed through Amazon In-App Purchasing there.",
+      pendingHint:
+        "The Appstore listing is in preparation. Until then install the APK below; in the Appstore build premium is billed through Amazon In-App Purchasing.",
+    },
     sideloadTitle: "Android sideload installation",
     downloaderTitle: "Fire TV Downloader",
     downloaderHint:

@@ -1,7 +1,7 @@
 # Amazon listing: English copy
 
 English version of the Amazon Appstore listing for StreamingHub
-(`de.streaminghub.app`, version 1.4.0). Keep it in sync with
+(`de.streaminghub.app`, version 1.6.0). Keep it in sync with
 [`listing.md`](listing.md); the German file stays the reference for wording and
 legal statements. Plain text only, no HTML.
 
@@ -106,15 +106,17 @@ The full walkthrough is in `docs/DEMO-REVIEW.md`.
 
 - The copy deliberately promises no content: StreamingHub is a player for
   sources the user adds. This matches the website and `android/README.md`.
-- Since 1.4.0 premium is sold through Amazon In-App Purchasing (SKU
-  `premium_monthly`, monthly). The listing therefore names the subscription
-  instead of hiding it, but never a price – the Amazon dialog shows that. Console
-  steps and the test round: [`UPLOAD.md`](UPLOAD.md) and
-  [`LAT-CHECKLIST.md`](LAT-CHECKLIST.md).
+- Premium is sold through Amazon In-App Purchasing: one monthly subscription
+  (SKU `premium_monthly`). There is no yearly plan in the Amazon build. The
+  listing therefore names the subscription instead of hiding it, but never a
+  price – the Amazon dialog shows that, and a duplicated price would go stale
+  with the next console change (see [`README.md`](README.md)). Console steps and
+  the test round: [`UPLOAD.md`](UPLOAD.md) and [`LAT-CHECKLIST.md`](LAT-CHECKLIST.md).
 - No performance or success promises ("guaranteed", "best"). Premium unlocks
   exactly two things, and both are named concretely above.
 - No Amazon logos and no wording that suggests a partnership; "for Fire TV" and
   "through your Amazon account" only describe compatibility and the billing
   route.
-- Assets live in `store/amazon/`; the demo walkthrough is in
-  `docs/DEMO-REVIEW.md`.
+- Assets live in `store/amazon/`; the screenshots are renders of the 1.6.0 UI
+  from `scripts/capture-amazon-screens.sh` (details in [`README.md`](README.md)),
+  the demo walkthrough is in `docs/DEMO-REVIEW.md`.

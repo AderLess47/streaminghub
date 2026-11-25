@@ -1,0 +1,11 @@
+{
+  "premium_monthly": {
+    "itemType": "SUBSCRIPTION",
+    "price": 3.49,
+    "title": "StreamingHub Premium (monatlich)",
+    "description": "Premium für StreamingHub: geräteübergreifendes Weiterschauen und bis zu fünf gekoppelte Geräte. Monatlich kündbar.",
+    "smallIconUrl": "https://streaminghub.org/icon.svg",
+    "subscriptionParent": "premium",
+    "term": "Monthly"
+  }
+}

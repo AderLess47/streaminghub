@@ -70,29 +70,32 @@ class AmazonPremiumBilling(context: Context) : PremiumBilling {
     }
 
     override suspend fun restore(sku: String): BillingOutcome {
-        val deferred = CompletableDeferred<PurchaseUpdatesResponse>()
-        updatesRequest = deferred
-        return try {
-            PurchasingService.getPurchaseUpdates(false)
-            val response = withTimeoutOrNull(TIMEOUT_MS) { deferred.await() }
-                ?: return BillingOutcome.Failed("Amazon hat nicht geantwortet. Bitte versuche es erneut.")
-            if (response.requestStatus?.name != STATUS_SUCCESSFUL) return BillingOutcome.Unavailable
+        // `true` fordert die vollständige Kaufhistorie an – das ist der Pfad für
+        // „Käufe wiederherstellen“, nicht der Inkremental-Update nach dem Start.
+        // Amazon liefert die Historie seitenweise; [ReceiptCollector] bricht nach
+        // einer festen Seitengrenze ab, statt den Nutzer warten zu lassen.
+        var response = requestPurchaseUpdates()
+            ?: return BillingOutcome.Failed(NO_ANSWER)
+        if (response.requestStatus?.name != STATUS_SUCCESSFUL) return BillingOutcome.Unavailable
 
-            val receipt = response.receipts.orEmpty().firstOrNull { it.sku == sku }
-                ?: return BillingOutcome.Unavailable
-            val appUserId = response.userData?.userId.orEmpty()
-            if (appUserId.isBlank()) return BillingOutcome.Failed("Amazon hat keine Kundennummer geliefert.")
-
-            BillingOutcome.Purchased(
-                BillingReceipt(
-                    receiptId = receipt.receiptId,
-                    appUserId = appUserId,
-                    productId = receipt.sku,
-                ),
-            )
-        } finally {
-            updatesRequest = null
+        val collector = ReceiptCollector(sku)
+        var appUserId = response.userData?.userId.orEmpty()
+        while (collector.acceptMore(response.hasMore(), pageOf(response))) {
+            response = requestPurchaseUpdates() ?: return BillingOutcome.Failed(NO_ANSWER)
+            if (response.requestStatus?.name != STATUS_SUCCESSFUL) break
+            if (appUserId.isBlank()) appUserId = response.userData?.userId.orEmpty()
         }
+
+        val receipt = collector.receipt ?: return BillingOutcome.Unavailable
+        if (appUserId.isBlank()) return BillingOutcome.Failed("Amazon hat keine Kundennummer geliefert.")
+
+        return BillingOutcome.Purchased(
+            BillingReceipt(
+                receiptId = receipt.receiptId,
+                appUserId = appUserId,
+                productId = receipt.productId,
+            ),
+        )
     }
 
     override suspend fun acknowledge(receiptId: String) {
@@ -100,6 +103,23 @@ class AmazonPremiumBilling(context: Context) : PremiumBilling {
             PurchasingService.notifyFulfillment(receiptId, FulfillmentResult.FULFILLED)
         }
     }
+
+    /** Eine Seite der Kaufhistorie (vollständige Historie, kein Reset-Offset). */
+    private suspend fun requestPurchaseUpdates(): PurchaseUpdatesResponse? {
+        val deferred = CompletableDeferred<PurchaseUpdatesResponse>()
+        updatesRequest = deferred
+        return try {
+            PurchasingService.getPurchaseUpdates(true)
+            withTimeoutOrNull(TIMEOUT_MS) { deferred.await() }
+        } finally {
+            updatesRequest = null
+        }
+    }
+
+    private fun pageOf(response: PurchaseUpdatesResponse): List<StoreReceipt> =
+        response.receipts.orEmpty().map { receipt ->
+            StoreReceipt(receiptId = receipt.receiptId, productId = receipt.sku)
+        }
 
     private suspend fun requestProductData(skus: Set<String>): ProductDataResponse? {
         val deferred = CompletableDeferred<ProductDataResponse>()
@@ -140,5 +160,6 @@ class AmazonPremiumBilling(context: Context) : PremiumBilling {
     private companion object {
         const val TIMEOUT_MS = 60_000L
         const val STATUS_SUCCESSFUL = "SUCCESSFUL"
+        const val NO_ANSWER = "Amazon hat nicht geantwortet. Bitte versuche es erneut."
     }
 }

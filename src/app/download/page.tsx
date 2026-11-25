@@ -14,7 +14,13 @@ export const dynamic = "force-dynamic";
 type PlatformKey = "firetv" | "androidtv" | "android";
 
 export default async function DownloadPage() {
-  const { t, locale } = await getI18n();
+  const { t } = await getI18n();
+
+  // Nur echte Store-Links: eine leere, relative oder halb gepflegte URL darf
+  // keinen Kaufweg öffnen, den es nicht gibt.
+  const amazonStoreUrl = /^https:\/\/\S+$/.test(env.downloads.amazonStore)
+    ? env.downloads.amazonStore
+    : "";
 
   const platforms: { key: PlatformKey; url: string; icon: "tv" | "devices" | "phone" }[] = [
     { key: "firetv", url: "/app.apk", icon: "tv" },
@@ -94,20 +100,24 @@ export default async function DownloadPage() {
           <div>
             <p className="text-sm font-medium">Amazon Appstore</p>
             <p className="mt-0.5 text-xs text-muted">
-              {locale === "de"
-                ? "Eine Appstore-Listung ist noch nicht verfügbar. In der Appstore-Version wird Premium derzeit nicht angeboten."
-                : "An Appstore listing is not available yet. Premium is currently not offered in the Appstore build."}
+              {amazonStoreUrl ? t.download.amazon.liveHint : t.download.amazon.pendingHint}
             </p>
           </div>
         </div>
-        {env.downloads.amazonStore ? (
-          <a href={env.downloads.amazonStore} className="btn btn-outline btn-sm" rel="noopener noreferrer">
-            {t.download.amazonCta}
+        {amazonStoreUrl ? (
+          <a
+            href={amazonStoreUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline btn-sm"
+            aria-label={t.download.amazon.ctaAria}
+          >
+            {t.download.amazon.cta}
             <Icon name="external" size={14} />
           </a>
         ) : (
           <button type="button" className="btn btn-outline btn-sm" disabled>
-            {t.download.amazonPlaceholder}
+            {t.download.amazon.placeholder}
           </button>
         )}
       </div>

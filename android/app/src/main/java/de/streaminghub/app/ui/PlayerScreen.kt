@@ -254,49 +254,7 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = 0.82f), Color.Transparent),
-                    ),
-                )
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Ink.copy(alpha = 0.45f)),
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Zurück zur Bibliothek",
-                    tint = Color.White,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = channel.name,
-                    color = Foreground,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "${channel.group} · ${channel.kind.label}",
-                    color = Muted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        PlayerTopBar(channel = channel, onBack = onBack)
 
         if (errorMessage != null) {
             Box(
@@ -342,6 +300,58 @@ fun PlayerScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Kopfzeile der Wiedergabe. Sie liegt als eigener Composable vor, damit die
+ * Store-Screenshots genau diese Fläche rendern können, ohne einen Player zu
+ * starten.
+ */
+@Composable
+internal fun PlayerTopBar(channel: Channel, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.Black.copy(alpha = 0.82f), Color.Transparent),
+                ),
+            )
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(Ink.copy(alpha = 0.45f)),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Zurück zur Bibliothek",
+                tint = Color.White,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = channel.name,
+                color = Foreground,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 17.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${channel.group} · ${channel.kind.label}",
+                color = Muted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

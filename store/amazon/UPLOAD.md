@@ -1,4 +1,4 @@
-# Uploading build 11 to the Amazon Appstore
+# Uploading build 13 (1.6.0) to the Amazon Appstore
 
 The store binary is the **Amazon flavor**, built and signed by the release
 workflow from the same commit as the public download. Since phase P4 it sells
@@ -12,24 +12,23 @@ in place – the card would otherwise end in a purchase that cannot be verified.
 
 | Field | Value |
 | --- | --- |
-| Workflow run | `43202606518` (`Android release`) |
+| Workflow run | latest green `Android release` run (`gh run list --workflow android-release.yml`) |
 | Artifact | `streaminghub-amazon-apk` |
 | File | `app-amazon-release.apk` |
-| Version | 1.4.0 (build 11) |
-| Size | 14.478.645 bytes |
-| SHA-256 | `ac2e11361b3be0ac55ab8febbc8c835699eb680b566f41602b7b67eb8073bf3e` |
+| Version | 1.6.0 (build 13) |
+| Size | read from the workflow log (changes per build) |
+| SHA-256 | read from the workflow log and record it here |
 | Signing certificate (SHA-256) | `34aefdb6f9dc697f4e5cd85794e0cb3b39756ef1b0086b24637016c8774ed07e` |
 
 Fetch it:
 
 ```bash
-gh run download 43202606518 -n streaminghub-amazon-apk -D /tmp/amazon-apk
-sha256sum /tmp/amazon-apk/app-amazon-release.apk   # must match the hash above
+gh run download <run-id> -n streaminghub-amazon-apk -D /tmp/amazon-apk
+sha256sum /tmp/amazon-apk/app-amazon-release.apk   # compare with the workflow log
 ```
 
 **Do not upload `https://streaminghub.org/app.apk`.** That is the `direct` flavor
-(1.4.0, 14.331.194 bytes,
-`8c707ce0760f73daf9de14ebcf6ded66d244b9535a11f770b5e7afa5926a1cdf`): same code,
+(1.6.0, different size and signature): same code,
 but premium is sold on the website instead of through Amazon IAP. Both builds
 now show a premium surface, so the size and the hash are the reliable way to
 tell them apart.
@@ -87,11 +86,11 @@ tell them apart.
 | Check | Result |
 | --- | --- |
 | APK signature (`apksigner verify --print-certs`) | verified, `CN=StreamingHub`, release key as above |
-| `aapt dump badging` | `de.streaminghub.app`, versionCode 11, versionName 1.4.0 |
+| `aapt dump badging` | `de.streaminghub.app`, versionCode 13, versionName 1.6.0 |
 | Premium surface | `PREMIUM_SALES = true` and `PREMIUM_CHANNEL = "amazon"` asserted in the workflow before upload |
 | Appstore SDK | `amazon-appstore-sdk:3.0.9` asserted on the `amazonReleaseRuntimeClasspath` |
 | Permissions | `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS` only – the SDK adds none |
-| Public download untouched by this flavor | `/api/release`, `/download`, `/app.apk` serve the direct 1.4.0 (build 11), checksum `8c707ce0…` |
+| Public download untouched by this flavor | `/api/release`, `/download`, `/app.apk` serve the direct 1.6.0 (build 13) |
 | Purchase logic | 61 JVM/Robolectric tests per flavor, including server-confirmation-before-fulfilment |
 | Cross-device resume | `/api/v1/progress` live and premium-gated (`402` without premium), 11 unit tests |
 | Adaptive layout | device class from UI mode and window width, 8 unit tests |

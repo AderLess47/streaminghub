@@ -172,4 +172,66 @@ class PremiumPurchaseControllerTest {
 
         assertTrue(subject.state.value is PremiumBillingState.Error)
     }
+
+    @Test
+    fun `a store exception during purchase becomes a visible error`() = runBlocking {
+        val subject = controller(ThrowingBilling(message = "Netzwerk nicht erreichbar."))
+
+        subject.purchase()
+
+        assertEquals(
+            PremiumBillingState.Error("Netzwerk nicht erreichbar."),
+            subject.state.value,
+        )
+    }
+
+    @Test
+    fun `a store exception during restore becomes a visible error`() = runBlocking {
+        val subject = controller(ThrowingBilling(message = "Zeitüberschreitung bei Amazon."))
+
+        subject.restore()
+
+        assertEquals(
+            PremiumBillingState.Error("Zeitüberschreitung bei Amazon."),
+            subject.state.value,
+        )
+    }
+
+    @Test
+    fun `a network failure while refreshing the status keeps the message`() = runBlocking {
+        val subject = controller(
+            billing = FakeBilling(),
+            refresh = { throw IllegalStateException("Server nicht erreichbar.") },
+        )
+
+        subject.refresh()
+
+        assertEquals(PremiumBillingState.Error("Server nicht erreichbar."), subject.state.value)
+    }
+
+    @Test
+    fun `an already owned purchase with a rejected receipt grants nothing`() = runBlocking {
+        val billing = FakeBilling(
+            purchaseOutcome = BillingOutcome.AlreadyOwned,
+            restoreOutcome = BillingOutcome.Purchased(receipt),
+        )
+        val subject = controller(
+            billing = billing,
+            submit = { SubmissionResult(false, message = "Beleg ist ungültig.") },
+        )
+
+        subject.purchase()
+
+        assertEquals(1, billing.restoreCalls)
+        assertEquals(PremiumBillingState.Error("Beleg ist ungültig."), subject.state.value)
+        assertNull(billing.acknowledgedReceipt)
+    }
+
+    /** Store, der wie ein abgebrochener SDK-Aufruf eine Exception wirft. */
+    private class ThrowingBilling(private val message: String) : PremiumBilling {
+        override suspend fun offer(sku: String): PremiumOffer = throw IllegalStateException(message)
+        override suspend fun purchase(sku: String): BillingOutcome = throw IllegalStateException(message)
+        override suspend fun restore(sku: String): BillingOutcome = throw IllegalStateException(message)
+        override suspend fun acknowledge(receiptId: String) = Unit
+    }
 }

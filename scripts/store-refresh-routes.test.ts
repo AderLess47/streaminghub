@@ -15,10 +15,12 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
 let rvsMode: "410" | "active" | "expired" = "410";
+let rvsCalls = 0;
 const expiredAt = Date.now() - 5_000;
 const future = Date.now() + 30 * 86_400_000;
 
 const server = createServer((request, response) => {
+  rvsCalls += 1;
   const receiptId = decodeURIComponent(request.url?.split("/receiptId/")[1] ?? "unknown");
   if (rvsMode === "410") {
     response.writeHead(410).end();
@@ -497,6 +499,76 @@ await check("amazon/refresh: Wiederkauf mailt nichts, naechster Ablauf wieder", 
 
   await amazonRefresh(call("/api/v1/amazon/refresh", token));
   assert.equal(mailCount(), 2, "derselbe Ablauf wird dedupliziert");
+});
+
+await check("amazon/purchase: falsches Produkt erreicht RVS nicht", async () => {
+  resetDb();
+  seedUser("amz-wrong-sku");
+  rvsMode = "active";
+  const before = rvsCalls;
+
+  const response = await amazonPurchase(
+    call("/api/v1/amazon/purchase", tokenFor("amz-wrong-sku"), {
+      receiptId: "amz_receipt_wrong",
+      appUserId: "amz-wrong-sku",
+      productId: "premium_yearly",
+    }),
+  );
+
+  assert.equal(response.status, 400);
+  assert.equal(rvsCalls, before, "ein fremdes Produkt darf RVS nicht erreichen");
+  assert.equal(
+    all<{ c: number }>(`SELECT COUNT(*) AS c FROM iap_receipts`)[0].c,
+    0,
+    "ohne passendes Produkt darf kein Beleg gespeichert werden",
+  );
+});
+
+await check("amazon/purchase: Beleg eines anderen Kontos ist ein Konflikt", async () => {
+  resetDb();
+  seedUser("amz-first");
+  seedUser("amz-second");
+  rvsMode = "active";
+
+  const first = await amazonPurchase(
+    call("/api/v1/amazon/purchase", tokenFor("amz-first"), {
+      receiptId: "amz_receipt_shared",
+      appUserId: "amz-first",
+      productId: "premium_monthly",
+    }),
+  );
+  assert.equal(first.status, 200);
+
+  const second = await amazonPurchase(
+    call("/api/v1/amazon/purchase", tokenFor("amz-second"), {
+      receiptId: "amz_receipt_shared",
+      appUserId: "amz-second",
+      productId: "premium_monthly",
+    }),
+  );
+  assert.equal(second.status, 409);
+});
+
+await check("amazon/purchase: aktiver Beleg wird ohne RVS wiederholt", async () => {
+  resetDb();
+  seedUser("amz-replay");
+  rvsMode = "active";
+  const token = tokenFor("amz-replay");
+  const body = {
+    receiptId: "amz_receipt_replay",
+    appUserId: "amz-replay",
+    productId: "premium_monthly",
+  };
+
+  const first = await amazonPurchase(call("/api/v1/amazon/purchase", token, body));
+  assert.equal(first.status, 200);
+  const callsAfterFirst = rvsCalls;
+
+  const second = await amazonPurchase(call("/api/v1/amazon/purchase", token, body));
+  assert.equal(second.status, 200);
+  const replay = (await second.json()) as { subscription: { premiumActive: boolean } };
+  assert.equal(replay.subscription.premiumActive, true);
+  assert.equal(rvsCalls, callsAfterFirst, "ein aktiver Beleg kommt aus der Datenbank");
 });
 
 /* -------------------------------- Ergebnis -------------------------------- */

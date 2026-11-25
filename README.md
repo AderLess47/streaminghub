@@ -9,7 +9,7 @@ import their own lawfully accessible sources.
 
 - Domain: `https://streaminghub.org`
 - Support: `service@streaminghub.org`
-- Premium: **2,49 € / Monat (Endpreis; keine USt. gemäß § 19 UStG)**
+- Premium: **3,49 € / Monat oder 34,99 € / Jahr (Endpreis; keine USt. gemäß § 19 UStG)**
 
 ## Stack
 
@@ -163,9 +163,9 @@ starts building.
 
 | Integration | State | What is required |
 | --- | --- | --- |
-| Payment provider (Stripe) | Checkout, signed webhooks, status mapping, cancellation and server-side success confirmation implemented and stub-tested; **configured** | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`; 2,49 € final price (no VAT under § 19 UStG); webhook at `/api/webhooks/stripe` |
+| Payment provider (Stripe) | Checkout, signed webhooks, status mapping, cancellation and server-side success confirmation implemented and stub-tested; **configured** | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`; 3,49 €/month and 34,99 €/year final price (no VAT under § 19 UStG); webhook at `/api/webhooks/stripe` |
 | Android app distribution | Signed APK served from Cloudflare R2; current version, size and SHA-256 come from `src/content/release.ts` | Amazon Appstore listing / future signed releases |
-| Amazon In-App Purchasing | Channel modelled and separated from web | Amazon IAP in the app + store reconciliation process |
+| Amazon In-App Purchasing | Appstore SDK 3.0.9 in the `amazon` flavor, RVS verification, RTN webhook and recovery sync implemented and tested; **configured**, submission pending | `AMAZON_RVS_SHARED_SECRET`, `AMAZON_IAP_SKU`, `AMAZON_RTN_TOPIC_ARN`, `AMAZON_SYNC_TOKEN`, `AMAZON_STORE_URL`; see `docs/IAP-AMAZON.md` |
 | App ↔ website API | Endpoints live and tested | Client implementation in the StreamingHub app |
 | Transactional email | Provider adapter, outbox, retry, delivery webhook and bounce/complaint suppression implemented and stub-tested | `EMAIL_API_KEY`, verified sending domain, `EMAIL_WEBHOOK_SECRET` |
 | Appme account SSO | **Not integrated** | Appme issuer URL, client ID/secret, scopes, redirect URI and API documentation |

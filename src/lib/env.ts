@@ -56,7 +56,6 @@ export const env = {
     stripeConversionCouponId: process.env.STRIPE_CONVERSION_COUPON_ID ?? "",
     /** Coupon für die Kündigungs-Rettung; leer = kein Angebot. */
     stripeWinbackCouponId: process.env.STRIPE_WINBACK_COUPON_ID ?? "",
-    amazonStoreUrl: process.env.AMAZON_STORE_URL ?? "",
     /** Amazon In-App Purchasing (Appstore SDK) receipt verification. */
     amazonRvsSharedSecret: process.env.AMAZON_RVS_SHARED_SECRET ?? "",
     amazonRvsBase: (process.env.AMAZON_RVS_BASE ?? "https://appstore-sdk.amazon.com").replace(
